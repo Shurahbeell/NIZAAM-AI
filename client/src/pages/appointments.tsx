@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,33 @@ interface Appointment {
   status: "pending" | "confirmed" | "completed";
 }
 
+const defaultAppointments: Appointment[] = [
+  {
+    id: "1",
+    doctorName: "Dr. Sarah Johnson",
+    department: "Cardiology",
+    date: "Nov 15, 2025",
+    time: "2:00 PM",
+    status: "confirmed"
+  },
+  {
+    id: "2",
+    doctorName: "Dr. Michael Chen",
+    department: "General Medicine",
+    date: "Nov 20, 2025",
+    time: "10:30 AM",
+    status: "pending"
+  },
+  {
+    id: "3",
+    doctorName: "Dr. Priya Patel",
+    department: "Pediatrics",
+    date: "Oct 28, 2025",
+    time: "3:00 PM",
+    status: "completed"
+  }
+];
+
 export default function Appointments() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -51,32 +78,21 @@ export default function Appointments() {
   const [time, setTime] = useState("");
   const [activeTab, setActiveTab] = useState("book");
   
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: "1",
-      doctorName: "Dr. Sarah Johnson",
-      department: "Cardiology",
-      date: "Nov 15, 2025",
-      time: "2:00 PM",
-      status: "confirmed"
-    },
-    {
-      id: "2",
-      doctorName: "Dr. Michael Chen",
-      department: "General Medicine",
-      date: "Nov 20, 2025",
-      time: "10:30 AM",
-      status: "pending"
-    },
-    {
-      id: "3",
-      doctorName: "Dr. Priya Patel",
-      department: "Pediatrics",
-      date: "Oct 28, 2025",
-      time: "3:00 PM",
-      status: "completed"
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const stored = localStorage.getItem("healthAppointments");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return defaultAppointments;
+      }
     }
-  ]);
+    return defaultAppointments;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("healthAppointments", JSON.stringify(appointments));
+  }, [appointments]);
 
   const handleBook = () => {
     if (!department || !doctor || !date || !time) {
