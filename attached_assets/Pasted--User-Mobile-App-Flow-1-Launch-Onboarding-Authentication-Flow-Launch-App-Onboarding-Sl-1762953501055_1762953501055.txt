@@ -1,0 +1,206 @@
+📱 User (Mobile App) Flow
+1. Launch / Onboarding / Authentication
+
+Flow:
+
+Launch App → Onboarding Slides → Login / Register → Dashboard
+
+
+Page design:
+
+Onboarding
+
+3–4 slides explaining benefits (“AI triage”, “Emergency Assist”, “Appointments”, “History”)
+
+Simple illustrations and a “Get Started” button
+
+Login/Register
+
+Fields: phone, password (optional CNIC for advanced profile)
+
+“Continue with Google / CNIC” (optional)
+
+“Forgot Password?”
+
+Save user info locally (SQLite/AsyncStorage)
+
+2. Dashboard (Home)
+
+Flow:
+
+Dashboard → [Chatbot] / [Appointments] / [Emergency] / [History] / [Profile]
+
+
+Page design:
+
+Top section → Greeting: “Good morning, Ali 👋”
+
+Cards or buttons for:
+
+🧠 Chat with HealthBot
+
+🗓️ Book Appointment
+
+🚨 Emergency
+
+📜 Medical History
+
+🏥 Nearby Facilities
+
+Bottom → “Quick Emergency Button” (floating red button)
+
+Technical:
+
+Uses REST API to fetch summary of:
+
+Recent appointments
+
+Last emergency status
+
+Next follow-up reminder
+
+3. Chatbot (AI Health Assistant)
+
+Flow:
+
+Dashboard → Chatbot → Triages symptoms → Suggest appointment / self-care
+
+
+Page design:
+
+Chat bubbles (user vs AI)
+
+Input box + mic icon for voice input
+
+Typing animation for AI response
+
+When user types symptom:
+
+Send to backend /v1/message/
+
+Wait for triage-agent response
+
+Show AI’s reasoning (“Looks like mild fever, want me to book an appointment?”)
+
+Buttons below AI response:
+
+[Book Appointment]
+
+[Find Nearby Facility]
+
+[Ask Another Question]
+
+4. Book Appointment
+
+Flow:
+
+Chatbot (suggests appointment) OR Dashboard → Appointment Screen → Confirmed → View Appointments
+
+
+Page design:
+
+Dropdowns for: Department, Doctor, Date, Time preference
+
+“Book Appointment” button
+
+After booking → success modal “Appointment request sent!”
+
+Displays pending/confirmed appointments (fetched from /v1/appointments/)
+
+Backend behavior:
+
+Sends appointment request to appointment-agent
+
+When confirmed, backend updates status → mobile app fetches confirmation
+
+5. Emergency (Auto-fill SOS Form)
+
+Flow:
+
+Dashboard → Emergency Button → Auto-fill Form → Send Emergency
+
+
+Page design:
+
+Large red “🚨 Emergency” screen
+
+Shows:
+
+User name, phone (auto-filled)
+
+GPS coordinates (auto-fetched)
+
+Dropdown for emergency type (Heart attack, Accident, Fall, Other)
+
+Press “Send Help” → API /v1/emergencies/
+
+Shows countdown “Sending alert…” then confirmation
+
+System behavior:
+
+Backend saves emergency → publishes message to Redis
+
+Hospital dashboard receives it in real-time
+
+Facility-agent suggests nearest hospital
+
+Appointment-agent reserves ER slot (optional)
+
+6. Map View (Nearby Facilities)
+
+Flow:
+
+Dashboard → Map → Tap on facility → See details → Call / Navigate / Book
+
+
+Page design:
+
+react-native-maps component
+
+Pins for BHUs / hospitals (fetched from backend JSON)
+
+Tap pin → opens card with:
+
+Hospital name
+
+Distance
+
+Availability (green = open, red = closed)
+
+Buttons: [Navigate] [Call] [Book Appointment]
+
+7. Medical History
+
+Flow:
+
+Dashboard → View History
+
+
+Page design:
+
+Scrollable list of records:
+
+Appointments (doctor, date, diagnosis)
+
+Emergencies (type, status)
+
+Notes or prescriptions (optional)
+
+Each card shows summary + “View Details”
+
+8. Profile Settings
+
+Flow:
+
+Dashboard → Profile
+
+
+Page design:
+
+Name, phone, CNIC, address
+
+Medical tags (diabetes, allergies)
+
+Button: “Export my health data”
+
+Button: “Logout”
