@@ -23,6 +23,19 @@ function generateTimeSlots(startTime: string, endTime: string, slotDuration: num
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/api/test-user", async (req, res) => {
+    try {
+      const user = await storage.getUserByUsername("testuser");
+      if (!user) {
+        return res.status(404).json({ error: "Test user not found" });
+      }
+      res.json({ userId: user.id });
+    } catch (error) {
+      console.error("Error fetching test user:", error);
+      res.status(500).json({ error: "Failed to fetch test user" });
+    }
+  });
+
   app.get("/api/doctors", async (req, res) => {
     try {
       const department = req.query.department as string;

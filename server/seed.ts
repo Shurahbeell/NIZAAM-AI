@@ -3,11 +3,17 @@ import { storage } from "./storage";
 async function seedDatabase() {
   console.log("Seeding database...");
 
+  const testUser = await storage.createUser({
+    username: "testuser",
+    password: "password123"
+  });
+  console.log(`Created test user: ${testUser.username} (ID: ${testUser.id})`);
+
   const departments = {
-    cardiology: "Cardiology",
-    general: "General Medicine",
-    orthopedics: "Orthopedics",
-    pediatrics: "Pediatrics"
+    cardiology: "cardiology",
+    general: "general",
+    orthopedics: "orthopedics",
+    pediatrics: "pediatrics"
   };
 
   const doctorsData = [

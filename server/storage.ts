@@ -13,7 +13,7 @@ import {
   appointments
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -97,13 +97,17 @@ export class DbStorage implements IStorage {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
     return await db
       .select()
       .from(appointments)
       .where(
         and(
           eq(appointments.doctorId, doctorId),
-          gte(appointments.appointmentDate, startOfDay)
+          gte(appointments.appointmentDate, startOfDay),
+          lte(appointments.appointmentDate, endOfDay)
         )
       );
   }
