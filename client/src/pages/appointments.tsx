@@ -1,18 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppointmentCard from "@/components/AppointmentCard";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import type { Doctor } from "@shared/schema";
 
 export default function Appointments() {
   const [, setLocation] = useLocation();
@@ -20,88 +16,9 @@ export default function Appointments() {
   const [doctor, setDoctor] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
-  const { toast } = useToast();
-
-  const { data: testUserData } = useQuery<{ userId: string }>({
-    queryKey: ["/api/test-user"],
-    queryFn: async () => {
-      const res = await fetch("/api/test-user");
-      if (!res.ok) throw new Error("Failed to fetch test user");
-      return res.json();
-    }
-  });
-
-  const { data: doctors = [], isLoading: loadingDoctors } = useQuery<Doctor[]>({
-    queryKey: ["/api/doctors", department],
-    queryFn: async () => {
-      if (!department) return [];
-      const res = await fetch(`/api/doctors?department=${encodeURIComponent(department)}`);
-      if (!res.ok) throw new Error("Failed to fetch doctors");
-      return res.json();
-    },
-    enabled: !!department
-  });
-
-  const { data: availableSlots, isLoading: loadingSlots } = useQuery<{ availableSlots: string[] }>({
-    queryKey: ["/api/doctors", doctor, "available-slots", date?.toISOString()],
-    queryFn: async () => {
-      if (!doctor || !date) return { availableSlots: [] };
-      const dateStr = date.toISOString().split('T')[0];
-      const res = await fetch(`/api/doctors/${doctor}/available-slots?date=${dateStr}`);
-      return res.json();
-    },
-    enabled: !!doctor && !!date
-  });
-
-  const bookAppointmentMutation = useMutation({
-    mutationFn: async () => {
-      if (!doctor || !date || !time || !testUserData?.userId) {
-        throw new Error("Please fill all fields");
-      }
-      
-      return await apiRequest("POST", "/api/appointments", {
-        userId: testUserData.userId,
-        doctorId: doctor,
-        appointmentDate: date.toISOString(),
-        appointmentTime: time,
-        notes: ""
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Appointment Booked!",
-        description: "Your appointment has been successfully scheduled."
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      setDepartment("");
-      setDoctor("");
-      setDate(undefined);
-      setTime("");
-    },
-    onError: () => {
-      toast({
-        title: "Booking Failed",
-        description: "Unable to book appointment. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
-
-  useEffect(() => {
-    if (department) {
-      setDoctor("");
-      setTime("");
-    }
-  }, [department]);
-
-  useEffect(() => {
-    if (doctor || date) {
-      setTime("");
-    }
-  }, [doctor, date]);
 
   const handleBook = () => {
-    bookAppointmentMutation.mutate();
+    console.log("Booking appointment", { department, doctor, date, time });
   };
 
   return (
@@ -144,16 +61,14 @@ export default function Appointments() {
 
               <div className="space-y-2">
                 <Label htmlFor="doctor">Doctor</Label>
-                <Select value={doctor} onValueChange={setDoctor} disabled={!department || loadingDoctors}>
+                <Select value={doctor} onValueChange={setDoctor}>
                   <SelectTrigger id="doctor" data-testid="select-doctor">
-                    <SelectValue placeholder={loadingDoctors ? "Loading doctors..." : "Select doctor"} />
+                    <SelectValue placeholder="Select doctor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {doctors.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        {doc.name} - {doc.specialization}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="dr-johnson">Dr. Sarah Johnson</SelectItem>
+                    <SelectItem value="dr-chen">Dr. Michael Chen</SelectItem>
+                    <SelectItem value="dr-patel">Dr. Priya Patel</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -170,41 +85,23 @@ export default function Appointments() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="time">Available Time Slots</Label>
-                <Select value={time} onValueChange={setTime} disabled={!doctor || !date || loadingSlots}>
+                <Label htmlFor="time">Preferred Time</Label>
+                <Select value={time} onValueChange={setTime}>
                   <SelectTrigger id="time" data-testid="select-time">
-                    <SelectValue placeholder={loadingSlots ? "Loading slots..." : "Select time"} />
+                    <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableSlots && availableSlots.availableSlots.length > 0 ? (
-                      availableSlots.availableSlots.map((slot) => {
-                        const [hours, mins] = slot.split(':');
-                        const hour = parseInt(hours);
-                        const period = hour >= 12 ? 'PM' : 'AM';
-                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-                        return (
-                          <SelectItem key={slot} value={slot}>
-                            {displayHour}:{mins} {period}
-                          </SelectItem>
-                        );
-                      })
-                    ) : (
-                      <SelectItem value="no-slots" disabled>
-                        No available slots
-                      </SelectItem>
-                    )}
+                    <SelectItem value="09:00">9:00 AM</SelectItem>
+                    <SelectItem value="10:00">10:00 AM</SelectItem>
+                    <SelectItem value="11:00">11:00 AM</SelectItem>
+                    <SelectItem value="14:00">2:00 PM</SelectItem>
+                    <SelectItem value="15:00">3:00 PM</SelectItem>
+                    <SelectItem value="16:00">4:00 PM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button 
-                type="button" 
-                className="w-full" 
-                onClick={handleBook} 
-                data-testid="button-book-appointment"
-                disabled={!department || !doctor || !date || !time || bookAppointmentMutation.isPending}
-              >
-                {bookAppointmentMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button type="button" className="w-full" onClick={handleBook} data-testid="button-book-appointment">
                 Book Appointment
               </Button>
             </form>
