@@ -76,7 +76,7 @@ export default function Dashboard() {
             <DashboardCard
               icon={MapPin}
               title="Nearby Facilities"
-              description="Find hospitals"
+              description="Hospitals & pharmacies"
               onClick={() => setLocation("/map")}
             />
             <DashboardCard
