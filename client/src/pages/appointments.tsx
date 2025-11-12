@@ -9,16 +9,113 @@ import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppointmentCard from "@/components/AppointmentCard";
+import { useToast } from "@/hooks/use-toast";
+
+const doctorMap: Record<string, string> = {
+  "dr-johnson": "Dr. Sarah Johnson",
+  "dr-chen": "Dr. Michael Chen",
+  "dr-patel": "Dr. Priya Patel"
+};
+
+const departmentMap: Record<string, string> = {
+  "cardiology": "Cardiology",
+  "general": "General Medicine",
+  "orthopedics": "Orthopedics",
+  "pediatrics": "Pediatrics"
+};
+
+const timeMap: Record<string, string> = {
+  "09:00": "9:00 AM",
+  "10:00": "10:00 AM",
+  "11:00": "11:00 AM",
+  "14:00": "2:00 PM",
+  "15:00": "3:00 PM",
+  "16:00": "4:00 PM"
+};
+
+interface Appointment {
+  id: string;
+  doctorName: string;
+  department: string;
+  date: string;
+  time: string;
+  status: "pending" | "confirmed" | "completed";
+}
 
 export default function Appointments() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
+  const [activeTab, setActiveTab] = useState("book");
+  
+  const [appointments, setAppointments] = useState<Appointment[]>([
+    {
+      id: "1",
+      doctorName: "Dr. Sarah Johnson",
+      department: "Cardiology",
+      date: "Nov 15, 2025",
+      time: "2:00 PM",
+      status: "confirmed"
+    },
+    {
+      id: "2",
+      doctorName: "Dr. Michael Chen",
+      department: "General Medicine",
+      date: "Nov 20, 2025",
+      time: "10:30 AM",
+      status: "pending"
+    },
+    {
+      id: "3",
+      doctorName: "Dr. Priya Patel",
+      department: "Pediatrics",
+      date: "Oct 28, 2025",
+      time: "3:00 PM",
+      status: "completed"
+    }
+  ]);
 
   const handleBook = () => {
-    console.log("Booking appointment", { department, doctor, date, time });
+    if (!department || !doctor || !date || !time) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields to book an appointment",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const formattedDate = date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+
+    const newAppointment: Appointment = {
+      id: Date.now().toString(),
+      doctorName: doctorMap[doctor] || doctor,
+      department: departmentMap[department] || department,
+      date: formattedDate,
+      time: timeMap[time] || time,
+      status: "pending"
+    };
+
+    setAppointments([newAppointment, ...appointments]);
+
+    toast({
+      title: "Appointment Booked!",
+      description: `Your appointment with ${newAppointment.doctorName} has been scheduled for ${formattedDate} at ${newAppointment.time}`,
+    });
+
+    setDepartment("");
+    setDoctor("");
+    setDate(undefined);
+    setTime("");
+    
+    setActiveTab("view");
   };
 
   return (
@@ -35,7 +132,7 @@ export default function Appointments() {
         <h1 className="text-xl font-semibold text-foreground">Appointments</h1>
       </header>
 
-      <Tabs defaultValue="book" className="p-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="p-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="book" data-testid="tab-book">Book New</TabsTrigger>
           <TabsTrigger value="view" data-testid="tab-view">My Appointments</TabsTrigger>
@@ -109,27 +206,22 @@ export default function Appointments() {
         </TabsContent>
 
         <TabsContent value="view" className="space-y-4 mt-6">
-          <AppointmentCard
-            doctorName="Dr. Sarah Johnson"
-            department="Cardiology"
-            date="Nov 15, 2025"
-            time="2:00 PM"
-            status="confirmed"
-          />
-          <AppointmentCard
-            doctorName="Dr. Michael Chen"
-            department="General Medicine"
-            date="Nov 20, 2025"
-            time="10:30 AM"
-            status="pending"
-          />
-          <AppointmentCard
-            doctorName="Dr. Priya Patel"
-            department="Pediatrics"
-            date="Oct 28, 2025"
-            time="3:00 PM"
-            status="completed"
-          />
+          {appointments.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">No appointments scheduled yet</p>
+            </Card>
+          ) : (
+            appointments.map((appointment) => (
+              <AppointmentCard
+                key={appointment.id}
+                doctorName={appointment.doctorName}
+                department={appointment.department}
+                date={appointment.date}
+                time={appointment.time}
+                status={appointment.status}
+              />
+            ))
+          )}
         </TabsContent>
       </Tabs>
     </div>
