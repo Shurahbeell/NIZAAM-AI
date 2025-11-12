@@ -6,10 +6,14 @@ A healthcare mobile application built with React and Express that provides AI-po
 
 **Core Features:**
 - AI health chatbot for symptom triage
-- Doctor appointment scheduling with real-time availability
+- **Doctor appointment scheduling with intelligent schedule cross-checking**
+  - Dynamic doctor lookup by department
+  - Real-time availability checking based on doctor schedules
+  - Time slot generation with automatic booking conflict detection
+  - Only shows available appointment times (filters out already booked slots)
 - Emergency assistance with one-tap alerts
 - Medical history and records management
-- Nearby facility finder with navigation
+- Nearby facility finder with navigation (hospitals and pharmacies)
 - User profile and health information management
 
 **Tech Stack:**
@@ -70,9 +74,17 @@ Preferred communication style: Simple, everyday language.
 **API Structure:**
 - RESTful endpoints under `/api` prefix
 - Routes defined in `server/routes.ts`
-- Endpoints: `/api/test-user`, `/api/doctors`, `/api/doctors/:id/available-slots`, `/api/appointments`
-- Time slot generation logic for appointment scheduling
-- Department-based doctor filtering
+- **Appointment Booking Endpoints:**
+  - `GET /api/test-user` - Fetches test user ID for development
+  - `GET /api/doctors?department=X` - Gets doctors filtered by department
+  - `GET /api/doctors/:id/available-slots?date=YYYY-MM-DD` - Returns available time slots for a doctor on a specific date
+  - `POST /api/appointments` - Creates new appointment booking
+  - `GET /api/appointments?userId=X` - Retrieves user's appointments with doctor details
+- **Schedule Cross-Checking Logic:**
+  - Generates time slots based on doctor's weekly schedule (day of week, start/end times, slot duration)
+  - Queries existing appointments for the selected doctor and date
+  - Filters out booked time slots to show only available times
+  - Prevents double-booking conflicts automatically
 
 **Database Layer:**
 - Storage abstraction through `IStorage` interface in `server/storage.ts`
@@ -81,10 +93,15 @@ Preferred communication style: Simple, everyday language.
 - WebSocket configuration for serverless database connections
 
 **Data Models:**
-- Users: Basic authentication with username/password
-- Doctors: Name, department, specialization, contact info
-- Doctor Schedules: Day of week, time slots, slot duration
-- Appointments: User-doctor relationships with date/time
+- **Users**: Basic authentication with username/password, UUID primary key
+- **Doctors**: Name, department (lowercase normalized), specialization, phone, UUID primary key
+- **Doctor Schedules**: Links to doctor, day of week (0-6), start time, end time, slot duration (default 30 min)
+- **Appointments**: User-doctor relationship with appointment date/time, status (pending/confirmed/completed), notes
+- **Recent Changes (Nov 2025):**
+  - Implemented full appointment booking system with schedule cross-checking
+  - Database seeded with 6 doctors across 4 departments (cardiology, general, orthopedics, pediatrics)
+  - Doctor schedules: Mon-Thu 9:00 AM - 5:00 PM, Fri 9:00 AM - 2:00 PM
+  - Test user created for development (username: testuser)
 
 **Development Setup:**
 - Vite dev server in middleware mode for HMR during development
