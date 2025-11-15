@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import SymptomChat from "@/pages/symptom-chat";
 import ProgramsChat from "@/pages/programs-chat";
+import Medicines from "@/pages/medicines";
 import Appointments from "@/pages/appointments";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/symptom-chat" component={SymptomChat} />
       <Route path="/programs-chat" component={ProgramsChat} />
+      <Route path="/medicines" component={Medicines} />
       <Route path="/appointments" component={Appointments} />
       <Route path="/emergency" component={Emergency} />
       <Route path="/map" component={Map} />
