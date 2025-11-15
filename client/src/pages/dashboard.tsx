@@ -2,7 +2,7 @@ import { useState } from "react";
 import DashboardCard from "@/components/DashboardCard";
 import EmergencyButton from "@/components/EmergencyButton";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, FileText, Beaker, BookOpen, Activity } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, FileText, Beaker, BookOpen, Activity, Syringe, Brain, Heart, Baby } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -114,6 +114,30 @@ export default function Dashboard() {
               title="Disease Library"
               description="Health conditions"
               onClick={() => setLocation("/disease-library")}
+            />
+            <DashboardCard
+              icon={Syringe}
+              title="Vaccinations"
+              description="EPI tracker"
+              onClick={() => setLocation("/vaccinations")}
+            />
+            <DashboardCard
+              icon={Brain}
+              title="Mental Health"
+              description="Mood & wellness"
+              onClick={() => setLocation("/mental-health")}
+            />
+            <DashboardCard
+              icon={Heart}
+              title="Women's Health"
+              description="Period & pregnancy"
+              onClick={() => setLocation("/womens-health")}
+            />
+            <DashboardCard
+              icon={Baby}
+              title="Child Health"
+              description="Growth & milestones"
+              onClick={() => setLocation("/child-health")}
             />
             <DashboardCard
               icon={ClipboardList}

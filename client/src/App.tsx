@@ -14,6 +14,10 @@ import MedicalProfile from "@/pages/medical-profile";
 import LabTests from "@/pages/lab-tests";
 import MedicineLibrary from "@/pages/medicine-library";
 import DiseaseLibrary from "@/pages/disease-library";
+import VaccinationTracker from "@/pages/vaccination-tracker";
+import MentalHealth from "@/pages/mental-health";
+import WomensHealth from "@/pages/womens-health";
+import ChildHealth from "@/pages/child-health";
 import Appointments from "@/pages/appointments";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
@@ -33,6 +37,10 @@ function Router() {
       <Route path="/lab-tests" component={LabTests} />
       <Route path="/medicine-library" component={MedicineLibrary} />
       <Route path="/disease-library" component={DiseaseLibrary} />
+      <Route path="/vaccinations" component={VaccinationTracker} />
+      <Route path="/mental-health" component={MentalHealth} />
+      <Route path="/womens-health" component={WomensHealth} />
+      <Route path="/child-health" component={ChildHealth} />
       <Route path="/appointments" component={Appointments} />
       <Route path="/emergency" component={Emergency} />
       <Route path="/map" component={Map} />
