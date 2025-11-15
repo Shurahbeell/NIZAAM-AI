@@ -19,6 +19,12 @@ import MentalHealth from "@/pages/mental-health";
 import WomensHealth from "@/pages/womens-health";
 import ChildHealth from "@/pages/child-health";
 import Appointments from "@/pages/appointments";
+import HospitalDashboard from "@/pages/hospital-dashboard";
+import HospitalDoctors from "@/pages/hospital-doctors";
+import HospitalAppointments from "@/pages/hospital-appointments";
+import HospitalPrescriptions from "@/pages/hospital-prescriptions";
+import HospitalReports from "@/pages/hospital-reports";
+import RoleGuard from "@/components/RoleGuard";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
 import History from "@/pages/history";
@@ -29,8 +35,16 @@ function Router() {
     <Switch>
       <Route path="/" component={Onboarding} />
       <Route path="/login" component={Login} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/symptom-chat" component={SymptomChat} />
+      <Route path="/dashboard">
+        <RoleGuard requiredRole="patient">
+          <Dashboard />
+        </RoleGuard>
+      </Route>
+      <Route path="/symptom-chat">
+        <RoleGuard requiredRole="patient">
+          <SymptomChat />
+        </RoleGuard>
+      </Route>
       <Route path="/programs-chat" component={ProgramsChat} />
       <Route path="/medicines" component={Medicines} />
       <Route path="/medical-profile" component={MedicalProfile} />
@@ -42,6 +56,31 @@ function Router() {
       <Route path="/womens-health" component={WomensHealth} />
       <Route path="/child-health" component={ChildHealth} />
       <Route path="/appointments" component={Appointments} />
+      <Route path="/hospital/dashboard">
+        <RoleGuard requiredRole="hospital">
+          <HospitalDashboard />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital/doctors">
+        <RoleGuard requiredRole="hospital">
+          <HospitalDoctors />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital/appointments">
+        <RoleGuard requiredRole="hospital">
+          <HospitalAppointments />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital/prescriptions">
+        <RoleGuard requiredRole="hospital">
+          <HospitalPrescriptions />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital/reports">
+        <RoleGuard requiredRole="hospital">
+          <HospitalReports />
+        </RoleGuard>
+      </Route>
       <Route path="/emergency" component={Emergency} />
       <Route path="/map" component={Map} />
       <Route path="/history" component={History} />

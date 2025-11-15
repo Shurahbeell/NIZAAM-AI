@@ -2,21 +2,32 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
-import { Heart } from "lucide-react";
+import { Heart, User, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"patient" | "hospital">("patient");
   const [, setLocation] = useLocation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted", { phone, password });
-    setLocation("/dashboard");
+    console.log("Form submitted", { phone, password, role });
+    
+    // Store role in localStorage for demo
+    localStorage.setItem("userRole", role);
+    
+    // Route based on role
+    if (role === "hospital") {
+      setLocation("/hospital/dashboard");
+    } else {
+      setLocation("/dashboard");
+    }
   };
 
   return (
@@ -34,6 +45,47 @@ export default function Login() {
 
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-3">
+              <Label>Login As</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Card
+                  className={`cursor-pointer hover-elevate ${
+                    role === "patient" ? "border-primary bg-primary/5" : ""
+                  }`}
+                  onClick={() => setRole("patient")}
+                  data-testid="role-patient"
+                >
+                  <CardContent className="p-4 flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      role === "patient" ? "bg-primary/10" : "bg-muted"
+                    }`}>
+                      <User className={`w-6 h-6 ${role === "patient" ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <p className="font-medium text-sm">Patient</p>
+                    {role === "patient" && <Badge variant="default" className="text-xs">Selected</Badge>}
+                  </CardContent>
+                </Card>
+                
+                <Card
+                  className={`cursor-pointer hover-elevate ${
+                    role === "hospital" ? "border-primary bg-primary/5" : ""
+                  }`}
+                  onClick={() => setRole("hospital")}
+                  data-testid="role-hospital"
+                >
+                  <CardContent className="p-4 flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      role === "hospital" ? "bg-primary/10" : "bg-muted"
+                    }`}>
+                      <Building2 className={`w-6 h-6 ${role === "hospital" ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <p className="font-medium text-sm">Hospital</p>
+                    {role === "hospital" && <Badge variant="default" className="text-xs">Selected</Badge>}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <Input
