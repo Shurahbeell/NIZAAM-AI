@@ -2,7 +2,7 @@ import { useState } from "react";
 import DashboardCard from "@/components/DashboardCard";
 import EmergencyButton from "@/components/EmergencyButton";
 import AppointmentCard from "@/components/AppointmentCard";
-import { MessageSquare, Calendar, MapPin, ClipboardList, User, Bell } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -62,10 +62,16 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-foreground">Quick Access</h3>
           <div className="grid grid-cols-2 gap-4">
             <DashboardCard
-              icon={MessageSquare}
-              title="Chat with HealthBot"
-              description="AI health assistant"
-              onClick={() => setLocation("/chat")}
+              icon={Stethoscope}
+              title="Symptom Checker"
+              description="AI symptom triage"
+              onClick={() => setLocation("/symptom-chat")}
+            />
+            <DashboardCard
+              icon={Building2}
+              title="Health Programs"
+              description="Government programs"
+              onClick={() => setLocation("/programs-chat")}
             />
             <DashboardCard
               icon={Calendar}

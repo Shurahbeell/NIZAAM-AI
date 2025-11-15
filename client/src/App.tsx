@@ -7,7 +7,8 @@ import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/onboarding";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
-import Chat from "@/pages/chat";
+import SymptomChat from "@/pages/symptom-chat";
+import ProgramsChat from "@/pages/programs-chat";
 import Appointments from "@/pages/appointments";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
@@ -20,7 +21,8 @@ function Router() {
       <Route path="/" component={Onboarding} />
       <Route path="/login" component={Login} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/chat" component={Chat} />
+      <Route path="/symptom-chat" component={SymptomChat} />
+      <Route path="/programs-chat" component={ProgramsChat} />
       <Route path="/appointments" component={Appointments} />
       <Route path="/emergency" component={Emergency} />
       <Route path="/map" component={Map} />
