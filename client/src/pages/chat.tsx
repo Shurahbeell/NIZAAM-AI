@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Mic, Stethoscope, Building2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { healthPrograms, PROGRAMS_SYSTEM_PROMPT } from "@shared/health-programs";
+import { healthPrograms } from "@shared/health-programs";
+import { analyzeSymptoms } from "@shared/symptom-triage";
 
 type ChatMode = "symptom" | "programs";
 
@@ -86,7 +87,37 @@ export default function Chat() {
       if (mode === "programs") {
         responseText = formatProgramsResponse(message);
       } else {
-        responseText = "I understand you're experiencing symptoms. Can you tell me more about what you're feeling? When did these symptoms start?";
+        // Symptom triage mode
+        const triageResult = analyzeSymptoms(message);
+        
+        responseText = `**Severity Level:** ${triageResult.severity.toUpperCase()}\n\n`;
+        
+        if (triageResult.possible_causes.length > 0 && triageResult.possible_causes[0].match_percentage > 0) {
+          responseText += `**Possible Causes:**\n`;
+          triageResult.possible_causes.forEach((cause, index) => {
+            responseText += `${index + 1}. ${cause.disease} (${cause.match_percentage}% match)\n`;
+          });
+          responseText += `\n`;
+        }
+        
+        if (triageResult.red_flags.length > 0) {
+          responseText += `**⚠️ Red Flags:**\n`;
+          triageResult.red_flags.forEach(flag => {
+            responseText += `• ${flag}\n`;
+          });
+          responseText += `\n`;
+        }
+        
+        if (triageResult.follow_up_questions.length > 0) {
+          responseText += `**Follow-up Questions:**\n`;
+          triageResult.follow_up_questions.forEach(q => {
+            responseText += `• ${q}\n`;
+          });
+          responseText += `\n`;
+        }
+        
+        responseText += `**Next Step:**\n${triageResult.recommendation}\n\n`;
+        responseText += `${triageResult.advice}`;
       }
       
       const aiResponse = {
