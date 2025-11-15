@@ -7,6 +7,34 @@ import { ArrowLeft, AlertTriangle, MapPin, Phone, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
 
+interface EmergencyData {
+  id: string;
+  patientName: string;
+  patientPhone: string;
+  location: string;
+  emergencyType: string;
+  priority: string;
+  symptoms: string;
+  status: string;
+  createdAt: string;
+}
+
+const priorityMap: Record<string, string> = {
+  "heart-attack": "critical",
+  "breathing": "critical",
+  "accident": "high",
+  "fall": "medium",
+  "other": "medium"
+};
+
+const symptomsMap: Record<string, string> = {
+  "heart-attack": "Chest pain, difficulty breathing, severe discomfort",
+  "breathing": "Shortness of breath, wheezing, cannot breathe normally",
+  "accident": "Trauma, injury, bleeding",
+  "fall": "Fall injury, possible fracture, pain",
+  "other": "Emergency medical attention required"
+};
+
 export default function Emergency() {
   const [, setLocation] = useLocation();
   const [emergencyType, setEmergencyType] = useState("");
@@ -24,6 +52,25 @@ export default function Emergency() {
           clearInterval(interval);
           setIsSending(false);
           setIsSent(true);
+          
+          // Save emergency to localStorage
+          const emergency: EmergencyData = {
+            id: Date.now().toString(),
+            patientName: "Ali Ahmed",
+            patientPhone: "+92 300 1234567",
+            location: "24.8607° N, 67.0011° E",
+            emergencyType: emergencyType,
+            priority: priorityMap[emergencyType] || "medium",
+            symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
+            status: "active",
+            createdAt: new Date().toISOString()
+          };
+          
+          const stored = localStorage.getItem("emergencies");
+          const emergencies = stored ? JSON.parse(stored) : [];
+          emergencies.unshift(emergency);
+          localStorage.setItem("emergencies", JSON.stringify(emergencies));
+          
           return 100;
         }
         return prev + 20;

@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Users, Calendar, FileText, Activity, TrendingUp, AlertCircle, User, Stethoscope } from "lucide-react";
+import { Users, Calendar, FileText, Activity, TrendingUp, AlertCircle, User, Stethoscope, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
 
 interface StatCard {
   title: string;
@@ -14,6 +15,22 @@ interface StatCard {
 
 export default function HospitalDashboard() {
   const [, setLocation] = useLocation();
+  const [activeEmergencies, setActiveEmergencies] = useState(0);
+
+  useEffect(() => {
+    const loadEmergencies = () => {
+      const stored = localStorage.getItem("emergencies");
+      if (stored) {
+        const emergencies = JSON.parse(stored);
+        const active = emergencies.filter((e: any) => e.status === "active").length;
+        setActiveEmergencies(active);
+      }
+    };
+
+    loadEmergencies();
+    const interval = setInterval(loadEmergencies, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const stats: StatCard[] = [
     { title: "Today's Appointments", value: "24", change: "+12%", icon: Calendar, trend: "up" },
@@ -57,6 +74,21 @@ export default function HospitalDashboard() {
       </header>
 
       <div className="p-4 space-y-6">
+        {activeEmergencies > 0 && (
+          <Card className="border-destructive bg-destructive/10 cursor-pointer hover-elevate" onClick={() => setLocation("/hospital/emergencies")} data-testid="card-emergency-alert">
+            <CardContent className="p-4 flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0 animate-pulse" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">
+                  {activeEmergencies} Active Emergency Alert{activeEmergencies > 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">Tap to view emergency dashboard</p>
+              </div>
+              <Badge variant="destructive">{activeEmergencies}</Badge>
+            </CardContent>
+          </Card>
+        )}
+
         {urgentAlerts.length > 0 && (
           <Card className="border-destructive bg-destructive/10">
             <CardContent className="p-4 space-y-2">
@@ -102,6 +134,20 @@ export default function HospitalDashboard() {
         <div>
           <h2 className="text-sm font-semibold mb-3">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
+            <Card className="cursor-pointer hover-elevate" onClick={() => setLocation("/hospital/emergencies")} data-testid="action-emergencies">
+              <CardContent className="p-4 flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center relative">
+                  <AlertTriangle className="w-6 h-6 text-destructive" />
+                  {activeEmergencies > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white text-xs flex items-center justify-center">
+                      {activeEmergencies}
+                    </div>
+                  )}
+                </div>
+                <p className="font-medium text-sm">Emergencies</p>
+              </CardContent>
+            </Card>
+
             <Card className="cursor-pointer hover-elevate" onClick={() => setLocation("/hospital/doctors")} data-testid="action-doctors">
               <CardContent className="p-4 flex flex-col items-center gap-2">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">

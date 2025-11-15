@@ -24,6 +24,7 @@ import HospitalDoctors from "@/pages/hospital-doctors";
 import HospitalAppointments from "@/pages/hospital-appointments";
 import HospitalPrescriptions from "@/pages/hospital-prescriptions";
 import HospitalReports from "@/pages/hospital-reports";
+import HospitalEmergencies from "@/pages/hospital-emergencies";
 import RoleGuard from "@/components/RoleGuard";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
@@ -79,6 +80,11 @@ function Router() {
       <Route path="/hospital/reports">
         <RoleGuard requiredRole="hospital">
           <HospitalReports />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital/emergencies">
+        <RoleGuard requiredRole="hospital">
+          <HospitalEmergencies />
         </RoleGuard>
       </Route>
       <Route path="/emergency" component={Emergency} />
