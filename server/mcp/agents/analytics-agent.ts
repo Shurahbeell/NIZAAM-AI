@@ -121,10 +121,14 @@ Provide answer with evidence in JSON:
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");
       
-      let responseText = `${parsed.answer}\n\n`;
+      // Null guards for GPT-5 response fields
+      const answer = parsed.answer || "I can provide health guidance based on medical protocols.";
+      const evidenceLevel = parsed.evidenceLevel || "moderate";
       
-      const evidenceEmoji = parsed.evidenceLevel === "high" ? "🟢" : parsed.evidenceLevel === "moderate" ? "🟡" : "🟠";
-      responseText += `${evidenceEmoji} **Evidence Level**: ${parsed.evidenceLevel?.toUpperCase()}\n\n`;
+      let responseText = `${answer}\n\n`;
+      
+      const evidenceEmoji = evidenceLevel === "high" ? "🟢" : evidenceLevel === "moderate" ? "🟡" : "🟠";
+      responseText += `${evidenceEmoji} **Evidence Level**: ${evidenceLevel.toUpperCase()}\n\n`;
 
       if (parsed.protocols?.length > 0) {
         responseText += "📚 **Evidence Sources:**\n";

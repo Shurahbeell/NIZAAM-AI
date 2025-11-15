@@ -191,12 +191,26 @@ Respond in JSON format:
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");
       
-      // Parse date strings
+      // Type-safe guards for GPT-5 response fields (protect against schema drift)
+      if (!Array.isArray(parsed.patterns)) {
+        parsed.patterns = [];
+      }
+      if (!Array.isArray(parsed.alerts)) {
+        parsed.alerts = [];
+      }
+      if (!Array.isArray(parsed.trends)) {
+        parsed.trends = [];
+      }
+      if (!Array.isArray(parsed.publicHealthInsights)) {
+        parsed.publicHealthInsights = [];
+      }
+      
+      // Parse date strings with defensive checks
       parsed.patterns = parsed.patterns.map((p: any) => ({
         ...p,
         timeRange: {
-          start: new Date(p.timeRange.start),
-          end: new Date(p.timeRange.end)
+          start: new Date(p.timeRange?.start || Date.now()),
+          end: new Date(p.timeRange?.end || Date.now())
         }
       }));
 

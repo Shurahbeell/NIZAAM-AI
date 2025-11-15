@@ -279,10 +279,14 @@ Respond in JSON format:
     
     let responseText = "";
 
-    if (assessment.eligiblePrograms.length === 0) {
-      responseText = `I need more information to determine which health programs you might be eligible for.\n\nPlease tell me:\n${assessment.recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+    // Type-safe guards for GPT-5 response fields (protect against schema drift)
+    const eligiblePrograms = Array.isArray(assessment.eligiblePrograms) ? assessment.eligiblePrograms : [];
+    const recommendedQuestions = Array.isArray(assessment.recommendedQuestions) ? assessment.recommendedQuestions : [];
+
+    if (eligiblePrograms.length === 0) {
+      responseText = `I need more information to determine which health programs you might be eligible for.\n\nPlease tell me:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
     } else {
-      const topPrograms = assessment.eligiblePrograms
+      const topPrograms = eligiblePrograms
         .filter(p => p.eligibilityScore > 0.5)
         .sort((a, b) => b.eligibilityScore - a.eligibilityScore)
         .slice(0, 3);
@@ -292,23 +296,23 @@ Respond in JSON format:
         
         topPrograms.forEach((program, i) => {
           responseText += `${i + 1}. **${program.name}** (${Math.round(program.eligibilityScore * 100)}% match)\n`;
-          responseText += `   Benefits: ${program.benefits.join(", ")}\n`;
+          responseText += `   Benefits: ${(program.benefits || []).join(", ")}\n`;
           
-          if (program.missingInfo.length > 0) {
+          if ((program.missingInfo || []).length > 0) {
             responseText += `   Missing info: ${program.missingInfo.join(", ")}\n`;
           }
           
-          if (program.nextSteps.length > 0) {
+          if ((program.nextSteps || []).length > 0) {
             responseText += `   Next steps: ${program.nextSteps.join(", ")}\n`;
           }
           responseText += "\n";
         });
 
-        if (assessment.recommendedQuestions.length > 0) {
-          responseText += `\nTo confirm your eligibility, please answer:\n${assessment.recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+        if (recommendedQuestions.length > 0) {
+          responseText += `\nTo confirm your eligibility, please answer:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
         }
       } else {
-        responseText = `I couldn't find programs with high eligibility based on current information.\n\nLet me ask a few questions:\n${assessment.recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+        responseText = `I couldn't find programs with high eligibility based on current information.\n\nLet me ask a few questions:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
       }
     }
 
