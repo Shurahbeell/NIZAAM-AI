@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeMCP, startEventProcessing } from "./mcp/index";
+import { validatePIIProtectionConfig } from "./mcp/services/pii-protection";
 
 const app = express();
 
@@ -47,6 +49,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // CRITICAL: Validate PII protection configuration before starting
+  // This will fail fast if production encryption is misconfigured
+  validatePIIProtectionConfig();
+  
+  // Initialize MCP Multi-Agent System
+  await initializeMCP();
+  startEventProcessing();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -77,5 +87,6 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    log(`[MCP] Multi-Agent System online with ${process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ? 'Replit AI' : 'OpenAI'}`);
   });
 })();

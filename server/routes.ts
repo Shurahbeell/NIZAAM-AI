@@ -1,81 +1,183 @@
-import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { Router, type Request, Response } from "express";
+import { createServer } from "http";
 import { storage } from "./storage";
-import { insertEmergencySchema, insertScreeningReminderSchema } from "@shared/schema";
+import {
+  insertEmergencySchema,
+  insertAgentSessionSchema
+} from "@shared/schema";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Emergency routes
-  app.post("/api/emergencies", async (req, res) => {
-    try {
-      const data = insertEmergencySchema.parse(req.body);
-      const emergency = await storage.createEmergency(data);
-      res.json(emergency);
-    } catch (error) {
-      res.status(400).json({ error: "Invalid emergency data" });
+const router = Router();
+
+// ==================== AGENT ROUTES ====================
+
+// Create new agent session
+router.post("/api/agent/sessions", async (req: Request, res: Response) => {
+  try {
+    const data = insertAgentSessionSchema.parse(req.body);
+    const session = await storage.createAgentSession(data);
+    res.json(session);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get agent session
+router.get("/api/agent/sessions/:id", async (req: Request, res: Response) => {
+  try {
+    const session = await storage.getAgentSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
     }
-  });
+    res.json(session);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  app.get("/api/emergencies", async (req, res) => {
-    const emergencies = await storage.getAllEmergencies();
-    res.json(emergencies);
-  });
-
-  app.get("/api/emergencies/:id", async (req, res) => {
-    const emergency = await storage.getEmergencyById(req.params.id);
-    if (!emergency) {
-      return res.status(404).json({ error: "Emergency not found" });
+// Send message to agent
+router.post("/api/agent/chat", async (req: Request, res: Response) => {
+  try {
+    const { sessionId, agentName, message, language = "english" } = req.body;
+    
+    if (!sessionId || !agentName || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
+    
+    // Import agentRegistry dynamically to avoid circular dependency
+    const { agentRegistry } = await import("./mcp/index");
+    
+    // Route to appropriate agent
+    const response = await agentRegistry.routeMessage(
+      agentName,
+      sessionId,
+      message,
+      language
+    );
+    
+    res.json({ response });
+  } catch (error: any) {
+    console.error("[Routes] Agent chat error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get conversation history
+router.get("/api/agent/messages/:sessionId", async (req: Request, res: Response) => {
+  try {
+    const messages = await storage.getSessionMessages(req.params.sessionId);
+    res.json(messages);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get agent events
+router.get("/api/agent/events/:sessionId", async (req: Request, res: Response) => {
+  try {
+    const events = await storage.getAllAgentEvents();
+    // Filter by session if sessionId provided
+    const sessionEvents = events.filter(e => 
+      e.triggeredBySession === req.params.sessionId
+    );
+    res.json(sessionEvents);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== EMERGENCY ROUTES ====================
+
+// Get all emergencies
+router.get("/api/emergencies", async (_req: Request, res: Response) => {
+  const emergencies = await storage.getAllEmergencies();
+  res.json(emergencies);
+});
+
+// Get emergency by ID
+router.get("/api/emergencies/:id", async (req: Request, res: Response) => {
+  const emergency = await storage.getEmergencyById(req.params.id);
+  if (!emergency) {
+    return res.status(404).json({ error: "Emergency not found" });
+  }
+  res.json(emergency);
+});
+
+// Create emergency
+router.post("/api/emergencies", async (req: Request, res: Response) => {
+  try {
+    const data = insertEmergencySchema.parse(req.body);
+    const emergency = await storage.createEmergency(data);
     res.json(emergency);
-  });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
-  app.patch("/api/emergencies/:id/status", async (req, res) => {
-    const { status } = req.body;
-    const emergency = await storage.updateEmergencyStatus(req.params.id, status);
-    if (!emergency) {
-      return res.status(404).json({ error: "Emergency not found" });
-    }
+// Update emergency status
+router.patch("/api/emergencies/:id", async (req: Request, res: Response) => {
+  try {
+    const emergency = await storage.updateEmergencyStatus(
+      req.params.id,
+      req.body.status
+    );
     res.json(emergency);
-  });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
-  // Women's Health Awareness routes
-  app.get("/api/womens-health/topics", async (req, res) => {
-    const topics = await storage.getAllWomensHealthTopics();
-    res.json(topics);
-  });
+// ==================== WOMEN'S HEALTH ROUTES ====================
 
-  app.get("/api/womens-health/topics/:id", async (req, res) => {
-    const topic = await storage.getWomensHealthTopicById(req.params.id);
-    if (!topic) {
-      return res.status(404).json({ error: "Topic not found" });
-    }
-    res.json(topic);
-  });
+// Get all women's health topics
+router.get("/api/womens-health", async (_req: Request, res: Response) => {
+  const topics = await storage.getAllWomensHealthTopics();
+  res.json(topics);
+});
 
-  // Screening Reminder routes
-  app.post("/api/screening-reminders", async (req, res) => {
-    try {
-      const data = insertScreeningReminderSchema.parse(req.body);
-      const reminder = await storage.createScreeningReminder(data);
-      res.json(reminder);
-    } catch (error) {
-      res.status(400).json({ error: "Invalid reminder data" });
-    }
-  });
+// Get women's health topic by ID
+router.get("/api/womens-health/:id", async (req: Request, res: Response) => {
+  const topic = await storage.getWomensHealthTopicById(req.params.id);
+  if (!topic) {
+    return res.status(404).json({ error: "Topic not found" });
+  }
+  res.json(topic);
+});
 
-  app.get("/api/screening-reminders/:userId", async (req, res) => {
-    const reminders = await storage.getUserScreeningReminders(req.params.userId);
-    res.json(reminders);
-  });
+// ==================== SCREENING REMINDER ROUTES ====================
 
-  app.patch("/api/screening-reminders/:id", async (req, res) => {
-    const reminder = await storage.updateScreeningReminder(req.params.id, req.body);
-    if (!reminder) {
-      return res.status(404).json({ error: "Reminder not found" });
-    }
+// Get user's screening reminders
+router.get("/api/screening-reminders/:userId", async (req: Request, res: Response) => {
+  const reminders = await storage.getUserScreeningReminders(req.params.userId);
+  res.json(reminders);
+});
+
+// Create screening reminder
+router.post("/api/screening-reminders", async (req: Request, res: Response) => {
+  try {
+    const reminder = await storage.createScreeningReminder(req.body);
     res.json(reminder);
-  });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
-  const httpServer = createServer(app);
+// Update screening reminder
+router.patch("/api/screening-reminders/:id", async (req: Request, res: Response) => {
+  try {
+    const reminder = await storage.updateScreeningReminder(
+      req.params.id,
+      req.body
+    );
+    res.json(reminder);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
-  return httpServer;
+export default router;
+
+// Export registerRoutes for server/index.ts
+export async function registerRoutes(app: any) {
+  app.use(router);
+  return createServer(app);
 }

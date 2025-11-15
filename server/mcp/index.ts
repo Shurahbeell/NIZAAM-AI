@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { EventBus } from "./orchestrator/event-bus";
 import { AgentRegistry } from "./orchestrator/agent-registry";
+import { triageAgent } from "./agents/triage-agent";
 
 // This is using Replit's AI Integrations service, which provides OpenAI-compatible API access
 // without requiring your own OpenAI API key. Charges are billed to your credits.
@@ -31,8 +32,10 @@ export const MCP_CONFIG = {
 export async function initializeMCP() {
   console.log("[MCP] Initializing Multi-Agent System...");
   
-  // TODO: Register all 6 agents when implemented
-  // agentRegistry.register("triage", triageAgent);
+  // Register Triage Agent
+  agentRegistry.register("triage", triageAgent);
+  
+  // TODO: Register remaining agents when implemented
   // agentRegistry.register("eligibility", eligibilityAgent);
   // agentRegistry.register("facility", facilityAgent);
   // agentRegistry.register("followup", followupAgent);
@@ -40,6 +43,7 @@ export async function initializeMCP() {
   // agentRegistry.register("knowledge", knowledgeAgent);
   
   console.log("[MCP] Multi-Agent System initialized successfully");
+  console.log(`[MCP] Registered agents: ${agentRegistry.getAllAgents().map(a => a.name).join(", ")}`);
 }
 
 // Start background event processing

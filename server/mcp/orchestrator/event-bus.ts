@@ -87,12 +87,22 @@ export class EventBus extends EventEmitter {
 
   /**
    * Process all pending events from database
+   * Uses status transitions to prevent race conditions
    */
   private async processPendingEvents() {
     try {
       const pendingEvents = await storage.getPendingAgentEvents();
       
       for (const event of pendingEvents) {
+        // Immediately transition to "processing" to prevent race conditions
+        // If update fails, another process already claimed it
+        try {
+          await storage.updateAgentEventStatus(event.id, "processing");
+        } catch (error) {
+          // Event already being processed, skip
+          continue;
+        }
+        
         const handlers = this.handlers.get(event.type) || [];
         
         if (handlers.length === 0) {
@@ -101,19 +111,22 @@ export class EventBus extends EventEmitter {
           continue;
         }
         
-        // Execute all handlers for this event type
-        await Promise.all(
-          handlers.map(async (handler) => {
-            try {
-              await handler(event);
-            } catch (error) {
-              console.error(`[EventBus] Error in handler for event ${event.id}:`, error);
-            }
-          })
-        );
+        // Execute all handlers for this event type serially to avoid conflicts
+        let allSucceeded = true;
+        for (const handler of handlers) {
+          try {
+            await handler(event);
+          } catch (error) {
+            console.error(`[EventBus] Error in handler for event ${event.id}:`, error);
+            allSucceeded = false;
+          }
+        }
         
-        // Mark event as completed
-        await storage.updateAgentEventStatus(event.id, "completed");
+        // Mark event as completed or failed based on handler results
+        await storage.updateAgentEventStatus(
+          event.id, 
+          allSucceeded ? "completed" : "failed"
+        );
       }
     } catch (error) {
       console.error("[EventBus] Error processing pending events:", error);
