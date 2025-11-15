@@ -10,6 +10,10 @@ import Dashboard from "@/pages/dashboard";
 import SymptomChat from "@/pages/symptom-chat";
 import ProgramsChat from "@/pages/programs-chat";
 import Medicines from "@/pages/medicines";
+import MedicalProfile from "@/pages/medical-profile";
+import LabTests from "@/pages/lab-tests";
+import MedicineLibrary from "@/pages/medicine-library";
+import DiseaseLibrary from "@/pages/disease-library";
 import Appointments from "@/pages/appointments";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
@@ -25,6 +29,10 @@ function Router() {
       <Route path="/symptom-chat" component={SymptomChat} />
       <Route path="/programs-chat" component={ProgramsChat} />
       <Route path="/medicines" component={Medicines} />
+      <Route path="/medical-profile" component={MedicalProfile} />
+      <Route path="/lab-tests" component={LabTests} />
+      <Route path="/medicine-library" component={MedicineLibrary} />
+      <Route path="/disease-library" component={DiseaseLibrary} />
       <Route path="/appointments" component={Appointments} />
       <Route path="/emergency" component={Emergency} />
       <Route path="/map" component={Map} />

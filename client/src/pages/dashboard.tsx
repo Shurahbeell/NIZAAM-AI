@@ -2,7 +2,7 @@ import { useState } from "react";
 import DashboardCard from "@/components/DashboardCard";
 import EmergencyButton from "@/components/EmergencyButton";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, FileText, Beaker, BookOpen, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -90,6 +90,30 @@ export default function Dashboard() {
               title="Nearby Facilities"
               description="Find hospitals"
               onClick={() => setLocation("/map")}
+            />
+            <DashboardCard
+              icon={FileText}
+              title="Medical Profile"
+              description="Health information"
+              onClick={() => setLocation("/medical-profile")}
+            />
+            <DashboardCard
+              icon={Beaker}
+              title="Lab Test Advisor"
+              description="Recommended tests"
+              onClick={() => setLocation("/lab-tests")}
+            />
+            <DashboardCard
+              icon={BookOpen}
+              title="Medicine Library"
+              description="Drug information"
+              onClick={() => setLocation("/medicine-library")}
+            />
+            <DashboardCard
+              icon={Activity}
+              title="Disease Library"
+              description="Health conditions"
+              onClick={() => setLocation("/disease-library")}
             />
             <DashboardCard
               icon={ClipboardList}
