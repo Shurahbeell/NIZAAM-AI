@@ -5,8 +5,8 @@ import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Clock } from "lucide-rea
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery, useMutation, queryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 
 interface Emergency {
   id: string;
@@ -32,10 +32,13 @@ export default function HospitalEmergencies() {
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return await apiRequest(`/api/emergencies/${id}/status`, {
+      const response = await fetch(`/api/emergencies/${id}/status`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
       });
+      if (!response.ok) throw new Error("Failed to update status");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });

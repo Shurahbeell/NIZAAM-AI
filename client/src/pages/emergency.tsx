@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, AlertTriangle, MapPin, Phone, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
-import { apiRequest } from "@/lib/queryClient";
 
 interface EmergencyData {
   id: string;
@@ -59,8 +58,9 @@ export default function Emergency() {
 
     try {
       // Send emergency to backend
-      await apiRequest("/api/emergencies", {
+      const response = await fetch("/api/emergencies", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           patientId: null,
           patientName: "Ali Ahmed",
@@ -74,6 +74,10 @@ export default function Emergency() {
           notes: null
         })
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to send emergency");
+      }
 
       setTimeout(() => {
         setIsSending(false);

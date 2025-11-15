@@ -62,7 +62,13 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      role: insertUser.role ?? "patient",
+      hospitalId: null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -71,8 +77,17 @@ export class MemStorage implements IStorage {
   async createEmergency(insertEmergency: InsertEmergency): Promise<Emergency> {
     const id = randomUUID();
     const emergency: Emergency = { 
-      ...insertEmergency, 
       id,
+      patientId: insertEmergency.patientId ?? null,
+      patientName: insertEmergency.patientName,
+      patientPhone: insertEmergency.patientPhone,
+      location: insertEmergency.location ?? null,
+      emergencyType: insertEmergency.emergencyType,
+      priority: insertEmergency.priority,
+      symptoms: insertEmergency.symptoms,
+      status: insertEmergency.status ?? "active",
+      assignedHospitalId: insertEmergency.assignedHospitalId ?? null,
+      notes: insertEmergency.notes ?? null,
       createdAt: new Date()
     };
     this.emergencies.set(id, emergency);
@@ -114,8 +129,14 @@ export class MemStorage implements IStorage {
   async createScreeningReminder(insertReminder: InsertScreeningReminder): Promise<ScreeningReminder> {
     const id = randomUUID();
     const reminder: ScreeningReminder = {
-      ...insertReminder,
       id,
+      userId: insertReminder.userId,
+      topic: insertReminder.topic,
+      reminderType: insertReminder.reminderType,
+      nextDueDate: insertReminder.nextDueDate,
+      frequency: insertReminder.frequency ?? null,
+      notificationSent: insertReminder.notificationSent ?? false,
+      isEnabled: insertReminder.isEnabled ?? true,
       createdAt: new Date()
     };
     this.screeningReminders.set(id, reminder);
