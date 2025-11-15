@@ -1,5 +1,6 @@
 import { openai, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
+import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
 import type { AgentMessage } from "@shared/schema";
 
@@ -107,33 +108,57 @@ export class EligibilityAgent implements Agent {
     message: string,
     language: string = "english"
   ): Promise<string> {
-    const storage = await import("../../storage").then(m => m.storage);
-    const history = await storage.getSessionMessages(sessionId);
-    
-    // Extract context from conversation
-    const context = this.extractContext(history);
-    
-    // Get eligibility assessment
-    const assessment = await this.assessEligibility(message, context, language);
-    
-    // Generate response
-    const response = await this.generateResponse(assessment, language);
-    
-    // Store message
-    await storage.createAgentMessage({
-      sessionId,
-      senderType: "agent",
-      content: response.text,
-      metadata: {
-        eligiblePrograms: assessment.eligiblePrograms,
-        recommendedQuestions: assessment.recommendedQuestions,
-        confidence: assessment.confidence,
-        reasoning: assessment.reasoning
-      },
-      language
-    });
-    
-    return response.text;
+    try {
+      console.log(`[EligibilityAgent] Processing message in ${language}`);
+      
+      // Detect and translate Urdu input to English for GPT-5
+      const detectedLanguage = await translationService.detectLanguage(message);
+      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      
+      let processedMessage = message;
+      if (userLanguage === "urdu") {
+        processedMessage = await translationService.translate(message, "english", "Program eligibility");
+      }
+      
+      const history = await storage.getSessionMessages(sessionId);
+      
+      // Extract context from conversation
+      const context = this.extractContext(history);
+      
+      // Get eligibility assessment
+      const assessment = await this.assessEligibility(processedMessage, context, "english");
+      
+      // Generate response in English first
+      const response = await this.generateResponse(assessment, "english");
+      
+      // Translate response to Urdu if needed
+      const localizedResponse = userLanguage === "urdu"
+        ? await translationService.translate(response.text, "urdu", "Program eligibility response")
+        : response.text;
+      
+      // Store message in user's language
+      await storage.createAgentMessage({
+        sessionId,
+        senderType: "agent",
+        content: localizedResponse,
+        metadata: {
+          eligiblePrograms: assessment.eligiblePrograms,
+          recommendedQuestions: assessment.recommendedQuestions,
+          confidence: assessment.confidence,
+          reasoning: assessment.reasoning
+        },
+        language: userLanguage
+      });
+      
+      return localizedResponse;
+      
+    } catch (error) {
+      console.error("[EligibilityAgent] Error:", error);
+      const fallback = "I can help you find health programs you're eligible for. Please tell me about your situation.";
+      return language === "urdu" 
+        ? await translationService.translate(fallback, "urdu")
+        : fallback;
+    }
   }
 
   private extractContext(history: any[]): EligibilityContext {

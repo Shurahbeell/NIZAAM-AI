@@ -1,359 +1,176 @@
 import { openai, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
+import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
-import { openai, MCP_CONFIG } from "../index";
-import { translationService } from "../services/translation";
-import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
-import { openai, MCP_CONFIG } from "../index";
-import { translationService } from "../services/translation";
-import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
-import { openai, MCP_CONFIG } from "../index";
-import { translationService } from "../services/translation";
-import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
-import { openai, MCP_CONFIG } from "../index";
-import { translationService } from "../services/translation";
-import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
-interface HealthQuery {
-  topic: string;
-  specificQuestion: string;
-  patientContext?: {
-    age?: number;
-    gender?: string;
-    conditions?: string[];
-  };
-}
 
-interface ProtocolSource {
-  organization: string;
-  title: string;
-  url: string;
-  relevanceScore: number;
-  keyPoints: string[];
-  citation: string;
-}
-
-interface AnalyticsResult {
-  answer: string;
-  protocols: ProtocolSource[];
-  evidenceLevel: "high" | "moderate" | "low";
-  recommendations: string[];
-  reasoning: string;
-  confidence: number;
-}
-
-// Sample WHO/NIH protocol database - In production, this would be a real database or API
+// Sample WHO/NIH protocol database
 const HEALTH_PROTOCOLS = [
   {
-    organization: "WHO",
+    org: "WHO",
     title: "Diabetes Management Guidelines",
-    url: "https://www.who.int/health-topics/diabetes",
-    topics: ["diabetes", "blood sugar", "insulin", "HbA1c"],
+    topics: ["diabetes", "blood sugar", "insulin"],
     keyPoints: [
       "Target HbA1c < 7% for most adults",
-      "Lifestyle modifications as first-line treatment",
-      "Metformin as first-line medication",
-      "Regular blood sugar monitoring essential"
+      "Lifestyle modifications first-line",
+      "Metformin as first medication",
+      "Regular blood sugar monitoring"
     ]
   },
   {
-    organization: "WHO",
-    title: "Tuberculosis Treatment Guidelines",
-    url: "https://www.who.int/tb/publications/guidelines",
-    topics: ["tuberculosis", "TB", "DOTS", "anti-TB medication"],
+    org: "WHO",
+    title: "TB Treatment Guidelines",
+    topics: ["tuberculosis", "TB", "DOTS"],
     keyPoints: [
-      "Directly Observed Treatment Short-course (DOTS) strategy",
-      "Minimum 6 months treatment duration",
-      "Never use single drug therapy",
-      "Regular sputum testing for monitoring"
+      "DOTS strategy essential",
+      "Minimum 6 months treatment",
+      "Never single drug therapy",
+      "Regular sputum testing"
     ]
   },
   {
-    organization: "WHO",
+    org: "WHO",
     title: "Maternal Health Guidelines",
-    url: "https://www.who.int/health-topics/maternal-health",
-    topics: ["pregnancy", "prenatal", "postnatal", "maternal care"],
+    topics: ["pregnancy", "prenatal", "maternal"],
     keyPoints: [
-      "Minimum 8 prenatal visits recommended",
-      "Iron and folic acid supplementation",
-      "Skilled birth attendance essential",
-      "Postnatal care within 24 hours of delivery"
+      "Minimum 8 prenatal visits",
+      "Iron and folic acid supplements",
+      "Skilled birth attendance",
+      "Postnatal care within 24 hours"
     ]
   },
   {
-    organization: "CDC",
+    org: "CDC",
     title: "Childhood Vaccination Schedule",
-    url: "https://www.cdc.gov/vaccines/schedules/",
-    topics: ["vaccination", "immunization", "children", "vaccines"],
+    topics: ["vaccination", "immunization", "children"],
     keyPoints: [
-      "BCG at birth for TB prevention",
+      "BCG at birth for TB",
       "DPT series at 6, 10, 14 weeks",
-      "Measles vaccine at 9 months",
+      "Measles at 9 months",
       "Polio drops at birth, 6, 10, 14 weeks"
     ]
-  },
-  {
-    organization: "NIH",
-    title: "Hypertension Management",
-    url: "https://www.nhlbi.nih.gov/health-topics/high-blood-pressure",
-    topics: ["hypertension", "blood pressure", "cardiovascular"],
-    keyPoints: [
-      "Target BP < 140/90 mmHg for most adults",
-      "Lifestyle changes: DASH diet, exercise, weight loss",
-      "ACE inhibitors or ARBs as first-line for many patients",
-      "Regular BP monitoring at home"
-    ]
-  },
-  {
-    organization: "WHO",
-    title: "Mental Health Action Plan",
-    url: "https://www.who.int/mental_health",
-    topics: ["mental health", "depression", "anxiety", "psychological"],
-    keyPoints: [
-      "Early intervention improves outcomes",
-      "Psychosocial support as first-line",
-      "Medication when needed for moderate-severe cases",
-      "Community-based care preferred over institutionalization"
-    ]
   }
 ];
 
-export const ANALYTICS_AGENT_CAPABILITIES: AgentCapability[] = [
-  "protocol_retrieval",
-  "evidence_assessment",
-  "citation_generation",
-  "medical_guidance",
-  "bilingual_support"
-];
+export class HealthAnalyticsAgent implements Agent {
+  name = "Health Analytics Agent";
+  description = "WHO/NIH protocol retrieval and evidence-based guidance";
+  capabilities = [
+    "protocol_retrieval",
+    "evidence_assessment",
+    "citation_generation",
+    "medical_guidance",
+    "bilingual_support"
+  ];
 
-export class HealthAnalyticsAgent {
-  private translationService: TranslationService;
-
-  constructor() {
-    this.translationService = new TranslationService();
-  }
-
-  async processMessage(
+  async handleMessage(
+    sessionId: string,
     message: string,
-    language: "english" | "urdu",
-    conversationHistory: AgentMessage[]
-  ): Promise<{ response: string; metadata: any }> {
-    
-    // Parse health query
-    const query = this.parseQuery(message, conversationHistory);
-    
-    // Retrieve relevant protocols and generate answer
-    const result = await this.retrieveProtocols(query, language);
-    
-    // Generate response
-    const response = await this.generateResponse(result, language);
-    
-    return {
-      response: response.text,
-      metadata: {
-        protocols: result.protocols,
-        evidenceLevel: result.evidenceLevel,
-        recommendations: result.recommendations,
-        confidence: result.confidence,
-        reasoning: result.reasoning
+    language: string = "english"
+  ): Promise<string> {
+    try {
+      console.log(`[HealthAnalyticsAgent] Processing message in ${language}`);
+      
+      // Detect and translate Urdu input to English for GPT-5
+      const detectedLanguage = await translationService.detectLanguage(message);
+      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      
+      let processedMessage = message;
+      if (userLanguage === "urdu") {
+        processedMessage = await translationService.translate(message, "english", "Health analytics query");
       }
-    };
-  }
+      
+      // Find relevant protocols
+      const queryLower = processedMessage.toLowerCase();
+    const relevant = HEALTH_PROTOCOLS.filter(p =>
+      p.topics.some(topic => queryLower.includes(topic))
+    );
 
-  private parseQuery(message: string, history: AgentMessage[]): HealthQuery {
-    const fullText = message + " " + history.map(m => m.content).join(" ");
-    
-    // Extract age
-    let age: number | undefined;
-    const ageMatch = fullText.match(/(\d+)\s*(years?|سال)/i);
-    if (ageMatch) age = parseInt(ageMatch[1]);
-    
-    // Extract gender
-    let gender: string | undefined;
-    if (/\b(female|woman|lady|عورت|خاتون)\b/i.test(fullText)) {
-      gender = "female";
-    } else if (/\b(male|man|مرد)\b/i.test(fullText)) {
-      gender = "male";
-    }
-    
-    // Extract conditions
-    const conditions: string[] = [];
-    const conditionKeywords = ["diabetes", "hypertension", "TB", "tuberculosis", "pregnancy", "asthma"];
-    conditionKeywords.forEach(condition => {
-      if (fullText.toLowerCase().includes(condition.toLowerCase())) {
-        conditions.push(condition);
-      }
-    });
-
-    return {
-      topic: message,
-      specificQuestion: message,
-      patientContext: age || gender || conditions.length > 0 ? {
-        age,
-        gender,
-        conditions: conditions.length > 0 ? conditions : undefined
-      } : undefined
-    };
-  }
-
-  private async retrieveProtocols(
-    query: HealthQuery,
-    language: "english" | "urdu"
-  ): Promise<AnalyticsResult> {
-    
-    // Find relevant protocols
-    const relevantProtocols = HEALTH_PROTOCOLS.filter(protocol => {
-      const queryLower = query.specificQuestion.toLowerCase();
-      return protocol.topics.some(topic => queryLower.includes(topic.toLowerCase()));
-    });
-
-    const protocolsInfo = relevantProtocols.length > 0
-      ? relevantProtocols.map(p => 
-          `${p.organization} - ${p.title}\nKey Points:\n${p.keyPoints.map(k => `- ${k}`).join("\n")}`
+    const protocolsInfo = relevant.length > 0
+      ? relevant.map(p => 
+          `${p.org} - ${p.title}\n${p.keyPoints.map(k => `- ${k}`).join("\n")}`
         ).join("\n\n")
-      : "No specific protocols found. Using general medical knowledge.";
+      : "General medical knowledge";
 
-    const patientContextStr = query.patientContext 
-      ? `Patient: ${query.patientContext.age ? `${query.patientContext.age} years old` : ""} ${query.patientContext.gender || ""} ${query.patientContext.conditions?.join(", ") || ""}`
-      : "General query";
+    const prompt = `Provide evidence-based health guidance.
 
-    const prompt = `You are a health analytics AI providing evidence-based medical guidance.
+Question: ${message}
 
-Patient Question: ${query.specificQuestion}
-${patientContextStr}
-
-Relevant WHO/NIH Protocols:
+Relevant Protocols:
 ${protocolsInfo}
 
-Task: Provide a comprehensive, evidence-based answer that:
-1. Directly answers the question using protocol guidelines
-2. Cites specific protocols and evidence
-3. Provides actionable recommendations
-4. Acknowledges limitations and when to seek professional care
-
-Respond in JSON format:
+Provide answer with evidence in JSON:
 {
-  "answer": "comprehensive answer to the question",
+  "answer": "comprehensive answer",
   "protocols": [
-    {
-      "organization": "WHO/NIH/CDC",
-      "title": "protocol title",
-      "relevanceScore": 0.0-1.0,
-      "keyPoints": ["relevant key points"],
-      "citation": "formal citation"
-    }
+    {"org": "WHO/CDC", "title": "title", "keyPoints": ["point 1"]}
   ],
   "evidenceLevel": "high|moderate|low",
-  "recommendations": ["actionable recommendations"],
-  "reasoning": "how protocols were applied to this case",
-  "confidence": 0.0-1.0
+  "recommendations": ["action 1", "action 2"],
+  "disclaimer": "when to see doctor"
 }`;
 
-    try {
-      const result = await generateText({
-        model: openai("gpt-4o"),
+      // Query GPT-5 for evidence-based answer
+      const result = await openai.chat.completions.create({
+        model: MCP_CONFIG.model,
         messages: [
-          {
-            role: "system",
-            content: "You are a medical evidence synthesis expert. Provide accurate, protocol-based guidance. Respond only with valid JSON."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
+          { role: "system", content: "You are a medical evidence expert. Respond with JSON only." },
+          { role: "user", content: prompt }
         ],
         temperature: 0.2,
-        maxTokens: 2500
+        max_tokens: 2000
       });
 
-      const parsed = JSON.parse(result.text);
+      const parsed = JSON.parse(result.choices[0].message.content || "{}");
       
-      // Enhance protocols with URLs
-      parsed.protocols = parsed.protocols.map((p: any) => {
-        const matchingProtocol = relevantProtocols.find(
-          rp => rp.organization === p.organization && rp.title === p.title
-        );
-        return {
-          ...p,
-          url: matchingProtocol?.url || "https://www.who.int"
-        };
+      let responseText = `${parsed.answer}\n\n`;
+      
+      const evidenceEmoji = parsed.evidenceLevel === "high" ? "🟢" : parsed.evidenceLevel === "moderate" ? "🟡" : "🟠";
+      responseText += `${evidenceEmoji} **Evidence Level**: ${parsed.evidenceLevel?.toUpperCase()}\n\n`;
+
+      if (parsed.protocols?.length > 0) {
+        responseText += "📚 **Evidence Sources:**\n";
+        parsed.protocols.forEach((p: any, i: number) => {
+          responseText += `${i + 1}. ${p.org} - ${p.title}\n`;
+          if (p.keyPoints) {
+            responseText += p.keyPoints.slice(0, 2).map((k: string) => `   - ${k}`).join("\n") + "\n";
+          }
+        });
+        responseText += "\n";
+      }
+
+      if (parsed.recommendations?.length > 0) {
+        responseText += "💡 **Recommendations:**\n";
+        parsed.recommendations.forEach((rec: string, i: number) => {
+          responseText += `${i + 1}. ${rec}\n`;
+        });
+        responseText += "\n";
+      }
+
+      responseText += `\n⚠️ ${parsed.disclaimer || "This is not medical advice. Consult a healthcare professional."}`;
+
+      // Translate response to Urdu if needed
+      const localizedResponse = userLanguage === "urdu"
+        ? await translationService.translate(responseText, "urdu", "Health analytics response")
+        : responseText;
+
+      await storage.createAgentMessage({
+        sessionId,
+        senderType: "agent",
+        content: localizedResponse,
+        metadata: { protocols: parsed.protocols, evidenceLevel: parsed.evidenceLevel },
+        language: userLanguage
       });
 
-      return parsed as AnalyticsResult;
+      return localizedResponse;
 
     } catch (error) {
-      console.error("[AnalyticsAgent] Retrieval error:", error);
-      
-      // Fallback response
-      return {
-        answer: "I can provide general health information, but please consult a healthcare professional for personalized medical advice.",
-        protocols: relevantProtocols.slice(0, 2).map(p => ({
-          organization: p.organization,
-          title: p.title,
-          url: p.url,
-          relevanceScore: 0.7,
-          keyPoints: p.keyPoints.slice(0, 3),
-          citation: `${p.organization}. ${p.title}.`
-        })),
-        evidenceLevel: "moderate",
-        recommendations: [
-          "Consult a healthcare professional",
-          "Follow evidence-based guidelines",
-          "Regular monitoring and follow-up"
-        ],
-        reasoning: "Providing general guidance based on available protocols.",
-        confidence: 0.6
-      };
+      console.error("[HealthAnalyticsAgent] Error:", error);
+      const fallback = "I can provide health information based on WHO/NIH protocols. What would you like to know?";
+      return language === "urdu"
+        ? await translationService.translate(fallback, "urdu")
+        : fallback;
     }
-  }
-
-  private async generateResponse(
-    result: AnalyticsResult,
-    language: "english" | "urdu"
-  ): Promise<{ text: string }> {
-    
-    let responseText = `${result.answer}\n\n`;
-
-    // Evidence level
-    const evidenceEmoji = result.evidenceLevel === "high" ? "🟢" : result.evidenceLevel === "moderate" ? "🟡" : "🟠";
-    responseText += `${evidenceEmoji} **Evidence Level**: ${result.evidenceLevel.toUpperCase()}\n\n`;
-
-    // Protocols section
-    if (result.protocols.length > 0) {
-      responseText += "📚 **Evidence Sources:**\n";
-      result.protocols.forEach((protocol, i) => {
-        responseText += `${i + 1}. ${protocol.organization} - ${protocol.title}\n`;
-        if (protocol.keyPoints.length > 0) {
-          responseText += `   Key Points:\n${protocol.keyPoints.slice(0, 3).map(k => `   - ${k}`).join("\n")}\n`;
-        }
-        responseText += `   Reference: ${protocol.url}\n\n`;
-      });
-    }
-
-    // Recommendations section
-    if (result.recommendations.length > 0) {
-      responseText += "💡 **Recommendations:**\n";
-      result.recommendations.forEach((rec, i) => {
-        responseText += `${i + 1}. ${rec}\n`;
-      });
-      responseText += "\n";
-    }
-
-    responseText += `\n⚠️ **Disclaimer**: This information is based on WHO/NIH protocols and should not replace professional medical consultation.`;
-
-    // Translate to Urdu if needed
-    if (language === "urdu") {
-      responseText = await this.translationService.translate(responseText, "urdu");
-    }
-
-    return { text: responseText };
-  }
-
-  getCapabilities(): AgentCapability[] {
-    return ANALYTICS_AGENT_CAPABILITIES;
   }
 }
+
+export const healthAnalyticsAgent = new HealthAnalyticsAgent();

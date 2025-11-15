@@ -1,8 +1,8 @@
-import { openai } from "@ai-sdk/openai";
-import { generateText } from "ai";
-import type { AgentCapability, AgentMessage } from "../types";
-import { TranslationService } from "../services/translation";
-import { PIIProtectionService } from "../services/pii-protection";
+import { openai, MCP_CONFIG } from "../index";
+import { translationService } from "../services/translation";
+import { piiProtection } from "../services/pii-protection";
+import { storage } from "../../storage";
+import type { Agent } from "../orchestrator/agent-registry";
 
 interface HealthPattern {
   symptomCluster: string[];
@@ -38,69 +38,79 @@ interface KnowledgeAnalysis {
   confidence: number;
 }
 
-export const KNOWLEDGE_AGENT_CAPABILITIES: AgentCapability[] = [
-  "pattern_detection",
-  "outbreak_monitoring",
-  "data_aggregation",
-  "alert_escalation",
-  "anonymization"
-];
+export class KnowledgeAgent implements Agent {
+  name = "Knowledge Agent";
+  description = "Pattern detection and outbreak monitoring";
+  capabilities = [
+    "pattern_detection",
+    "outbreak_monitoring",
+    "data_aggregation",
+    "alert_escalation",
+    "anonymization"
+  ];
 
-export class KnowledgeAgent {
-  private translationService: TranslationService;
-  private piiProtection: PIIProtectionService;
-
-  constructor() {
-    this.translationService = new TranslationService();
-    this.piiProtection = new PIIProtectionService();
-  }
-
-  async processMessage(
+  async handleMessage(
+    sessionId: string,
     message: string,
-    language: "english" | "urdu",
-    conversationHistory: AgentMessage[]
-  ): Promise<{ response: string; metadata: any }> {
-    
-    // Anonymize all data before processing
-    const anonymizedMessage = await this.piiProtection.redactPII(message);
-    const anonymizedHistory = await Promise.all(
-      conversationHistory.map(async (msg) => ({
-        ...msg,
-        content: await this.piiProtection.redactPII(msg.content)
-      }))
-    );
-    
-    // Analyze patterns and detect potential outbreaks
-    const analysis = await this.analyzeHealthPatterns(
-      anonymizedMessage,
-      anonymizedHistory,
-      language
-    );
-    
-    // Generate response
-    const response = await this.generateResponse(analysis, language);
-    
-    // Process escalations if needed
-    if (analysis.alerts.some(a => a.shouldEscalate)) {
-      await this.escalateAlerts(analysis.alerts.filter(a => a.shouldEscalate));
-    }
-    
-    return {
-      response: response.text,
-      metadata: {
-        patterns: analysis.patterns,
-        alerts: analysis.alerts,
-        trends: analysis.trends,
-        confidence: analysis.confidence,
-        reasoning: analysis.reasoning
+    language: string = "english"
+  ): Promise<string> {
+    try {
+      console.log(`[KnowledgeAgent] Processing message in ${language}`);
+      
+      // Detect and translate Urdu input to English for GPT-5
+      const detectedLanguage = await translationService.detectLanguage(message);
+      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      
+      let processedMessage = message;
+      if (userLanguage === "urdu") {
+        processedMessage = await translationService.translate(message, "english", "Outbreak monitoring");
       }
-    };
+      
+      // Anonymize all data before processing
+      const anonymizedMessage = await piiProtection.redactPII(processedMessage);
+      
+      // Analyze patterns and detect potential outbreaks
+      const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "english");
+      
+      // Generate response in English first
+      const response = await this.generateResponse(analysis, "english");
+      
+      // Translate response to Urdu if needed
+      const localizedResponse = userLanguage === "urdu"
+        ? await translationService.translate(response.text, "urdu", "Outbreak monitoring response")
+        : response.text;
+      
+      // Process escalations if needed
+      if (analysis.alerts.some(a => a.shouldEscalate)) {
+        await this.escalateAlerts(analysis.alerts.filter(a => a.shouldEscalate));
+      }
+      
+      await storage.createAgentMessage({
+        sessionId,
+        senderType: "agent",
+        content: localizedResponse,
+        metadata: {
+          patterns: analysis.patterns,
+          alerts: analysis.alerts,
+          trends: analysis.trends
+        },
+        language: userLanguage
+      });
+      
+      return localizedResponse;
+      
+    } catch (error) {
+      console.error("[KnowledgeAgent] Error:", error);
+      const fallback = "I monitor health patterns and can detect potential outbreaks. Please tell me about your health concerns.";
+      return language === "urdu"
+        ? await translationService.translate(fallback, "urdu")
+        : fallback;
+    }
   }
 
   private async analyzeHealthPatterns(
     message: string,
-    history: AgentMessage[],
-    language: "english" | "urdu"
+    language: string
   ): Promise<KnowledgeAnalysis> {
     
     // In production, this would query aggregated anonymized data from database
@@ -163,8 +173,8 @@ Respond in JSON format:
 }`;
 
     try {
-      const result = await generateText({
-        model: openai("gpt-4o"),
+      const result = await openai.chat.completions.create({
+        model: MCP_CONFIG.model,
         messages: [
           {
             role: "system",
@@ -176,10 +186,10 @@ Respond in JSON format:
           }
         ],
         temperature: 0.3,
-        maxTokens: 2500
+        max_tokens: 2500
       });
 
-      const parsed = JSON.parse(result.text);
+      const parsed = JSON.parse(result.choices[0].message.content || "{}");
       
       // Parse date strings
       parsed.patterns = parsed.patterns.map((p: any) => ({
@@ -264,7 +274,7 @@ Note: All data anonymized and aggregated per privacy protocols.
 
   private async generateResponse(
     analysis: KnowledgeAnalysis,
-    language: "english" | "urdu"
+    language: string
   ): Promise<{ text: string }> {
     
     let responseText = "";
@@ -332,13 +342,11 @@ Note: All data anonymized and aggregated per privacy protocols.
 
     // Translate to Urdu if needed
     if (language === "urdu") {
-      responseText = await this.translationService.translate(responseText, "urdu");
+      responseText = await translationService.translate(responseText, "urdu");
     }
 
     return { text: responseText };
   }
-
-  getCapabilities(): AgentCapability[] {
-    return KNOWLEDGE_AGENT_CAPABILITIES;
-  }
 }
+
+export const knowledgeAgent = new KnowledgeAgent();
