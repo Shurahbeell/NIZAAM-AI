@@ -134,8 +134,7 @@ Provide top 3 recommendations with match scores (0-1) in JSON:
           { role: "system", content: "You are a facility finder. Respond with JSON only." },
           { role: "user", content: prompt }
         ],
-        temperature: 0.3,
-        max_tokens: 1500
+        max_completion_tokens: 1500
       });
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");

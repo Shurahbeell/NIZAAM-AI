@@ -69,8 +69,7 @@ Create adaptive reminders and recommendations in JSON:
           { role: "system", content: "You are a follow-up care coordinator. Respond with JSON only." },
           { role: "user", content: prompt }
         ],
-        temperature: 0.4,
-        max_tokens: 1500
+        max_completion_tokens: 1500
       });
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");

@@ -116,8 +116,7 @@ Provide answer with evidence in JSON:
           { role: "system", content: "You are a medical evidence expert. Respond with JSON only." },
           { role: "user", content: prompt }
         ],
-        temperature: 0.2,
-        max_tokens: 2000
+        max_completion_tokens: 2000
       });
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");

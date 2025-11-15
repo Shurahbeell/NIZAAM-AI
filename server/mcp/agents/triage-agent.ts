@@ -154,8 +154,7 @@ export class TriageAgent implements Agent {
       const response = await openai.chat.completions.create({
         model: MCP_CONFIG.model,
         messages,
-        temperature: MCP_CONFIG.temperature,
-        max_tokens: MCP_CONFIG.maxTokens
+        max_completion_tokens: MCP_CONFIG.maxTokens
       });
       
       const content = response.choices[0].message.content || "";

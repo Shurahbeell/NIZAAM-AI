@@ -67,7 +67,8 @@ export class KnowledgeAgent implements Agent {
       }
       
       // Anonymize all data before processing
-      const anonymizedMessage = await piiProtection.redactPII(processedMessage);
+      const anonymizedResult = piiProtection.minimizePII(processedMessage);
+      const anonymizedMessage = anonymizedResult.minimized;
       
       // Analyze patterns and detect potential outbreaks
       const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "english");
@@ -185,8 +186,7 @@ Respond in JSON format:
             content: prompt
           }
         ],
-        temperature: 0.3,
-        max_tokens: 2500
+        max_completion_tokens: 2500
       });
 
       const parsed = JSON.parse(result.choices[0].message.content || "{}");
