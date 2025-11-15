@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -101,6 +101,80 @@ export const screeningReminders = pgTable("screening_reminders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Agent System Tables
+export const agentSessions = pgTable("agent_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  agent: text("agent").notNull(), // "triage", "eligibility", "facility", "followup", "analytics", "knowledge"
+  status: text("status").notNull().default("active"), // "active", "completed", "terminated"
+  language: text("language").notNull().default("english"), // "english", "urdu"
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+});
+
+export const agentMessages = pgTable("agent_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  senderType: text("sender_type").notNull(), // "user", "agent", "system"
+  language: text("language").notNull().default("english"),
+  content: text("content").notNull(),
+  reasoningTrace: jsonb("reasoning_trace"), // Store agent's reasoning process
+  metadata: jsonb("metadata"), // Additional context (urgency level, confidence scores, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const agentEvents = pgTable("agent_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // "EmergencyCreated", "EligibilityReport", "FacilityRecommended", etc.
+  payload: jsonb("payload").notNull(),
+  triggeredByAgent: text("triggered_by_agent"), // Which agent triggered this event
+  triggeredBySession: varchar("triggered_by_session"),
+  status: text("status").notNull().default("pending"), // "pending", "processing", "completed", "failed"
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const cachedResponses = pgTable("cached_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agent: text("agent").notNull(),
+  keyHash: text("key_hash").notNull().unique(), // Hash of input for cache lookup
+  response: jsonb("response").notNull(),
+  language: text("language").notNull().default("english"),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const agentState = pgTable("agent_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().unique(),
+  agent: text("agent").notNull(),
+  state: jsonb("state").notNull(), // Current conversation state, context, variables
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const knowledgeAlerts = pgTable("knowledge_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertType: text("alert_type").notNull(), // "outbreak", "pattern", "anomaly"
+  signalDetails: jsonb("signal_details").notNull(), // What pattern was detected
+  severity: text("severity").notNull(), // "low", "medium", "high", "critical"
+  status: text("status").notNull().default("new"), // "new", "investigating", "confirmed", "resolved"
+  acknowledgedBy: varchar("acknowledged_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+});
+
+export const protocolSources = pgTable("protocol_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceName: text("source_name").notNull(), // "WHO", "Pakistan NIH", etc.
+  category: text("category").notNull(), // "guidelines", "protocols", "medication", "disease"
+  url: text("url"),
+  content: text("content"), // Cached protocol content
+  checksum: text("checksum"), // For detecting updates
+  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -142,6 +216,43 @@ export const insertScreeningReminderSchema = createInsertSchema(screeningReminde
   createdAt: true,
 });
 
+export const insertAgentSessionSchema = createInsertSchema(agentSessions).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertAgentMessageSchema = createInsertSchema(agentMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAgentEventSchema = createInsertSchema(agentEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCachedResponseSchema = createInsertSchema(cachedResponses).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
+export const insertAgentStateSchema = createInsertSchema(agentState).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertKnowledgeAlertSchema = createInsertSchema(knowledgeAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProtocolSourceSchema = createInsertSchema(protocolSources).omit({
+  id: true,
+  createdAt: true,
+  lastSyncedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertHospital = z.infer<typeof insertHospitalSchema>;
@@ -158,3 +269,18 @@ export type InsertWomensHealthAwareness = z.infer<typeof insertWomensHealthAware
 export type WomensHealthAwareness = typeof womensHealthAwareness.$inferSelect;
 export type InsertScreeningReminder = z.infer<typeof insertScreeningReminderSchema>;
 export type ScreeningReminder = typeof screeningReminders.$inferSelect;
+
+export type InsertAgentSession = z.infer<typeof insertAgentSessionSchema>;
+export type AgentSession = typeof agentSessions.$inferSelect;
+export type InsertAgentMessage = z.infer<typeof insertAgentMessageSchema>;
+export type AgentMessage = typeof agentMessages.$inferSelect;
+export type InsertAgentEvent = z.infer<typeof insertAgentEventSchema>;
+export type AgentEvent = typeof agentEvents.$inferSelect;
+export type InsertCachedResponse = z.infer<typeof insertCachedResponseSchema>;
+export type CachedResponse = typeof cachedResponses.$inferSelect;
+export type InsertAgentState = z.infer<typeof insertAgentStateSchema>;
+export type AgentState = typeof agentState.$inferSelect;
+export type InsertKnowledgeAlert = z.infer<typeof insertKnowledgeAlertSchema>;
+export type KnowledgeAlert = typeof knowledgeAlerts.$inferSelect;
+export type InsertProtocolSource = z.infer<typeof insertProtocolSourceSchema>;
+export type ProtocolSource = typeof protocolSources.$inferSelect;
