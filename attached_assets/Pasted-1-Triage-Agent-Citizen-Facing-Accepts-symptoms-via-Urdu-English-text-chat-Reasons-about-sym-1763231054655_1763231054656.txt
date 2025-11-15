@@ -1,0 +1,35 @@
+1. 
+Triage Agent (Citizen-Facing): Accepts symptoms via Urdu/English text chat, 
+Reasons about symptom severity using few-shot learning, decides urgency level: 
+Self-care / BHU Visit / Emergency. Plans for next steps based on assessment and 
+coordination with other agents when needed. 
+In Collaboration with   
+2. 
+3. 
+4. 
+5. 
+6. 
+Program Eligibility Agent: Reasons about eligibility for: Medical Card, EPI Vaccines, 
+Health Subsidy, plans information gathering (what data is missing?). Decides which 
+programs citizen qualifies for and generates pre-filled application forms 
+autonomously. Adapts questions based on citizen's answers. 
+Facility Finder Agent: Reasons about facility selection based on: Distance, 
+availability, opening hours, patient reviews. Decides best facility match for user's 
+specific needs or plans alternative routes if first choice unavailable. Coordinates 
+with Triage Agent to match facility capabilities with medical needs. 
+Follow-Up Agent: Plans medication/vaccination schedules autonomously. Decides 
+when to send reminders based on user behavior and adapts reminder frequency if 
+user non-adherent. Coordinates with Triage Agent for re-consultation needs. 
+Reasons for the intervention timing (when to escalate?). 
+Health Analytics Agent: Retrieves verified medical protocols from WHO, Pakistan 
+NIH, or pre-loaded knowledge base, reasons about which information is relevant to 
+current case, decides when to surface information vs. stay silent, cites sources for 
+transparency and coordinates with Triage Agent to provide evidence-based 
+guidance. 
+Knowledge Agent: Autonomously aggregates anonymized case data, detects 
+unusual patterns (e.g., dengue outbreak), decides when to raise alerts to health 
+authorities and plans data collection strategies. 
+Each agent must: 
+• Communicate through the MCP server (traceable inter-agent logs). 
+• Show autonomous decision making (e.g., if medicine is use, auto-notify patients). 
+• Demonstrate degraded mode (offline + cached orders). 
