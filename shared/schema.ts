@@ -77,6 +77,30 @@ export const emergencies = pgTable("emergencies", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const womensHealthAwareness = pgTable("womens_health_awareness", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topic: text("topic").notNull(), // "breast-cancer", "cervical-cancer", "pregnancy", etc.
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  riskFactors: text("risk_factors").array(),
+  preventionTips: text("prevention_tips").array(),
+  resources: text("resources").array(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const screeningReminders = pgTable("screening_reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  topic: text("topic").notNull(), // "breast-self-exam", "mammogram", "pap-smear", etc.
+  reminderType: text("reminder_type").notNull(),
+  nextDueDate: timestamp("next_due_date").notNull(),
+  frequency: text("frequency"), // "monthly", "yearly", "custom"
+  notificationSent: boolean("notification_sent").default(false),
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -108,6 +132,16 @@ export const insertEmergencySchema = createInsertSchema(emergencies).omit({
   createdAt: true,
 });
 
+export const insertWomensHealthAwarenessSchema = createInsertSchema(womensHealthAwareness).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertScreeningReminderSchema = createInsertSchema(screeningReminders).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertHospital = z.infer<typeof insertHospitalSchema>;
@@ -120,3 +154,7 @@ export type InsertPrescription = z.infer<typeof insertPrescriptionSchema>;
 export type Prescription = typeof prescriptions.$inferSelect;
 export type InsertEmergency = z.infer<typeof insertEmergencySchema>;
 export type Emergency = typeof emergencies.$inferSelect;
+export type InsertWomensHealthAwareness = z.infer<typeof insertWomensHealthAwarenessSchema>;
+export type WomensHealthAwareness = typeof womensHealthAwareness.$inferSelect;
+export type InsertScreeningReminder = z.infer<typeof insertScreeningReminderSchema>;
+export type ScreeningReminder = typeof screeningReminders.$inferSelect;

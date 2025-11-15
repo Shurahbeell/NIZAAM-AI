@@ -5,6 +5,8 @@ import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Clock } from "lucide-rea
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery, useMutation, queryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Emergency {
   id: string;
@@ -20,30 +22,28 @@ interface Emergency {
 
 export default function HospitalEmergencies() {
   const [, setLocation] = useLocation();
-  const [emergencies, setEmergencies] = useState<Emergency[]>([]);
 
-  useEffect(() => {
-    // Load emergencies from localStorage
-    const loadEmergencies = () => {
-      const stored = localStorage.getItem("emergencies");
-      if (stored) {
-        setEmergencies(JSON.parse(stored));
-      }
-    };
+  // Fetch emergencies with polling
+  const { data: emergencies = [], isLoading } = useQuery<Emergency[]>({
+    queryKey: ["/api/emergencies"],
+    refetchInterval: 5000 // Poll every 5 seconds
+  });
 
-    loadEmergencies();
-
-    // Poll for new emergencies every 5 seconds
-    const interval = setInterval(loadEmergencies, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // Update status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest(`/api/emergencies/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });
+    }
+  });
 
   const updateStatus = (id: string, status: Emergency["status"]) => {
-    const updated = emergencies.map(e =>
-      e.id === id ? { ...e, status } : e
-    );
-    setEmergencies(updated);
-    localStorage.setItem("emergencies", JSON.stringify(updated));
+    updateStatusMutation.mutate({ id, status });
   };
 
   const getPriorityColor = (priority: Emergency["priority"]) => {
@@ -82,7 +82,7 @@ export default function HospitalEmergencies() {
     return emergencies.filter(e => e.status === status);
   };
 
-  const sortedEmergencies = [...emergencies].sort((a, b) => {
+  const sortedEmergencies = isLoading ? [] : [...emergencies].sort((a, b) => {
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityDiff !== 0) return priorityDiff;

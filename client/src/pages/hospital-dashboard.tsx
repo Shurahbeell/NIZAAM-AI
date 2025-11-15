@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Users, Calendar, FileText, Activity, TrendingUp, AlertCircle, User, Stethoscope, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface StatCard {
   title: string;
@@ -15,22 +15,14 @@ interface StatCard {
 
 export default function HospitalDashboard() {
   const [, setLocation] = useLocation();
-  const [activeEmergencies, setActiveEmergencies] = useState(0);
 
-  useEffect(() => {
-    const loadEmergencies = () => {
-      const stored = localStorage.getItem("emergencies");
-      if (stored) {
-        const emergencies = JSON.parse(stored);
-        const active = emergencies.filter((e: any) => e.status === "active").length;
-        setActiveEmergencies(active);
-      }
-    };
+  // Fetch emergencies to get active count
+  const { data: emergencies = [] } = useQuery<any[]>({
+    queryKey: ["/api/emergencies"],
+    refetchInterval: 5000
+  });
 
-    loadEmergencies();
-    const interval = setInterval(loadEmergencies, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const activeEmergencies = emergencies.filter((e: any) => e.status === "active").length;
 
   const stats: StatCard[] = [
     { title: "Today's Appointments", value: "24", change: "+12%", icon: Calendar, trend: "up" },

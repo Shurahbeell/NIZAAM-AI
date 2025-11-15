@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, AlertTriangle, MapPin, Phone, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
+import { apiRequest } from "@/lib/queryClient";
 
 interface EmergencyData {
   id: string;
@@ -42,7 +43,7 @@ export default function Emergency() {
   const [isSent, setIsSent] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const handleSendHelp = () => {
+  const handleSendHelp = async () => {
     setIsSending(true);
     setProgress(0);
 
@@ -50,32 +51,38 @@ export default function Emergency() {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setIsSending(false);
-          setIsSent(true);
-          
-          // Save emergency to localStorage
-          const emergency: EmergencyData = {
-            id: Date.now().toString(),
-            patientName: "Ali Ahmed",
-            patientPhone: "+92 300 1234567",
-            location: "24.8607° N, 67.0011° E",
-            emergencyType: emergencyType,
-            priority: priorityMap[emergencyType] || "medium",
-            symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
-            status: "active",
-            createdAt: new Date().toISOString()
-          };
-          
-          const stored = localStorage.getItem("emergencies");
-          const emergencies = stored ? JSON.parse(stored) : [];
-          emergencies.unshift(emergency);
-          localStorage.setItem("emergencies", JSON.stringify(emergencies));
-          
           return 100;
         }
         return prev + 20;
       });
     }, 300);
+
+    try {
+      // Send emergency to backend
+      await apiRequest("/api/emergencies", {
+        method: "POST",
+        body: JSON.stringify({
+          patientId: null,
+          patientName: "Ali Ahmed",
+          patientPhone: "+92 300 1234567",
+          location: "24.8607° N, 67.0011° E",
+          emergencyType: emergencyType,
+          priority: priorityMap[emergencyType] || "medium",
+          symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
+          status: "active",
+          assignedHospitalId: null,
+          notes: null
+        })
+      });
+
+      setTimeout(() => {
+        setIsSending(false);
+        setIsSent(true);
+      }, 1500);
+    } catch (error) {
+      console.error("Failed to send emergency:", error);
+      setIsSending(false);
+    }
   };
 
   if (isSent) {

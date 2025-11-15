@@ -1,0 +1,81 @@
+✅ Replit Prompt – Women’s Health Awareness Module
+You are an expert full-stack developer. I already have a patient module implemented in React + FastAPI + Supabase. Now, add a **Women’s Health Awareness module** with the following requirements:
+
+STACK:
+- Frontend: React + TailwindCSS
+- Backend: FastAPI (Python)
+- Database: Supabase (PostgreSQL)
+- Notifications: integrated with existing Health Reminders System
+- Optional AI: symptom-based risk assessment (rule-based or OpenAI/HF)
+
+---
+
+MODULE FEATURES:
+
+1. **Awareness Topics**
+   - Breast Cancer: signs, symptoms, risk factors, self-exam guide, mammogram reminders
+   - Cervical Cancer: HPV info, Pap smear reminders, prevention tips
+   - Pregnancy & Maternal Health: high-risk pregnancy info, nutrition, vaccination reminders
+   - Menstrual Health: cycle tracking, abnormal cycle alerts, PMS info
+   - Reproductive Health & STIs: preventive tips, guidance, resources
+   - General Preventive Health: nutrition, exercise, mental health awareness
+
+2. **Screening Reminders**
+   - Monthly self-exam reminders (breast cancer)
+   - Mammogram schedule alerts (age/risk-based)
+   - Pap smear reminders
+   - Pregnancy checkup reminders
+   - Integrated with Health Reminders System
+
+3. **Database Tables**
+   - `women_health_awareness`:
+     - id, topic, title, description, risk_factors, prevention_tips, resources, image_url
+   - `screening_reminders`:
+     - id, user_id, topic, next_due_date, notification_sent
+   - Optional: link to existing `users` table
+
+4. **Frontend**
+   - Awareness homepage: list of topics with search/filter
+   - Topic detail page: text + images + external resource links
+   - Reminder setup: allow user to set notifications for screening/self-exams
+   - AI symptom checker panel (optional): ask symptom-related questions → outputs risk score + advice
+
+5. **Backend (FastAPI)**
+   - CRUD endpoints for awareness articles:
+     - GET `/awareness` → list all topics
+     - GET `/awareness/{id}` → detailed topic info
+   - POST `/screening_reminder` → add user reminder
+   - GET `/screening_reminder/{user_id}` → fetch upcoming reminders
+   - AI symptom check endpoint:
+     - Input: user responses to risk questions
+     - Output: JSON with risk level, recommendations, next actions
+   - Reminders integration: trigger notifications via existing Health Reminders System
+
+6. **AI Symptom Check (Optional)**
+   - Rule-based evaluation for breast cancer, menstrual health, pregnancy risks
+   - Returns JSON:
+
+
+{
+"risk_level": "low/medium/high",
+"recommendation": "Consult doctor / schedule test / self-monitor",
+"red_flags": ["lump detected", "abnormal bleeding"],
+"advice": "Follow preventive guidelines"
+}
+
+
+7. **Frontend Routing**
+- `/women-health` → awareness homepage
+- `/women-health/{topic}` → topic detail page + AI symptom checker panel
+- Reminder setup integrated with user dashboard
+
+---
+
+OUTPUT REQUIREMENTS:
+1. Folder structure (frontend + backend)
+2. Backend FastAPI code for awareness endpoints and reminders
+3. React frontend code for awareness module, topic pages, and reminders UI
+4. Supabase schema for `women_health_awareness` and `screening_reminders` tables
+5. Example seed data for articles and reminders
+6. Instructions to run in Replit
+7. Ensure integration with existing Health Reminders System and Dashboard
