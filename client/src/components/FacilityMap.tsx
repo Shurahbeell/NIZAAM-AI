@@ -75,6 +75,7 @@ export default function FacilityMap({
     if (type.toLowerCase().includes("hospital")) return "red";
     if (type.toLowerCase().includes("clinic")) return "blue";
     if (type.toLowerCase().includes("bhu")) return "green";
+    if (type.toLowerCase().includes("pharmacy") || type.toLowerCase().includes("drug")) return "purple";
     return "orange";
   };
 
@@ -107,7 +108,7 @@ export default function FacilityMap({
             font-size: 16px;
             font-weight: bold;
           ">
-            ${type.toLowerCase().includes("hospital") ? "H" : type.toLowerCase().includes("clinic") ? "C" : "B"}
+            ${type.toLowerCase().includes("hospital") ? "H" : type.toLowerCase().includes("clinic") ? "C" : type.toLowerCase().includes("pharmacy") || type.toLowerCase().includes("drug") ? "P" : "B"}
           </div>
         </div>
       `,
@@ -134,6 +135,10 @@ export default function FacilityMap({
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
             <span>BHU (B)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-purple-500 rounded-full border-2 border-white"></div>
+            <span>Pharmacy (P)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-gray-400 rounded-full border-2 border-white"></div>

@@ -177,6 +177,83 @@ router.post("/api/mcp/facility/search", async (req: Request, res: Response) => {
         phone: "+92 51 111 222 666",
         address: "G-8/3, Islamabad",
         city: "Islamabad"
+      },
+      {
+        id: 6,
+        name: "CityMed Pharmacy",
+        lat: 31.5651,
+        lng: 74.3098,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 42 111 333 111",
+        address: "Mall Road, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 7,
+        name: "Health Plus Drug Store",
+        lat: 31.5204,
+        lng: 74.3587,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 42 111 333 222",
+        address: "Gulberg III, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 8,
+        name: "MediCare Pharmacy",
+        lat: 31.4697,
+        lng: 74.2728,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 42 111 333 333",
+        address: "DHA Phase 5, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 9,
+        name: "Fazal Din Pharmacy",
+        lat: 24.8700,
+        lng: 67.0631,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 21 111 444 111",
+        address: "Tariq Road, Karachi",
+        city: "Karachi"
+      },
+      {
+        id: 10,
+        name: "D. Watson Pharmacy Karachi",
+        lat: 24.9056,
+        lng: 67.0822,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 21 111 444 222",
+        address: "Clifton Block 5, Karachi",
+        city: "Karachi"
+      },
+      {
+        id: 11,
+        name: "MedLife Pharmacy",
+        lat: 33.7077,
+        lng: 73.0469,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 51 111 555 111",
+        address: "Blue Area, Islamabad",
+        city: "Islamabad"
+      },
+      {
+        id: 12,
+        name: "Sehat Pharmacy",
+        lat: 33.6995,
+        lng: 73.0363,
+        type: "Pharmacy",
+        isOpen: true,
+        phone: "+92 51 111 555 222",
+        address: "F-7 Markaz, Islamabad",
+        city: "Islamabad"
       }
     ];
     

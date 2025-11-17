@@ -62,14 +62,59 @@ const SAMPLE_FACILITIES = [
     rating: 4.7,
     reviewCount: 3421,
     availability: "24/7"
+  },
+  {
+    id: "5",
+    name: "CityMed Pharmacy",
+    type: "Pharmacy",
+    city: "Lahore",
+    address: "Mall Road, Lahore",
+    services: ["Prescription Medicines", "OTC Drugs", "Medical Supplies", "Home Delivery"],
+    rating: 4.3,
+    reviewCount: 567,
+    availability: "8 AM - 11 PM"
+  },
+  {
+    id: "6",
+    name: "Health Plus Drug Store",
+    type: "Pharmacy",
+    city: "Lahore",
+    address: "Gulberg III, Lahore",
+    services: ["Prescription Medicines", "OTC Drugs", "Vitamins", "First Aid Supplies"],
+    rating: 4.1,
+    reviewCount: 432,
+    availability: "24/7"
+  },
+  {
+    id: "7",
+    name: "Fazal Din Pharmacy",
+    type: "Pharmacy",
+    city: "Karachi",
+    address: "Tariq Road, Karachi",
+    services: ["Prescription Medicines", "OTC Drugs", "Medical Equipment", "Lab Tests"],
+    rating: 4.5,
+    reviewCount: 891,
+    availability: "24/7"
+  },
+  {
+    id: "8",
+    name: "MedLife Pharmacy",
+    type: "Pharmacy",
+    city: "Islamabad",
+    address: "Blue Area, Islamabad",
+    services: ["Prescription Medicines", "OTC Drugs", "Supplements", "Cosmetics"],
+    rating: 4.2,
+    reviewCount: 324,
+    availability: "9 AM - 10 PM"
   }
 ];
 
 export class FacilityFinderAgent implements Agent {
   name = "Facility Finder Agent";
-  description = "Smart hospital/BHU matching with Triage coordination";
+  description = "Smart hospital/BHU/pharmacy matching with Triage coordination";
   capabilities = [
     "facility_matching",
+    "pharmacy_search",
     "distance_calculation",
     "triage_coordination",
     "availability_checking",
