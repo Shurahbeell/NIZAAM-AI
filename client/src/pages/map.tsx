@@ -101,8 +101,27 @@ export default function Map() {
 
   // Fetch AI-recommended facilities based on user location
   const { data: aiFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: FacilityLocation[] }>({
-    queryKey: ['/api/mcp/facility/search', userLocation],
+    queryKey: ['/api/mcp/facility/search', userLocation?.lat, userLocation?.lng],
     enabled: !!userLocation,
+    queryFn: async () => {
+      if (!userLocation) return { facilities: [] };
+      
+      const response = await fetch('/api/mcp/facility/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+          language: 'english'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch facilities');
+      }
+      
+      return response.json();
+    }
   });
 
   // Smart filtering: Calculate distances, filter by proximity, sort by distance

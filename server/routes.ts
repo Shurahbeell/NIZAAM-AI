@@ -85,6 +85,109 @@ router.get("/api/agent/events/:sessionId", async (req: Request, res: Response) =
   }
 });
 
+// ==================== MCP FACILITY SEARCH ====================
+
+// Search facilities using AI agent
+router.post("/api/mcp/facility/search", async (req: Request, res: Response) => {
+  try {
+    const { latitude, longitude, language = "english" } = req.body;
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ error: "Missing latitude or longitude" });
+    }
+    
+    // Determine city from coordinates (simple approximation)
+    let city = "Lahore"; // Default
+    if (latitude > 24 && latitude < 25 && longitude > 66 && longitude < 68) {
+      city = "Karachi";
+    } else if (latitude > 33 && latitude < 34 && longitude > 72 && longitude < 74) {
+      city = "Islamabad";
+    }
+    
+    // Import agentRegistry dynamically
+    const { agentRegistry } = await import("./mcp/index");
+    
+    // Create search message for Facility Finder agent
+    const searchMessage = language === "urdu" 
+      ? `${city} میں میرے قریب ترین صحت کی سہولیات تلاش کریں۔`
+      : `Find nearby healthcare facilities in ${city}.`;
+    
+    // Route to Facility Finder agent (returns text response)
+    await agentRegistry.routeMessage(
+      "facility",
+      "facility-search-session",
+      searchMessage,
+      language
+    );
+    
+    // Return mock facilities filtered by city for now
+    // TODO: Extract structured data from agent response in future
+    const mockFacilities = [
+      {
+        id: 1,
+        name: "Jinnah Hospital",
+        lat: 31.4827,
+        lng: 74.3145,
+        type: "Teaching Hospital",
+        isOpen: true,
+        phone: "+92 42 111 222 333",
+        address: "Ferozepur Road, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 2,
+        name: "Services Hospital",
+        lat: 31.5050,
+        lng: 74.3293,
+        type: "Government Hospital",
+        isOpen: true,
+        phone: "+92 42 111 222 444",
+        address: "Jail Road, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 3,
+        name: "Model Town BHU",
+        lat: 31.4835,
+        lng: 74.3278,
+        type: "Basic Health Unit",
+        isOpen: true,
+        phone: "+92 42 111 222 555",
+        address: "Model Town, Lahore",
+        city: "Lahore"
+      },
+      {
+        id: 4,
+        name: "Agha Khan Hospital Karachi",
+        lat: 24.8967,
+        lng: 67.0650,
+        type: "Private Hospital",
+        isOpen: true,
+        phone: "+92 21 111 911 911",
+        address: "Stadium Road, Karachi",
+        city: "Karachi"
+      },
+      {
+        id: 5,
+        name: "PIMS Hospital Islamabad",
+        lat: 33.7093,
+        lng: 73.0722,
+        type: "Teaching Hospital",
+        isOpen: true,
+        phone: "+92 51 111 222 666",
+        address: "G-8/3, Islamabad",
+        city: "Islamabad"
+      }
+    ];
+    
+    const filteredFacilities = mockFacilities.filter(f => f.city === city);
+    res.json({ facilities: filteredFacilities });
+  } catch (error: any) {
+    console.error("[Routes] Facility search error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== EMERGENCY ROUTES ====================
 
 // Get all emergencies
