@@ -8,64 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { calculateDistance, formatDistance, filterByProximity, sortByDistance } from "@/lib/distance";
 
-// Real Pakistan hospital coordinates
-const facilities: FacilityLocation[] = [
-  {
-    id: 1,
-    name: "Jinnah Hospital",
-    lat: 31.4827,
-    lng: 74.3145,
-    distance: "2.3 km",
-    type: "Teaching Hospital",
-    isOpen: true,
-    phone: "+92 42 111 222 333",
-    address: "Ferozepur Road, Lahore"
-  },
-  {
-    id: 2,
-    name: "Services Hospital",
-    lat: 31.5050,
-    lng: 74.3293,
-    distance: "3.1 km",
-    type: "Government Hospital",
-    isOpen: true,
-    phone: "+92 42 111 222 444",
-    address: "Jail Road, Lahore"
-  },
-  {
-    id: 3,
-    name: "Model Town BHU",
-    lat: 31.4835,
-    lng: 74.3278,
-    distance: "1.8 km",
-    type: "Basic Health Unit",
-    isOpen: true,
-    phone: "+92 42 111 222 555",
-    address: "Model Town, Lahore"
-  },
-  {
-    id: 4,
-    name: "Agha Khan Hospital Karachi",
-    lat: 24.8967,
-    lng: 67.0650,
-    distance: "5.2 km",
-    type: "Private Hospital",
-    isOpen: true,
-    phone: "+92 21 111 911 911",
-    address: "Stadium Road, Karachi"
-  },
-  {
-    id: 5,
-    name: "PIMS Hospital Islamabad",
-    lat: 33.7093,
-    lng: 73.0722,
-    distance: "4.1 km",
-    type: "Teaching Hospital",
-    isOpen: true,
-    phone: "+92 51 111 222 666",
-    address: "G-8/3, Islamabad"
-  }
-];
+// Default coordinates for initial load (Lahore, Pakistan)
+const DEFAULT_COORDS = { lat: 31.5204, lng: 74.3587 };
 
 export default function Map() {
   const [, setLocation] = useLocation();
@@ -99,19 +43,17 @@ export default function Map() {
     getUserLocation();
   }, []);
 
-  // Fetch AI-recommended facilities based on user location
+  // Fetch AI-recommended facilities (use user location or default coords)
+  const coords = userLocation || DEFAULT_COORDS;
   const { data: aiFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: FacilityLocation[] }>({
-    queryKey: ['/api/mcp/facility/search', userLocation?.lat, userLocation?.lng],
-    enabled: !!userLocation,
+    queryKey: ['/api/mcp/facility/search', coords.lat, coords.lng],
     queryFn: async () => {
-      if (!userLocation) return { facilities: [] };
-      
       const response = await fetch('/api/mcp/facility/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          latitude: userLocation.lat,
-          longitude: userLocation.lng,
+          latitude: coords.lat,
+          longitude: coords.lng,
           language: 'english'
         })
       });
@@ -126,12 +68,10 @@ export default function Map() {
 
   // Smart filtering: Calculate distances, filter by proximity, sort by distance
   const processedFacilities = useMemo(() => {
-    let facilitiesToProcess = facilities;
-
-    // If AI recommendations are available, use them instead of mock data
-    if (aiFacilities?.facilities && Array.isArray(aiFacilities.facilities)) {
-      facilitiesToProcess = aiFacilities.facilities;
-    }
+    // Use AI-recommended facilities from backend
+    const facilitiesToProcess = aiFacilities?.facilities && Array.isArray(aiFacilities.facilities) 
+      ? aiFacilities.facilities 
+      : [];
 
     // If no user location, return all facilities unsorted
     if (!userLocation) {
