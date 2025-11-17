@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -31,6 +31,17 @@ interface FacilityMapProps {
   facilities: FacilityLocation[];
   userLocation?: { lat: number; lng: number };
   onFacilityClick?: (facility: FacilityLocation) => void;
+}
+
+// Map controller component to handle recentering
+function MapController({ center }: { center: [number, number] }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    map.setView(center, 13, { animate: true });
+  }, [center, map]);
+  
+  return null;
 }
 
 export default function FacilityMap({
@@ -70,6 +81,7 @@ export default function FacilityMap({
   const createCustomIcon = (type: string, isOpen: boolean) => {
     const color = getMarkerColor(type);
     const opacity = isOpen ? 1 : 0.6;
+    const shape = isOpen ? "50% 50% 50% 0" : "20%";
     
     return L.divIcon({
       className: "custom-marker",
@@ -78,7 +90,7 @@ export default function FacilityMap({
           background-color: ${color};
           width: 30px;
           height: 30px;
-          border-radius: 50% 50% 50% 0;
+          border-radius: ${shape};
           transform: rotate(-45deg);
           border: 3px solid white;
           box-shadow: 0 2px 5px rgba(0,0,0,0.3);
@@ -106,81 +118,112 @@ export default function FacilityMap({
   };
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden border" data-testid="facility-map">
-      <MapContainer
-        center={center}
-        zoom={13}
-        style={{ height: "100%", width: "100%" }}
-        className="z-0"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+    <div className="w-full h-full flex flex-col gap-3">
+      {/* Map Legend */}
+      <div className="bg-card p-3 rounded-lg border text-sm">
+        <div className="font-semibold mb-2">Map Legend</div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>
+            <span>Hospital (H)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>
+            <span>Clinic (C)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+            <span>BHU (B)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-400 rounded-full border-2 border-white"></div>
+            <span>Closed (faded)</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Map Container */}
+      <div className="flex-1 rounded-lg overflow-hidden border" data-testid="facility-map">
+        <MapContainer
+          center={center}
+          zoom={13}
+          style={{ height: "100%", width: "100%" }}
+          className="z-0"
+        >
+          <MapController center={center} />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-        {/* User location marker */}
-        {userLocation && (
-          <>
-            <Marker position={[userLocation.lat, userLocation.lng]}>
+          {/* User location marker */}
+          {userLocation && (
+            <>
+              <Marker position={[userLocation.lat, userLocation.lng]}>
+                <Popup>
+                  <strong>Your Location</strong>
+                </Popup>
+              </Marker>
+              <Circle
+                center={[userLocation.lat, userLocation.lng]}
+                radius={500}
+                pathOptions={{ color: "blue", fillColor: "blue", fillOpacity: 0.1 }}
+              />
+            </>
+          )}
+
+          {/* Facility markers */}
+          {facilities.map((facility) => (
+            <Marker
+              key={facility.id}
+              position={[facility.lat, facility.lng]}
+              icon={createCustomIcon(facility.type, facility.isOpen)}
+              eventHandlers={{
+                click: () => onFacilityClick?.(facility),
+              }}
+              title={`${facility.name} - ${facility.type}`}
+            >
               <Popup>
-                <strong>Your Location</strong>
+                <div className="p-2 min-w-[200px]" data-testid={`popup-facility-${facility.id}`}>
+                  <h3 className="font-semibold text-base mb-1">{facility.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-2">{facility.type}</p>
+                  {facility.address && (
+                    <p className="text-xs text-muted-foreground mb-2">{facility.address}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs mb-1">
+                    <span className="font-medium">Distance:</span>
+                    <span>{facility.distance}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs mb-2">
+                    <span className="font-medium">Status:</span>
+                    <span
+                      className={`px-2 py-0.5 rounded ${
+                        facility.isOpen
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                      role="status"
+                      aria-label={facility.isOpen ? "Open now" : "Currently closed"}
+                    >
+                      {facility.isOpen ? "Open" : "Closed"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium">Phone:</span>
+                    <a
+                      href={`tel:${facility.phone}`}
+                      className="text-primary hover:underline"
+                      aria-label={`Call ${facility.name} at ${facility.phone}`}
+                    >
+                      {facility.phone}
+                    </a>
+                  </div>
+                </div>
               </Popup>
             </Marker>
-            <Circle
-              center={[userLocation.lat, userLocation.lng]}
-              radius={500}
-              pathOptions={{ color: "blue", fillColor: "blue", fillOpacity: 0.1 }}
-            />
-          </>
-        )}
-
-        {/* Facility markers */}
-        {facilities.map((facility) => (
-          <Marker
-            key={facility.id}
-            position={[facility.lat, facility.lng]}
-            icon={createCustomIcon(facility.type, facility.isOpen)}
-            eventHandlers={{
-              click: () => onFacilityClick?.(facility),
-            }}
-          >
-            <Popup>
-              <div className="p-2 min-w-[200px]" data-testid={`popup-facility-${facility.id}`}>
-                <h3 className="font-semibold text-base mb-1">{facility.name}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{facility.type}</p>
-                {facility.address && (
-                  <p className="text-xs text-muted-foreground mb-2">{facility.address}</p>
-                )}
-                <div className="flex items-center gap-2 text-xs mb-1">
-                  <span className="font-medium">Distance:</span>
-                  <span>{facility.distance}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs mb-2">
-                  <span className="font-medium">Status:</span>
-                  <span
-                    className={`px-2 py-0.5 rounded ${
-                      facility.isOpen
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {facility.isOpen ? "Open" : "Closed"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-medium">Phone:</span>
-                  <a
-                    href={`tel:${facility.phone}`}
-                    className="text-primary hover:underline"
-                  >
-                    {facility.phone}
-                  </a>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+          ))}
+        </MapContainer>
+      </div>
     </div>
   );
 }
