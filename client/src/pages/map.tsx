@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Navigation } from "lucide-react";
 import { useLocation } from "wouter";
 import FacilityCard from "@/components/FacilityCard";
 import FacilityMap, { type FacilityLocation } from "@/components/FacilityMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { calculateDistance, formatDistance, filterByProximity, sortByDistance } from "@/lib/distance";
 
 // Real Pakistan hospital coordinates
 const facilities: FacilityLocation[] = [
@@ -69,6 +71,7 @@ export default function Map() {
   const [, setLocation] = useLocation();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const MAX_DISTANCE_KM = 50; // Only show facilities within 50km
 
   const getUserLocation = () => {
     if (!navigator.geolocation) {
@@ -95,6 +98,50 @@ export default function Map() {
   useEffect(() => {
     getUserLocation();
   }, []);
+
+  // Fetch AI-recommended facilities based on user location
+  const { data: aiFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: FacilityLocation[] }>({
+    queryKey: ['/api/mcp/facility/search', userLocation],
+    enabled: !!userLocation,
+  });
+
+  // Smart filtering: Calculate distances, filter by proximity, sort by distance
+  const processedFacilities = useMemo(() => {
+    let facilitiesToProcess = facilities;
+
+    // If AI recommendations are available, use them instead of mock data
+    if (aiFacilities?.facilities && Array.isArray(aiFacilities.facilities)) {
+      facilitiesToProcess = aiFacilities.facilities;
+    }
+
+    // If no user location, return all facilities unsorted
+    if (!userLocation) {
+      return facilitiesToProcess;
+    }
+
+    // Filter by proximity (within MAX_DISTANCE_KM)
+    const nearbyFacilities = filterByProximity(
+      facilitiesToProcess,
+      userLocation.lat,
+      userLocation.lng,
+      MAX_DISTANCE_KM
+    );
+
+    // Sort by distance (nearest first)
+    const sortedFacilities = sortByDistance(
+      nearbyFacilities,
+      userLocation.lat,
+      userLocation.lng
+    );
+
+    // Update distance labels with real calculations
+    return sortedFacilities.map((facility) => ({
+      ...facility,
+      distance: formatDistance(
+        calculateDistance(userLocation.lat, userLocation.lng, facility.lat, facility.lng)
+      ),
+    }));
+  }, [aiFacilities, userLocation]);
 
   const handleFacilityClick = (facility: FacilityLocation) => {
     console.log("Facility clicked:", facility.name);
@@ -136,9 +183,19 @@ export default function Map() {
         </TabsList>
 
         <TabsContent value="map" className="mt-6">
+          {userLocation && processedFacilities.length === 0 && (
+            <div className="p-6 bg-muted rounded-lg text-center mb-4">
+              <MapPin className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-lg font-semibold mb-2">No facilities found nearby</p>
+              <p className="text-sm text-muted-foreground">
+                No healthcare facilities within {MAX_DISTANCE_KM}km of your location.
+                Try a different area or contact emergency services if urgent.
+              </p>
+            </div>
+          )}
           <div className="w-full h-[600px]">
             <FacilityMap
-              facilities={facilities}
+              facilities={processedFacilities}
               userLocation={userLocation}
               onFacilityClick={handleFacilityClick}
             />
@@ -146,13 +203,22 @@ export default function Map() {
           {userLocation && (
             <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
               <MapPin className="w-4 h-4 inline mr-2" />
-              Your location: {userLocation.lat.toFixed(4)}°, {userLocation.lng.toFixed(4)}°
+              Showing {processedFacilities.length} facilities within {MAX_DISTANCE_KM}km
+              {isLoadingAI && " • Fetching AI recommendations..."}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="list" className="space-y-4 mt-6">
-          {facilities.map((facility) => (
+          {userLocation && processedFacilities.length === 0 && (
+            <div className="p-6 bg-muted rounded-lg text-center">
+              <p className="text-lg font-semibold mb-2">No facilities found nearby</p>
+              <p className="text-sm text-muted-foreground">
+                No healthcare facilities within {MAX_DISTANCE_KM}km of your location.
+              </p>
+            </div>
+          )}
+          {processedFacilities.map((facility) => (
             <FacilityCard
               key={facility.id}
               name={facility.name}
