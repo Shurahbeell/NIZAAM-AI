@@ -219,13 +219,20 @@ export default function Map() {
               onFacilityClick={handleFacilityClick}
             />
           </div>
-          {userLocation && (
-            <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4 inline mr-2" />
-              Showing {processedFacilities.length} facilities within {MAX_DISTANCE_KM}km
-              {isLoadingAI && " • Fetching AI recommendations..."}
-            </div>
-          )}
+          <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground" data-testid="status-facilities-count">
+            <MapPin className="w-4 h-4 inline mr-2" />
+            {userLocation ? (
+              <>
+                Showing {processedFacilities.length} facilities within {MAX_DISTANCE_KM}km
+                {isLoadingAI && " • Fetching AI recommendations..."}
+              </>
+            ) : (
+              <>
+                Showing {processedFacilities.length} facilities
+                {isLoadingLocation ? " • Detecting your location..." : " • Click 'My Location' to filter by proximity"}
+              </>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="list" className="space-y-4 mt-6">
