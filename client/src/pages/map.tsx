@@ -71,7 +71,7 @@ export default function Map() {
   const [, setLocation] = useLocation();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const MAX_DISTANCE_KM = 50; // Only show facilities within 50km
+  const MAX_DISTANCE_KM = 200; // Only show facilities within 200km
 
   const getUserLocation = () => {
     if (!navigator.geolocation) {
