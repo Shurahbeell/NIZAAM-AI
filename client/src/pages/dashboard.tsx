@@ -171,6 +171,20 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* Emergency Module - Top Right */}
+        <div className="flex justify-end">
+          <Button
+            size="lg"
+            variant="destructive"
+            className="gap-2 shadow-lg"
+            onClick={() => setLocation("/emergency")}
+            data-testid="button-emergency-top"
+          >
+            <AlertCircle className="w-5 h-5" />
+            SOS Emergency
+          </Button>
+        </div>
+
         {/* MAIN MODULES Section */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-foreground">Main Services</h3>
@@ -214,9 +228,6 @@ export default function Dashboard() {
           </Accordion>
         </div>
       </div>
-
-      {/* Emergency Module */}
-      <EmergencyButton onClick={() => setLocation("/emergency")} />
     </div>
   );
 }
