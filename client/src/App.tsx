@@ -57,6 +57,16 @@ function Router() {
       <Route path="/womens-health" component={WomensHealth} />
       <Route path="/child-health" component={ChildHealth} />
       <Route path="/appointments" component={Appointments} />
+      <Route path="/hospital">
+        <RoleGuard requiredRole="hospital">
+          <HospitalDashboard />
+        </RoleGuard>
+      </Route>
+      <Route path="/hospital-dashboard">
+        <RoleGuard requiredRole="hospital">
+          <HospitalDashboard />
+        </RoleGuard>
+      </Route>
       <Route path="/hospital/dashboard">
         <RoleGuard requiredRole="hospital">
           <HospitalDashboard />
