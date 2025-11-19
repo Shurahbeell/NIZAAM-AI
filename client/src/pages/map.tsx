@@ -43,20 +43,14 @@ export default function Map() {
     getUserLocation();
   }, []);
 
-  // Fetch AI-recommended facilities (use user location or default coords)
+  // Fetch real hospitals from Google Places API
   const coords = userLocation || DEFAULT_COORDS;
-  const { data: aiFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: FacilityLocation[] }>({
-    queryKey: ['/api/mcp/facility/search', coords.lat, coords.lng],
+  const { data: googleFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: any[] }>({
+    queryKey: ['/api/facilities/hospitals', coords.lat, coords.lng],
     queryFn: async () => {
-      const response = await fetch('/api/mcp/facility/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          latitude: coords.lat,
-          longitude: coords.lng,
-          language: 'english'
-        })
-      });
+      const response = await fetch(
+        `/api/facilities/hospitals?lat=${coords.lat}&lng=${coords.lng}&radius=200000`
+      );
       
       if (!response.ok) {
         throw new Error('Failed to fetch facilities');
@@ -65,6 +59,25 @@ export default function Map() {
       return response.json();
     }
   });
+
+  // Transform Google Places data to FacilityLocation format
+  const aiFacilities = useMemo(() => {
+    if (!googleFacilities?.facilities) return { facilities: [] };
+    
+    return {
+      facilities: googleFacilities.facilities.map((place: any, index: number) => ({
+        id: index + 1,
+        name: place.name,
+        lat: place.latitude,
+        lng: place.longitude,
+        type: "Hospital",
+        distance: place.distance ? formatDistance(place.distance) : "Unknown",
+        isOpen: true,
+        phone: "",
+        address: place.address
+      }))
+    };
+  }, [googleFacilities]);
 
   // Smart filtering: Calculate distances, filter by proximity, sort by distance
   const processedFacilities = useMemo(() => {
