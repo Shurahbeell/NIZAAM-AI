@@ -2,34 +2,55 @@ import { openai, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
-import { GOOGLE_MAPS_API_KEY } from "../../config/google";
+import axios from "axios";
 
-interface FacilityMatch {
-  id: string;
-  name: string;
-  type: string;
-  address: string;
-  distance?: number;
-  rating: number;
-  reviewCount: number;
-  services: string[];
-  availability: string;
-  matchScore: number;
-  reasoning: string;
-}
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GOOGLE_MAPS_KEY || "";
 
-interface GooglePlacesResult {
+interface GooglePlace {
   name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
+  vicinity?: string;
+  formatted_address?: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
   rating?: number;
   place_id: string;
-  distance?: number;
+  user_ratings_total?: number;
+  types?: string[];
+  photos?: Array<{ photo_reference: string }>;
+  formatted_phone_number?: string;
+  opening_hours?: any;
+}
+
+interface FacilityResult {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  rating?: number;
+  place_id: string;
+  user_ratings_total?: number;
+  types?: string[];
+  photo_reference?: string;
+  phone?: string;
+  opening_hours?: any;
+  distance?: {
+    text: string;
+    value: number;
+  };
+  duration?: {
+    text: string;
+    value: number;
+  };
+  recommendation?: string[];
+  score?: number;
 }
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
+  const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -40,35 +61,295 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchPlacesNearby(
+  lat: number,
+  lng: number,
+  radius?: number,
+  rankBy?: 'distance',
+  keyword?: string,
+  pageToken?: string
+): Promise<{ results: GooglePlace[]; next_page_token?: string }> {
+  try {
+    let url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?';
+    
+    if (rankBy === 'distance') {
+      url += `location=${lat},${lng}&rankby=distance&type=hospital`;
+    } else {
+      url += `location=${lat},${lng}&radius=${radius || 5000}&type=hospital`;
+    }
+    
+    if (keyword) {
+      url += `&keyword=${encodeURIComponent(keyword)}`;
+    }
+    
+    if (pageToken) {
+      url += `&pagetoken=${pageToken}`;
+    }
+    
+    url += `&key=${GOOGLE_API_KEY}`;
+    
+    const response = await axios.get(url);
+    
+    if (response.data.status === 'ZERO_RESULTS') {
+      return { results: [] };
+    }
+    
+    if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+      console.error('[Places API] Error:', response.data.status, response.data.error_message);
+      return { results: [] };
+    }
+    
+    return {
+      results: response.data.results || [],
+      next_page_token: response.data.next_page_token
+    };
+  } catch (error) {
+    console.error('[fetchPlacesNearby] Error:', error);
+    return { results: [] };
+  }
+}
+
+async function fetchPlaceDetails(placeId: string): Promise<Partial<GooglePlace> | null> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_phone_number,opening_hours,website,photos&key=${GOOGLE_API_KEY}`;
+    const response = await axios.get(url);
+    
+    if (response.data.status === 'OK') {
+      return response.data.result;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[fetchPlaceDetails] Error:', error);
+    return null;
+  }
+}
+
+async function fetchDistanceMatrix(
+  origin: { lat: number; lng: number },
+  destinations: Array<{ lat: number; lng: number }>
+): Promise<Array<{ distance?: { text: string; value: number }; duration?: { text: string; value: number } }>> {
+  try {
+    const destinationsStr = destinations.map(d => `${d.lat},${d.lng}`).join('|');
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.lng}&destinations=${destinationsStr}&key=${GOOGLE_API_KEY}`;
+    
+    const response = await axios.get(url);
+    
+    if (response.data.status === 'OK' && response.data.rows?.[0]?.elements) {
+      return response.data.rows[0].elements.map((el: any) => ({
+        distance: el.distance,
+        duration: el.duration
+      }));
+    }
+    
+    return destinations.map(() => ({}));
+  } catch (error) {
+    console.error('[fetchDistanceMatrix] Error:', error);
+    return destinations.map(() => ({}));
+  }
+}
+
 export async function findNearbyFacilities(
   lat: number,
   lng: number,
-  radius: number = 200000
-): Promise<GooglePlacesResult[]> {
+  opts?: { limit?: number; filters?: string[] }
+): Promise<{ results: FacilityResult[]; meta: { cached: boolean; source: string; fetched_at: number; error?: string } }> {
+  const limit = opts?.limit || 50;
+  const filters = opts?.filters || [];
+  const keyword = filters.join(' ');
+  
+  console.log(`[findNearbyFacilities] Searching near ${lat},${lng} with limit ${limit}, filters: ${filters.join(',')}`);
+  
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=hospital&key=${GOOGLE_MAPS_API_KEY}`;
+    let allResults: GooglePlace[] = [];
+    const seenPlaceIds = new Set<string>();
     
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status === "ZERO_RESULTS" || !data.results) {
-      return [];
+    console.log('[Zone 1] Fetching with rankby=distance...');
+    let response = await fetchPlacesNearby(lat, lng, undefined, 'distance', keyword);
+    
+    response.results.forEach(r => {
+      if (!seenPlaceIds.has(r.place_id)) {
+        allResults.push(r);
+        seenPlaceIds.add(r.place_id);
+      }
+    });
+    
+    let pageToken = response.next_page_token;
+    let pageCount = 0;
+    
+    while (pageToken && allResults.length < limit && pageCount < 2) {
+      await sleep(2000);
+      console.log(`[Zone 1] Fetching page ${pageCount + 2}...`);
+      response = await fetchPlacesNearby(lat, lng, undefined, 'distance', keyword, pageToken);
+      
+      response.results.forEach(r => {
+        if (!seenPlaceIds.has(r.place_id)) {
+          allResults.push(r);
+          seenPlaceIds.add(r.place_id);
+        }
+      });
+      
+      pageToken = response.next_page_token;
+      pageCount++;
     }
-
-    const results: GooglePlacesResult[] = data.results.map((place: any) => ({
+    
+    console.log(`[Zone 1 Loaded] Found ${allResults.length} results`);
+    
+    const minWanted = 15;
+    const radii = [5000, 20000, 50000, 100000, 200000];
+    
+    if (allResults.length < minWanted) {
+      for (const radius of radii) {
+        if (allResults.length >= limit) break;
+        
+        console.log(`[Zone ${radius/1000}km] Fetching...`);
+        await sleep(400);
+        
+        const radiusResponse = await fetchPlacesNearby(lat, lng, radius, undefined, keyword);
+        
+        radiusResponse.results.forEach(r => {
+          if (!seenPlaceIds.has(r.place_id) && allResults.length < limit) {
+            allResults.push(r);
+            seenPlaceIds.add(r.place_id);
+          }
+        });
+        
+        console.log(`[Zone ${radius/1000}km Loaded] Total: ${allResults.length}`);
+        
+        let zonePageToken = radiusResponse.next_page_token;
+        if (zonePageToken && allResults.length < limit) {
+          await sleep(2000);
+          const pageResponse = await fetchPlacesNearby(lat, lng, radius, undefined, keyword, zonePageToken);
+          pageResponse.results.forEach(r => {
+            if (!seenPlaceIds.has(r.place_id) && allResults.length < limit) {
+              allResults.push(r);
+              seenPlaceIds.add(r.place_id);
+            }
+          });
+        }
+        
+        if (allResults.length >= limit) break;
+      }
+    }
+    
+    const mapped: FacilityResult[] = allResults.slice(0, limit).map(place => ({
       name: place.name,
-      address: place.vicinity,
-      latitude: place.geometry.location.lat,
-      longitude: place.geometry.location.lng,
+      address: place.vicinity || place.formatted_address || '',
+      lat: place.geometry.location.lat,
+      lng: place.geometry.location.lng,
       rating: place.rating,
       place_id: place.place_id,
-      distance: calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng)
+      user_ratings_total: place.user_ratings_total,
+      types: place.types,
+      photo_reference: place.photos?.[0]?.photo_reference
     }));
-
-    return results.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+    
+    mapped.forEach(f => {
+      f.distance = {
+        text: `${(calculateDistance(lat, lng, f.lat, f.lng) / 1000).toFixed(1)} km`,
+        value: calculateDistance(lat, lng, f.lat, f.lng)
+      };
+    });
+    
+    mapped.sort((a, b) => (a.distance?.value || 0) - (b.distance?.value || 0));
+    
+    const topN = Math.min(10, mapped.length);
+    const topResults = mapped.slice(0, topN);
+    
+    console.log(`[Place Details] Fetching for top ${topN} results...`);
+    for (const result of topResults) {
+      const details = await fetchPlaceDetails(result.place_id);
+      if (details) {
+        result.phone = details.formatted_phone_number;
+        result.opening_hours = details.opening_hours;
+        if (details.photos?.[0]) {
+          result.photo_reference = details.photos[0].photo_reference;
+        }
+      }
+      await sleep(100);
+    }
+    
+    console.log(`[Distance Matrix] Computing for top ${topN} results...`);
+    const destinations = topResults.map(r => ({ lat: r.lat, lng: r.lng }));
+    const distanceData = await fetchDistanceMatrix({ lat, lng }, destinations);
+    
+    topResults.forEach((result, i) => {
+      if (distanceData[i].distance) {
+        result.distance = distanceData[i].distance;
+      }
+      if (distanceData[i].duration) {
+        result.duration = distanceData[i].duration;
+      }
+    });
+    
+    const maxDistance = 200000;
+    const weightDistance = 0.5;
+    const weightRating = 0.35;
+    const weightEmergency = 0.15;
+    
+    mapped.forEach(result => {
+      const distanceNorm = Math.min((result.distance?.value || 0) / maxDistance, 1);
+      const ratingNorm = (result.rating || 0) / 5;
+      
+      const hasEmergency = filters.some(f => 
+        f.toLowerCase().includes('emergency') || 
+        f.toLowerCase().includes('24h')
+      ) || result.types?.some(t => t.includes('emergency'));
+      
+      const score = 
+        weightDistance * (1 - distanceNorm) +
+        weightRating * ratingNorm +
+        weightEmergency * (hasEmergency ? 1 : 0);
+      
+      result.score = score;
+      result.recommendation = [];
+      
+      if (hasEmergency) {
+        result.recommendation.push('Emergency');
+      }
+      
+      if ((result.rating || 0) >= 4.5) {
+        result.recommendation.push('Best Rated');
+      }
+    });
+    
+    mapped.sort((a, b) => (b.score || 0) - (a.score || 0));
+    
+    const top3 = mapped.slice(0, 3);
+    top3.forEach(r => {
+      if (!r.recommendation?.includes('Top Pick')) {
+        r.recommendation = [...(r.recommendation || []), 'Top Pick'];
+      }
+    });
+    
+    mapped.sort((a, b) => (a.distance?.value || 0) - (b.distance?.value || 0));
+    
+    console.log(`[Completed] Returning ${mapped.length} results`);
+    
+    return {
+      results: mapped,
+      meta: {
+        cached: false,
+        source: 'google',
+        fetched_at: Date.now()
+      }
+    };
+    
   } catch (error) {
-    console.error("[findNearbyFacilities] Error:", error);
-    return [];
+    console.error('[findNearbyFacilities] Error:', error);
+    return {
+      results: [],
+      meta: {
+        cached: false,
+        source: 'google',
+        fetched_at: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    };
   }
 }
 

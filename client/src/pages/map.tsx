@@ -43,13 +43,16 @@ export default function Map() {
     getUserLocation();
   }, []);
 
+  const [filters, setFilters] = useState<string[]>([]);
+  const [searchCoords, setSearchCoords] = useState(DEFAULT_COORDS);
+  
   // Fetch real hospitals from Google Places API
-  const coords = userLocation || DEFAULT_COORDS;
-  const { data: googleFacilities, isLoading: isLoadingAI } = useQuery<{ facilities: any[] }>({
-    queryKey: ['/api/facilities/hospitals', coords.lat, coords.lng],
+  const { data: googleFacilities, isLoading: isLoadingAI } = useQuery<{ results: any[]; meta: any }>({
+    queryKey: ['/api/facilities/hospitals', searchCoords.lat, searchCoords.lng, filters],
     queryFn: async () => {
+      const filterParam = filters.length > 0 ? `&filters=${filters.join(',')}` : '';
       const response = await fetch(
-        `/api/facilities/hospitals?lat=${coords.lat}&lng=${coords.lng}&radius=200000`
+        `/api/facilities/hospitals?lat=${searchCoords.lat}&lng=${searchCoords.lng}&limit=50${filterParam}`
       );
       
       if (!response.ok) {
@@ -62,22 +65,32 @@ export default function Map() {
 
   // Transform Google Places data to FacilityLocation format
   const aiFacilities = useMemo(() => {
-    if (!googleFacilities?.facilities) return { facilities: [] };
+    if (!googleFacilities?.results) return { facilities: [] };
     
     return {
-      facilities: googleFacilities.facilities.map((place: any, index: number) => ({
+      facilities: googleFacilities.results.map((place: any, index: number) => ({
         id: index + 1,
         name: place.name,
-        lat: place.latitude,
-        lng: place.longitude,
+        lat: place.lat,
+        lng: place.lng,
         type: "Hospital",
-        distance: place.distance ? formatDistance(place.distance) : "Unknown",
+        distance: place.distance || "Unknown",
+        duration: place.duration,
         isOpen: true,
-        phone: "",
-        address: place.address
+        phone: place.phone || "",
+        address: place.address,
+        rating: place.rating,
+        photo_reference: place.photo_reference,
+        recommendation: place.recommendation
       }))
     };
   }, [googleFacilities]);
+
+  useEffect(() => {
+    if (userLocation) {
+      setSearchCoords(userLocation);
+    }
+  }, [userLocation]);
 
   // Smart filtering: Calculate distances, filter by proximity, sort by distance
   const processedFacilities = useMemo(() => {
@@ -170,6 +183,9 @@ export default function Map() {
               facilities={processedFacilities}
               userLocation={userLocation}
               onFacilityClick={handleFacilityClick}
+              isLoading={isLoadingAI}
+              onFiltersChange={setFilters}
+              onBoundsChange={(lat, lng) => setSearchCoords({ lat, lng })}
             />
           </div>
           <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground" data-testid="status-facilities-count">

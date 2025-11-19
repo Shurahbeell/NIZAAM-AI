@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeMCP, startEventProcessing } from "./mcp/index";
 import { validatePIIProtectionConfig } from "./mcp/services/pii-protection";
 import facilitiesRoutes from "./routes/facilities";
+import photosRoutes from "./routes/photos";
 
 const app = express();
 
@@ -58,7 +59,8 @@ app.use((req, res, next) => {
   await initializeMCP();
   startEventProcessing();
   
-  app.use(facilitiesRoutes);
+  app.use("/api/facilities", facilitiesRoutes);
+  app.use("/api/facilities", photosRoutes);
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

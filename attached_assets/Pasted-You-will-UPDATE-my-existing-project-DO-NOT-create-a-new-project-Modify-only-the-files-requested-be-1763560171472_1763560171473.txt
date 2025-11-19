@@ -1,0 +1,133 @@
+You will UPDATE my existing project. DO NOT create a new project. Modify only the files requested below. The goal: implement all levels of improvement for the facility-finder so hospitals shown are accurate, fast, cheaper, useful, and AI-ranked. Use process.env.GOOGLE_MAPS_KEY for the API key (user has added it to Replit Secrets). Keep the rest of the app and authentication intact.
+
+SUMMARY OF FEATURES TO ADD:
+1. Use Google Places (rankby=distance) + fallback text search/paged requests to gather up to ~60 results quickly.
+2. Implement server-side caching with TTL and LRU-like simple Map to reduce repeated calls (cache key = lat|lng|radius|filters).
+3. Debounce requests server-side and client-side to avoid spam (400ms).
+4. Adaptive radius strategy: start with rankby=distance (closest results), if < desiredCount, expand using progressive radius tiers (5km → 20km → 50km → 100km → 200km) until we reach desiredCount or max.
+5. Use Places Photos (store photo_reference), and request Place Details only if necessary (to fetch photos/address).
+6. Add Distance Matrix integration to compute distance/time for top N results only (limit to 10 to reduce cost).
+7. Support filters: `type=hospital`, keywords (emergency, maternity, pharmacy), public/private via `keyword` matching; accept query params `filter=emergency,24h,...`.
+8. Add simple AI recommender scoring: score = weighted sum(distance normalized, rating, is_emergency_keyword, user_preference) and return `recommendation` tags (Top Pick, Closest Emergency, Best Rated).
+9. Implement retries and pagetoken paging for Places (handle pagination with short waits per Google docs).
+10. Update frontend FacilityMap.tsx to:
+   - Debounce user moves (400ms)
+   - Show loading shimmer overlay
+   - Call new endpoint `/api/facilities/hospitals?lat=...&lng=...&radius=...&filters=...&limit=...`
+   - Show markers with photos (if available), ratings, distance/time, call & directions buttons
+   - Add filter UI (checkboxes for Emergency/24h/Private/Pharmacy)
+   - Fit bounds to markers progressively as they load
+   - Use color-coded markers per distance zone (0–5km green, 5–20 blue, 20–50 orange, >50 red)
+   - Show "Top Picks" section in the map popup or side panel
+
+FILES TO MODIFY / CREATE:
+(Modify these paths inside project. If path doesn't exist, create it.)
+
+1) server/mcp/agents/facility-finder-agent.ts
+- Replace current implementation with an exported async function:
+  `export async function findNearbyFacilities(lat:number, lng:number, opts?:{limit?:number, filters?:string[]})`
+- Implementation details:
+  * Use `const apiKey = process.env.GOOGLE_MAPS_KEY;`
+  * Desired default limit = 50 (configurable)
+  * First attempt: call Places Nearby Search with `rankby=distance&location=lat,lng&type=hospital&key=...` (no radius). Collect up to `limit` using pagination (`next_page_token`) per Google docs (wait ~2s before using next_page_token).
+  * If collected results < minWanted (e.g., 15), perform progressive radius nearby searches:
+      radii = [5000, 20000, 50000, 100000, 200000]
+      For each radius not exceeding 200000, call:
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=lat,lng&radius=R&type=hospital&keyword=<joined filters>&key=...`
+      - Sleep 300–500ms between requests to avoid rate limits.
+      - Use `pagetoken` paging for each radius if provided.
+  * For each place result map to minimal object:
+      {
+        name,
+        vicinity || formatted_address,
+        lat: geometry.location.lat,
+        lng: geometry.location.lng,
+        rating,
+        place_id,
+        user_ratings_total,
+        types,
+        photo_reference (first photo if present)
+      }
+  * For top N (configurable, default 10) call Place Details only to fetch `formatted_phone_number` and `opening_hours` and high-res photo references (use `fields=photo,formatted_phone_number,opening_hours,website`).
+  * Compute distance/time using Distance Matrix API for these top N results (single batch request from origin lat,lng to destinations). Include `distance.text`, `distance.value`, `duration.text`, `duration.value`.
+  * Sort final results by distance ascending.
+  * Add `recommendation` field using simple scoring:
+      score = (weight_distance * (1 - min( distance_value / maxDistanceForNormalization, 1))) +
+              (weight_rating * (rating/5)) +
+              (weight_emergency * (hasEmergencyKeyword?1:0))
+      Choose weights default: distance 0.5, rating 0.35, emergency 0.15.
+      Add `recommendation` tags: if score in top 3 -> "Top Pick", if hasEmergencyKeyword -> "Emergency", if rating>=4.5 -> "Best Rated".
+  * Return `{ results: [...], meta: { cached: boolean, source: 'google', fetched_at: timestamp } }`
+  * Add robust error handling: on error, log and return `{ results: [], error: 'message' }` — never crash.
+
+2) server/routes/facilities.ts
+- Create router with route:
+  `GET /api/facilities/hospitals`
+  Query params:
+    - lat (required), lng (required), radius (optional), limit (optional), filters (comma-separated)
+  Behavior:
+    - Validate lat/lng; return 400 if missing.
+    - Normalize `filters` into array.
+    - Build cacheKey = `${lat}|${lng}|${radius||''}|${filtersSorted}|${limit||''}`
+    - If cache hit and TTL not expired -> return cached response.
+    - Else call `findNearbyFacilities(lat, lng, {limit, filters})`
+    - Cache result for TTL (config default 15 minutes).
+    - Return JSON to client.
+- Implement rate-limiting guard: if same ip or same key invokes > 5 requests/10s, delay or return 429.
+
+3) server/config/cache.ts
+- Simple in-memory cache module:
+  - `get(key)`, `set(key, value, ttlMs)`, `delete`, `clear`
+  - TTL cleanup using timestamps
+  - Note: do not persist to disk.
+
+4) server/middlewares/debounce-or-rate.ts (optional)
+- Basic rate limiter middleware used by the route to avoid request storms.
+
+5) server/index.ts or server/routes.ts
+- Ensure facilities router imported and used:
+  `import facilitiesRoutes from "./routes/facilities"; app.use("/api/facilities", facilitiesRoutes);`
+
+6) client/src/components/FacilityMap.tsx
+- Update to:
+  * Use debounce hook for map move / zoom (400ms).
+  * When centering, call `/api/facilities/hospitals?lat=...&lng=...&limit=50&filters=...`
+  * Show loading shimmer overlay while fetch in progress and progressive loading UI as each batch arrives (if backend returns incremental meta, but at minimum show spinner).
+  * Accept `limit` and `filters`.
+  * Render markers color-coded per distance brackets (0-5km green, 5-20 blue, 20-50 orange, >50 red).
+  * Marker popup shows: photo (if photo_reference present, build photo URL server-side or use Places Photo endpoint via server `/api/facilities/photo?photoref=...` to proxy), name, rating (stars), address, phone (if present), distance/time, "Call" button (`tel:`), and "Directions" button (open Google Maps with `https://www.google.com/maps/dir/?api=1&origin=LAT,LNG&destination=DEST_LAT,DEST_LNG`).
+  * Add a compact "Top Picks" panel above map listing top 3 recommended facilities with quick action buttons.
+  * Ensure fetch uses relative path (no direct Google key exposure).
+
+7) server/routes/photos.ts
+- Add route:
+  `GET /api/facilities/photo?photoref=...&maxwidth=400`
+  - Proxy to Places Photo API: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=...&photoreference=...&key=...`
+  - Stream image back to client (so key never exposed to browser).
+
+8) Performance & cost controls:
+- Limit Place Details and Distance Matrix calls to top 10 results only.
+- Cache photo proxy responses for longer TTL (1 day) if possible.
+
+9) Tests & Logging:
+- Add console logs with `Zone X Loaded`, `Cache hit`, `Cache miss`, and errors.
+- Ensure the agent logs do not print API keys.
+
+IMPLEMENTATION RULES FOR REPLIT AI:
+- Use async/await, fetch or axios (install axios if not present).
+- Add dependencies to package.json if needed (axios, express-rate-limit, node-fetch, cors).
+- Keep code TypeScript/JS consistent with existing codebase style. If project is TypeScript, use types and compile safely.
+- Respect existing imports/exports naming and keep formatting compatible.
+- Do NOT commit any real API key into files; use `process.env.GOOGLE_MAPS_KEY` in all server code. If the project previously used a local config file, prefer environment variables.
+- Return only modified/created file contents as the Replit AI output (do not include explanation text).
+
+EXACT OUTPUT FORMAT I EXPECT FROM YOU:
+- Modified/created file paths and full file contents for each file changed (server/mcp/agents/facility-finder-agent.ts, server/routes/facilities.ts, server/config/cache.ts, server/routes/photos.ts, client/src/components/FacilityMap.tsx, plus any small imports/changes in server/index.ts).
+- No additional commentary.
+
+IMPORTANT: If you cannot access `process.env.GOOGLE_MAPS_KEY` for testing in Replit, mock it safely with:
+`const apiKey = process.env.GOOGLE_MAPS_KEY || "TEST_KEY_SHOULD_BE_IN_SECRETS";`
+But do not commit any real key.
+
+Once you finish, respond with: "Completed" and list the modified files only.
+
