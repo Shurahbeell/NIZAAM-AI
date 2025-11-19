@@ -1,0 +1,197 @@
+You are modifying my project. Apply ALL the following fixes in order A–G.
+
+========================================================
+A) MIDDLEWARE CLEANUP
+========================================================
+
+1. Unify middleware folders:
+   - Delete: server/middlewares/
+   - Move any useful files into: server/middleware/
+   - Fix all imports throughout project to use server/middleware/*
+
+2. Create file: server/middleware/error-handler.ts
+   - Export:
+        export default function errorHandler(err, req, res, next) {
+            console.error(err);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+
+3. Create file: server/middleware/rate-limit.ts
+   - Implement simple memory-based rate limiter:
+        - Sliding window or token bucket
+        - Limit: 60 requests / 60 seconds per IP
+   - Export rateLimit() middleware.
+
+4. Update server/index.ts:
+   - Import rate-limit and apply before routes.
+   - Add errorHandler AFTER routes:
+         app.use(errorHandler);
+
+========================================================
+B) AGENT SYSTEM (MCP FOLDER)
+========================================================
+
+1. Verify orchestrator:
+   - event-bus.ts exports a single global EventEmitter instance.
+   - agent-registry.ts exports:
+         register(name, instance)
+         get(name)
+         list()
+
+2. Create new file: server/mcp/bootstrap.ts
+   - Import ALL agents from server/mcp/agents/*
+   - Register each:
+         AgentRegistry.register("triage", new TriageAgent())
+         AgentRegistry.register("followup", new FollowupAgent())
+         etc.
+
+3. Wire orchestrator into server:
+   - In server/index.ts add AT TOP:
+         import "./mcp/bootstrap";
+
+4. Fix missing prompts:
+   - Create files under server/mcp/prompts/:
+         triage.txt
+         followup.txt
+         emergency.txt
+         health-education.txt
+   - Fill them with placeholder text like:
+         "You are a health triage agent…"
+
+5. Each agent must:
+   - Load its prompt from corresponding txt file.
+   - Subscribe to eventBus.
+
+========================================================
+C) AUTH SYSTEM REPAIR
+========================================================
+
+1. Secure JWT:
+   - Remove any hardcoded secrets.
+   - Use process.env.JWT_SECRET ONLY.
+   - Throw descriptive error if missing.
+
+2. Password hashing:
+   - Use bcrypt or argon2 consistently across project.
+   - In server/services/auth.ts add:
+         hashPassword()
+         verifyPassword()
+
+3. Input validation:
+   - Install zod.
+   - Create server/validation/auth.ts with schemas:
+         SignupSchema
+         LoginSchema
+   - Use these in auth routes.
+
+4. Error handling:
+   - Replace throw new Error() with next({ status: 400, message: "..." })
+   - Ensure global error handler receives errors.
+
+5. Auth middleware:
+   - Validate Authorization: Bearer <token>
+   - Verify JWT
+   - Attach decoded user to req.user
+
+========================================================
+D) GOOGLE PLACES MICROSERVICE IMPROVEMENTS
+========================================================
+
+1. Add caching:
+   - Expand server/config/cache.ts with TTL Map-based cache.
+   - Wrap Google Places calls with cache check before API call.
+
+2. Validation:
+   - Add zod schemas in server/validation/google.ts
+   - Validate query params for:
+        - type
+        - radius
+        - keyword
+        - latitude, longitude
+
+3. Prevent quota draining:
+   - Apply rate-limit middleware on all /places routes.
+   - Sanitize user input:
+        - remove SQL-like injection patterns
+        - disallow long arbitrary text
+        - restrict keywords
+
+4. Wrap Google API errors:
+   - Return structured JSON:
+         { success: false, message, code }
+
+========================================================
+E) DATABASE LAYER CONSOLIDATION
+========================================================
+
+1. Remove duplicate:
+   - Delete: server/db/db.ts
+   - Keep: server/db/index.ts
+
+2. In server/db/index.ts:
+   - Export:
+         export const db = ...
+         export async function connectDB() {}
+         export async function disconnectDB() {}
+   - Fix all imports across project to:
+         import { db } from "../db";
+
+========================================================
+F) ROUTE FIXES (MISSING ENDPOINTS + NORMALIZATION)
+========================================================
+
+1. Standardize routes folder:
+   Ensure these exist under server/routes/:
+       auth.ts
+       agents.ts
+       facilities.ts
+       emergencies.ts
+       appointments.ts
+       users.ts
+       analytics.ts
+       womens-health.ts
+       vaccinations.ts
+
+2. Add missing endpoints:
+   - Appointments CRUD
+   - Vaccination tracker
+   - Women's health content
+   - Analytics stub endpoints
+
+3. Apply middleware:
+   - All POST/PUT routes require auth.
+   - Google endpoints require rate-limit.
+   - All routes end at error-handler downstream.
+
+4. Attach to server/index.ts:
+   - Prefix all routes with /api
+     Example:
+         app.use("/api/auth", authRoutes)
+
+========================================================
+G) PROJECT ARCHITECTURE + CLEANUP
+========================================================
+
+1. Folder cleanup:
+   - Move config files into /server/config
+   - Move services to /server/services
+   - Keep agents under /server/mcp/agents
+   - Keep middleware under /server/middleware
+   - Keep routes under /server/routes
+
+2. Naming conventions:
+   - Convert filenames to kebab-case.
+   - Ensure exports use camelCase.
+
+3. Cleanup:
+   - Remove unused files.
+   - Remove old Replit agent state folders.
+   - Keep `.replit`, `.env`, etc.
+
+4. Ensure build still works:
+   - Update paths after refactor.
+   - Run a test build inside Replit.
+
+========================================================
+
+After applying all above tasks A–G, confirm successful refactor, rebuild the project, and ensure the server boots without errors.

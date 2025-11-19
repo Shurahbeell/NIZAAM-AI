@@ -37,16 +37,15 @@ export const MCP_CONFIG = {
 export async function initializeMCP() {
   console.log("[MCP] Initializing Multi-Agent System...");
   
-  // Register all agents
-  agentRegistry.register("triage", triageAgent);
-  agentRegistry.register("eligibility", eligibilityAgent);
-  agentRegistry.register("facility", facilityFinderAgent);
-  agentRegistry.register("followup", followUpAgent);
-  agentRegistry.register("analytics", healthAnalyticsAgent);
-  agentRegistry.register("knowledge", knowledgeAgent);
+  // Agents are now registered via bootstrap.ts
+  // Just verify they're loaded
+  const agents = agentRegistry.getAllAgents();
+  if (agents.length === 0) {
+    throw new Error("[MCP] No agents registered! Bootstrap may have failed.");
+  }
   
   console.log("[MCP] Multi-Agent System initialized successfully");
-  console.log(`[MCP] Registered agents: ${agentRegistry.getAllAgents().map(a => a.name).join(", ")}`);
+  console.log(`[MCP] Registered agents: ${agents.map(a => a.name).join(", ")}`);
 }
 
 // Start background event processing

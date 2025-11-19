@@ -1,14 +1,26 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import http from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeMCP, startEventProcessing } from "./mcp/index";
 import { validatePIIProtectionConfig } from "./mcp/services/pii-protection";
 import cookieParser from "cookie-parser";
+import { rateLimit } from "./middleware/rate-limit";
+import errorHandler from "./middleware/error-handler";
+
+// Import MCP bootstrap to register all agents
+import "./mcp/bootstrap";
+
+// Import all route modules
 import authRoutes from "./routes/auth";
 import facilitiesRoutes from "./routes/facilities";
 import photosRoutes from "./routes/photos";
 import emergenciesRoutes from "./routes/emergencies";
 import agentsRoutes from "./routes/agents";
+import appointmentsRoutes from "./routes/appointments";
+import usersRoutes from "./routes/users";
+import analyticsRoutes from "./routes/analytics";
+import womensHealthRoutes from "./routes/womens-health";
+import vaccinationsRoutes from "./routes/vaccinations";
 
 const app = express();
 
@@ -24,6 +36,9 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Apply global rate limiting: 60 requests per 60 seconds per IP
+app.use(rateLimit({ windowMs: 60 * 1000, max: 60 }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -64,22 +79,23 @@ app.use((req, res, next) => {
   await initializeMCP();
   startEventProcessing();
   
-  // Mount API routes
+  // Mount all API routes with /api prefix
   app.use("/api/auth", authRoutes);
   app.use("/api/emergencies", emergenciesRoutes);
   app.use("/api/agent", agentsRoutes);
   app.use("/api/facilities", facilitiesRoutes);
   app.use("/api/facilities", photosRoutes);
-  
-  const server = await registerRoutes(app);
+  app.use("/api/appointments", appointmentsRoutes);
+  app.use("/api/users", usersRoutes);
+  app.use("/api/analytics", analyticsRoutes);
+  app.use("/api/womens-health", womensHealthRoutes);
+  app.use("/api/vaccinations", vaccinationsRoutes);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Global error handler (must be AFTER all routes)
+  app.use(errorHandler);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+  // Setup HTTP server
+  const server = http.createServer(app);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
