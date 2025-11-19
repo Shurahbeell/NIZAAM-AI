@@ -178,7 +178,7 @@ export default function Map() {
               </p>
             </div>
           )}
-          <div className="w-full h-[600px]">
+          <div className="w-full h-[calc(100vh-250px)] min-h-[700px]">
             <FacilityMap
               facilities={processedFacilities}
               userLocation={userLocation}
