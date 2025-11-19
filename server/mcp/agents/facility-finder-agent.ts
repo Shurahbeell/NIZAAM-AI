@@ -2,6 +2,7 @@ import { openai, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
+import { GOOGLE_MAPS_API_KEY } from "../../config/google";
 
 interface FacilityMatch {
   id: string;
@@ -17,7 +18,60 @@ interface FacilityMatch {
   reasoning: string;
 }
 
-// Sample facility data - In production, this would come from a database
+interface GooglePlacesResult {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  rating?: number;
+  place_id: string;
+  distance?: number;
+}
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+export async function findNearbyFacilities(
+  lat: number,
+  lng: number,
+  radius: number = 200000
+): Promise<GooglePlacesResult[]> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=hospital&key=${GOOGLE_MAPS_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "ZERO_RESULTS" || !data.results) {
+      return [];
+    }
+
+    const results: GooglePlacesResult[] = data.results.map((place: any) => ({
+      name: place.name,
+      address: place.vicinity,
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      rating: place.rating,
+      place_id: place.place_id,
+      distance: calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng)
+    }));
+
+    return results.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  } catch (error) {
+    console.error("[findNearbyFacilities] Error:", error);
+    return [];
+  }
+}
+
 const SAMPLE_FACILITIES = [
   {
     id: "1",
@@ -129,7 +183,6 @@ export class FacilityFinderAgent implements Agent {
     try {
       console.log(`[FacilityFinderAgent] Processing message in ${language}`);
       
-      // Detect and translate Urdu input to English for GPT-5
       const detectedLanguage = await translationService.detectLanguage(message);
       const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
       
@@ -141,8 +194,7 @@ export class FacilityFinderAgent implements Agent {
       const history = await storage.getSessionMessages(sessionId);
       const fullText = processedMessage + " " + history.map(m => m.content).join(" ");
     
-    // Extract location
-    let city = "Lahore"; // Default
+    let city = "Lahore";
     const cities = ["lahore", "karachi", "islamabad"];
     cities.forEach(c => {
       if (fullText.toLowerCase().includes(c)) {
@@ -150,7 +202,6 @@ export class FacilityFinderAgent implements Agent {
       }
     });
     
-    // Filter facilities
     const facilities = SAMPLE_FACILITIES.filter(f => f.city === city);
     
     const facilitiesInfo = facilities.map(f =>
@@ -200,7 +251,6 @@ Provide top 3 recommendations with match scores (0-1) in JSON:
       
       responseText += parsed.summary || "";
 
-      // Translate response to Urdu if needed
       const localizedResponse = userLanguage === "urdu"
         ? await translationService.translate(responseText, "urdu", "Facility search results")
         : responseText;
