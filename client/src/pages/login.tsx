@@ -3,30 +3,58 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
-import { Heart, User, Building2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Heart, AlertCircle } from "lucide-react";
+import { useAuthStore } from "@/lib/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"patient" | "hospital">("patient");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [, setLocation] = useLocation();
+  const { setAuth } = useAuthStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted", { phone, password, role });
-    
-    // Store role in localStorage for demo
-    localStorage.setItem("userRole", role);
-    
-    // Route based on role
-    if (role === "hospital") {
-      setLocation("/hospital/dashboard");
-    } else {
-      setLocation("/dashboard");
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          ...(isLogin ? {} : { role: "patient" }),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Authentication failed");
+      }
+
+      // Store auth data
+      setAuth(data.token, data.user);
+
+      // Redirect based on role
+      if (data.user.role === "hospital") {
+        setLocation("/hospital-dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -39,62 +67,30 @@ export default function Login() {
               <Heart className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">HealthCare App</h1>
+          <h1 className="text-2xl font-bold text-foreground">HealthCare Pakistan</h1>
           <p className="text-muted-foreground">Your health, our priority</p>
         </div>
 
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-3">
-              <Label>Login As</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <Card
-                  className={`cursor-pointer hover-elevate ${
-                    role === "patient" ? "border-primary bg-primary/5" : ""
-                  }`}
-                  onClick={() => setRole("patient")}
-                  data-testid="role-patient"
-                >
-                  <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      role === "patient" ? "bg-primary/10" : "bg-muted"
-                    }`}>
-                      <User className={`w-6 h-6 ${role === "patient" ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <p className="font-medium text-sm">Patient</p>
-                    {role === "patient" && <Badge variant="default" className="text-xs">Selected</Badge>}
-                  </CardContent>
-                </Card>
-                
-                <Card
-                  className={`cursor-pointer hover-elevate ${
-                    role === "hospital" ? "border-primary bg-primary/5" : ""
-                  }`}
-                  onClick={() => setRole("hospital")}
-                  data-testid="role-hospital"
-                >
-                  <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      role === "hospital" ? "bg-primary/10" : "bg-muted"
-                    }`}>
-                      <Building2 className={`w-6 h-6 ${role === "hospital" ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <p className="font-medium text-sm">Hospital</p>
-                    {role === "hospital" && <Badge variant="default" className="text-xs">Selected</Badge>}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="phone"
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                data-testid="input-phone"
+                id="username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                data-testid="input-username"
               />
             </div>
 
@@ -106,57 +102,38 @@ export default function Login() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
                 data-testid="input-password"
               />
             </div>
 
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="cnic">CNIC (Optional)</Label>
-                <Input
-                  id="cnic"
-                  type="text"
-                  placeholder="12345-1234567-1"
-                  data-testid="input-cnic"
-                />
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" data-testid="button-submit">
-              {isLogin ? "Login" : "Register"}
+            <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-submit">
+              {isLoading ? "Please wait..." : isLogin ? "Login" : "Register"}
             </Button>
-
-            {isLogin && (
-              <Button type="button" variant="ghost" className="w-full text-sm" data-testid="button-forgot-password">
-                Forgot Password?
-              </Button>
-            )}
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full mt-4" data-testid="button-google">
-              Continue with Google
-            </Button>
-          </div>
 
           <div className="mt-6 text-center text-sm">
             <button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover-elevate"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError("");
+              }}
+              className="text-primary hover:underline"
               data-testid="button-toggle-mode"
+              disabled={isLoading}
             >
               {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
             </button>
+          </div>
+
+          <div className="mt-6 p-4 bg-muted rounded-lg text-sm space-y-2">
+            <p className="font-semibold">Demo Credentials:</p>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>Patient: username=<strong>patient</strong>, password=<strong>patient123</strong></p>
+              <p>Hospital: username=<strong>jinnah_admin</strong>, password=<strong>hospital123</strong></p>
+            </div>
           </div>
         </Card>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useAuthStore } from "@/lib/auth";
 
 interface RoleGuardProps {
   requiredRole: "patient" | "hospital";
@@ -8,30 +9,30 @@ interface RoleGuardProps {
 
 export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    const userRole = localStorage.getItem("userRole");
-    
-    if (!userRole) {
-      // No role found, redirect to login
+    if (!isAuthenticated()) {
       setLocation("/login");
       return;
     }
 
-    if (userRole !== requiredRole) {
+    if (user && user.role !== requiredRole) {
       // Wrong role, redirect to appropriate dashboard
-      if (userRole === "hospital") {
-        setLocation("/hospital/dashboard");
+      if (user.role === "hospital") {
+        setLocation("/hospital-dashboard");
       } else {
         setLocation("/dashboard");
       }
     }
-  }, [requiredRole, setLocation]);
+  }, [user, isAuthenticated, requiredRole, setLocation]);
 
-  const userRole = localStorage.getItem("userRole");
-  
+  if (!isAuthenticated() || !user) {
+    return null;
+  }
+
   // Only render children if role matches
-  if (userRole === requiredRole) {
+  if (user.role === requiredRole) {
     return <>{children}</>;
   }
 

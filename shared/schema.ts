@@ -179,6 +179,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   role: true,
+  hospitalId: true,
 });
 
 export const insertHospitalSchema = createInsertSchema(hospitals).omit({

@@ -1,6 +1,22 @@
-import { 
-  type User, 
+import { eq, desc, and } from "drizzle-orm";
+import { db } from "./db";
+import {
+  users,
+  hospitals,
+  emergencies,
+  womensHealthAwareness,
+  screeningReminders,
+  agentSessions,
+  agentMessages,
+  agentEvents,
+  cachedResponses,
+  agentState,
+  knowledgeAlerts,
+  protocolSources,
+  type User,
   type InsertUser,
+  type Hospital,
+  type InsertHospital,
   type Emergency,
   type InsertEmergency,
   type WomensHealthAwareness,
@@ -20,64 +36,69 @@ import {
   type KnowledgeAlert,
   type InsertKnowledgeAlert,
   type ProtocolSource,
-  type InsertProtocolSource
+  type InsertProtocolSource,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
 
 export interface IStorage {
+  // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
+  // Hospital methods
+  getAllHospitals(): Promise<Hospital[]>;
+  getHospitalById(id: string): Promise<Hospital | undefined>;
+  createHospital(hospital: InsertHospital): Promise<Hospital>;
+
   // Emergency methods
   createEmergency(emergency: InsertEmergency): Promise<Emergency>;
   getAllEmergencies(): Promise<Emergency[]>;
+  getEmergenciesByHospital(hospitalId: string): Promise<Emergency[]>;
+  getEmergenciesByUser(userId: string): Promise<Emergency[]>;
   getEmergencyById(id: string): Promise<Emergency | undefined>;
-  updateEmergencyStatus(id: string, status: string): Promise<Emergency | undefined>;
-  
+  updateEmergencyStatus(id: string, status: string, assignedHospitalId?: string): Promise<Emergency | undefined>;
+
   // Women's Health Awareness methods
   getAllWomensHealthTopics(): Promise<WomensHealthAwareness[]>;
   getWomensHealthTopicById(id: string): Promise<WomensHealthAwareness | undefined>;
-  
+  createWomensHealthTopic(topic: InsertWomensHealthAwareness): Promise<WomensHealthAwareness>;
+
   // Screening Reminder methods
   createScreeningReminder(reminder: InsertScreeningReminder): Promise<ScreeningReminder>;
   getUserScreeningReminders(userId: string): Promise<ScreeningReminder[]>;
   updateScreeningReminder(id: string, updates: Partial<ScreeningReminder>): Promise<ScreeningReminder | undefined>;
-  
+
   // Agent Session methods
   createAgentSession(session: InsertAgentSession): Promise<AgentSession>;
   getAgentSession(id: string): Promise<AgentSession | undefined>;
   getUserAgentSessions(userId: string): Promise<AgentSession[]>;
   updateAgentSession(id: string, updates: Partial<AgentSession>): Promise<AgentSession | undefined>;
-  
+
   // Agent Message methods
   createAgentMessage(message: InsertAgentMessage): Promise<AgentMessage>;
   getSessionMessages(sessionId: string): Promise<AgentMessage[]>;
-  
+
   // Agent Event methods
   createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent>;
   getAllAgentEvents(): Promise<AgentEvent[]>;
   getPendingAgentEvents(): Promise<AgentEvent[]>;
-  updateAgentEventStatus(id: string, status: string): Promise<AgentEvent | undefined>;
-  
+  updateAgentEventStatus(id: string, status: string, processedAt?: Date): Promise<AgentEvent | undefined>;
+
   // Cached Response methods
   getCachedResponse(keyHash: string): Promise<CachedResponse | undefined>;
   createCachedResponse(response: InsertCachedResponse): Promise<CachedResponse>;
   updateCachedResponseUsage(keyHash: string): Promise<void>;
-  
+
   // Agent State methods
   getAgentState(sessionId: string): Promise<AgentState | undefined>;
   upsertAgentState(state: InsertAgentState): Promise<AgentState>;
-  
+
   // Knowledge Alert methods
   createKnowledgeAlert(alert: InsertKnowledgeAlert): Promise<KnowledgeAlert>;
   getAllKnowledgeAlerts(): Promise<KnowledgeAlert[]>;
   getNewKnowledgeAlerts(): Promise<KnowledgeAlert[]>;
   updateKnowledgeAlert(id: string, updates: Partial<KnowledgeAlert>): Promise<KnowledgeAlert | undefined>;
-  
+
   // Protocol Source methods
   getAllProtocolSources(): Promise<ProtocolSource[]>;
   getProtocolSource(id: string): Promise<ProtocolSource | undefined>;
@@ -85,391 +106,311 @@ export interface IStorage {
   updateProtocolSource(id: string, updates: Partial<ProtocolSource>): Promise<ProtocolSource | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private emergencies: Map<string, Emergency>;
-  private womensHealthTopics: Map<string, WomensHealthAwareness>;
-  private screeningReminders: Map<string, ScreeningReminder>;
-  private agentSessions: Map<string, AgentSession>;
-  private agentMessages: Map<string, AgentMessage>;
-  private agentEvents: Map<string, AgentEvent>;
-  private cachedResponses: Map<string, CachedResponse>;
-  private agentStates: Map<string, AgentState>;
-  private knowledgeAlerts: Map<string, KnowledgeAlert>;
-  private protocolSources: Map<string, ProtocolSource>;
-
-  constructor() {
-    this.users = new Map();
-    this.emergencies = new Map();
-    this.womensHealthTopics = new Map();
-    this.screeningReminders = new Map();
-    this.agentSessions = new Map();
-    this.agentMessages = new Map();
-    this.agentEvents = new Map();
-    this.cachedResponses = new Map();
-    this.agentStates = new Map();
-    this.knowledgeAlerts = new Map();
-    this.protocolSources = new Map();
-    
-    // Seed women's health topics
-    this.seedWomensHealthTopics();
-  }
-
+export class DrizzleStorage implements IStorage {
+  // ==================== USER METHODS ====================
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      id,
-      username: insertUser.username,
-      password: insertUser.password,
-      role: insertUser.role ?? "patient",
-      hospitalId: null
-    };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
   }
 
-  // Emergency methods
-  async createEmergency(insertEmergency: InsertEmergency): Promise<Emergency> {
-    const id = randomUUID();
-    const emergency: Emergency = { 
-      id,
-      patientId: insertEmergency.patientId ?? null,
-      patientName: insertEmergency.patientName,
-      patientPhone: insertEmergency.patientPhone,
-      location: insertEmergency.location ?? null,
-      emergencyType: insertEmergency.emergencyType,
-      priority: insertEmergency.priority,
-      symptoms: insertEmergency.symptoms,
-      status: insertEmergency.status ?? "active",
-      assignedHospitalId: insertEmergency.assignedHospitalId ?? null,
-      notes: insertEmergency.notes ?? null,
-      createdAt: new Date()
-    };
-    this.emergencies.set(id, emergency);
-    return emergency;
+  // ==================== HOSPITAL METHODS ====================
+  async getAllHospitals(): Promise<Hospital[]> {
+    return await db.select().from(hospitals);
+  }
+
+  async getHospitalById(id: string): Promise<Hospital | undefined> {
+    const result = await db.select().from(hospitals).where(eq(hospitals.id, id));
+    return result[0];
+  }
+
+  async createHospital(hospital: InsertHospital): Promise<Hospital> {
+    const result = await db.insert(hospitals).values(hospital).returning();
+    return result[0];
+  }
+
+  // ==================== EMERGENCY METHODS ====================
+  async createEmergency(emergency: InsertEmergency): Promise<Emergency> {
+    const result = await db.insert(emergencies).values(emergency).returning();
+    return result[0];
   }
 
   async getAllEmergencies(): Promise<Emergency[]> {
-    return Array.from(this.emergencies.values()).sort((a, b) => {
-      const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-      const priorityDiff = (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
-      if (priorityDiff !== 0) return priorityDiff;
-      return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
-    });
+    return await db.select().from(emergencies).orderBy(desc(emergencies.createdAt));
+  }
+
+  async getEmergenciesByHospital(hospitalId: string): Promise<Emergency[]> {
+    return await db
+      .select()
+      .from(emergencies)
+      .where(eq(emergencies.assignedHospitalId, hospitalId))
+      .orderBy(desc(emergencies.createdAt));
+  }
+
+  async getEmergenciesByUser(userId: string): Promise<Emergency[]> {
+    return await db
+      .select()
+      .from(emergencies)
+      .where(eq(emergencies.patientId, userId))
+      .orderBy(desc(emergencies.createdAt));
   }
 
   async getEmergencyById(id: string): Promise<Emergency | undefined> {
-    return this.emergencies.get(id);
+    const result = await db.select().from(emergencies).where(eq(emergencies.id, id));
+    return result[0];
   }
 
-  async updateEmergencyStatus(id: string, status: string): Promise<Emergency | undefined> {
-    const emergency = this.emergencies.get(id);
-    if (!emergency) return undefined;
-    
-    const updated = { ...emergency, status };
-    this.emergencies.set(id, updated);
-    return updated;
+  async updateEmergencyStatus(
+    id: string,
+    status: string,
+    assignedHospitalId?: string
+  ): Promise<Emergency | undefined> {
+    const updates: any = { status };
+    if (assignedHospitalId) {
+      updates.assignedHospitalId = assignedHospitalId;
+    }
+
+    const result = await db
+      .update(emergencies)
+      .set(updates)
+      .where(eq(emergencies.id, id))
+      .returning();
+    return result[0];
   }
 
-  // Women's Health Awareness methods
+  // ==================== WOMEN'S HEALTH METHODS ====================
   async getAllWomensHealthTopics(): Promise<WomensHealthAwareness[]> {
-    return Array.from(this.womensHealthTopics.values());
+    return await db.select().from(womensHealthAwareness);
   }
 
   async getWomensHealthTopicById(id: string): Promise<WomensHealthAwareness | undefined> {
-    return this.womensHealthTopics.get(id);
+    const result = await db.select().from(womensHealthAwareness).where(eq(womensHealthAwareness.id, id));
+    return result[0];
   }
 
-  // Screening Reminder methods
-  async createScreeningReminder(insertReminder: InsertScreeningReminder): Promise<ScreeningReminder> {
-    const id = randomUUID();
-    const reminder: ScreeningReminder = {
-      id,
-      userId: insertReminder.userId,
-      topic: insertReminder.topic,
-      reminderType: insertReminder.reminderType,
-      nextDueDate: insertReminder.nextDueDate,
-      frequency: insertReminder.frequency ?? null,
-      notificationSent: insertReminder.notificationSent ?? false,
-      isEnabled: insertReminder.isEnabled ?? true,
-      createdAt: new Date()
-    };
-    this.screeningReminders.set(id, reminder);
-    return reminder;
+  async createWomensHealthTopic(topic: InsertWomensHealthAwareness): Promise<WomensHealthAwareness> {
+    const result = await db.insert(womensHealthAwareness).values(topic).returning();
+    return result[0];
+  }
+
+  // ==================== SCREENING REMINDER METHODS ====================
+  async createScreeningReminder(reminder: InsertScreeningReminder): Promise<ScreeningReminder> {
+    const result = await db.insert(screeningReminders).values(reminder).returning();
+    return result[0];
   }
 
   async getUserScreeningReminders(userId: string): Promise<ScreeningReminder[]> {
-    return Array.from(this.screeningReminders.values())
-      .filter(r => r.userId === userId);
+    return await db
+      .select()
+      .from(screeningReminders)
+      .where(eq(screeningReminders.userId, userId))
+      .orderBy(desc(screeningReminders.nextDueDate));
   }
 
-  async updateScreeningReminder(id: string, updates: Partial<ScreeningReminder>): Promise<ScreeningReminder | undefined> {
-    const reminder = this.screeningReminders.get(id);
-    if (!reminder) return undefined;
-    
-    const updated = { ...reminder, ...updates };
-    this.screeningReminders.set(id, updated);
-    return updated;
+  async updateScreeningReminder(
+    id: string,
+    updates: Partial<ScreeningReminder>
+  ): Promise<ScreeningReminder | undefined> {
+    const result = await db
+      .update(screeningReminders)
+      .set(updates)
+      .where(eq(screeningReminders.id, id))
+      .returning();
+    return result[0];
   }
 
-  // Agent Session methods
-  async createAgentSession(insertSession: InsertAgentSession): Promise<AgentSession> {
-    const id = randomUUID();
-    const session: AgentSession = { 
-      id, 
-      userId: insertSession.userId,
-      agent: insertSession.agent,
-      status: insertSession.status ?? "active",
-      language: insertSession.language ?? "english",
-      startedAt: new Date(), 
-      endedAt: null 
-    };
-    this.agentSessions.set(id, session);
-    return session;
+  // ==================== AGENT SESSION METHODS ====================
+  async createAgentSession(session: InsertAgentSession): Promise<AgentSession> {
+    const result = await db.insert(agentSessions).values(session).returning();
+    return result[0];
   }
 
   async getAgentSession(id: string): Promise<AgentSession | undefined> {
-    return this.agentSessions.get(id);
+    const result = await db.select().from(agentSessions).where(eq(agentSessions.id, id));
+    return result[0];
   }
 
   async getUserAgentSessions(userId: string): Promise<AgentSession[]> {
-    return Array.from(this.agentSessions.values()).filter(s => s.userId === userId);
+    return await db
+      .select()
+      .from(agentSessions)
+      .where(eq(agentSessions.userId, userId))
+      .orderBy(desc(agentSessions.startedAt));
   }
 
-  async updateAgentSession(id: string, updates: Partial<AgentSession>): Promise<AgentSession | undefined> {
-    const session = this.agentSessions.get(id);
-    if (!session) return undefined;
-    const updated = { ...session, ...updates };
-    this.agentSessions.set(id, updated);
-    return updated;
+  async updateAgentSession(
+    id: string,
+    updates: Partial<AgentSession>
+  ): Promise<AgentSession | undefined> {
+    const result = await db
+      .update(agentSessions)
+      .set(updates)
+      .where(eq(agentSessions.id, id))
+      .returning();
+    return result[0];
   }
 
-  // Agent Message methods
-  async createAgentMessage(insertMessage: InsertAgentMessage): Promise<AgentMessage> {
-    const id = randomUUID();
-    const message: AgentMessage = { 
-      id,
-      sessionId: insertMessage.sessionId,
-      senderType: insertMessage.senderType,
-      language: insertMessage.language ?? "english",
-      content: insertMessage.content,
-      reasoningTrace: insertMessage.reasoningTrace ?? null,
-      metadata: insertMessage.metadata ?? null,
-      createdAt: new Date() 
-    };
-    this.agentMessages.set(id, message);
-    return message;
+  // ==================== AGENT MESSAGE METHODS ====================
+  async createAgentMessage(message: InsertAgentMessage): Promise<AgentMessage> {
+    const result = await db.insert(agentMessages).values(message).returning();
+    return result[0];
   }
 
   async getSessionMessages(sessionId: string): Promise<AgentMessage[]> {
-    return Array.from(this.agentMessages.values())
-      .filter(m => m.sessionId === sessionId)
-      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+    return await db
+      .select()
+      .from(agentMessages)
+      .where(eq(agentMessages.sessionId, sessionId))
+      .orderBy(agentMessages.createdAt);
   }
 
-  // Agent Event methods
-  async createAgentEvent(insertEvent: InsertAgentEvent): Promise<AgentEvent> {
-    const id = randomUUID();
-    const event: AgentEvent = { 
-      id,
-      type: insertEvent.type,
-      payload: insertEvent.payload,
-      triggeredByAgent: insertEvent.triggeredByAgent ?? null,
-      triggeredBySession: insertEvent.triggeredBySession ?? null,
-      status: insertEvent.status ?? "pending",
-      createdAt: new Date(), 
-      processedAt: null 
-    };
-    this.agentEvents.set(id, event);
-    return event;
+  // ==================== AGENT EVENT METHODS ====================
+  async createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent> {
+    const result = await db.insert(agentEvents).values(event).returning();
+    return result[0];
   }
 
   async getAllAgentEvents(): Promise<AgentEvent[]> {
-    return Array.from(this.agentEvents.values());
+    return await db.select().from(agentEvents).orderBy(desc(agentEvents.createdAt));
   }
 
   async getPendingAgentEvents(): Promise<AgentEvent[]> {
-    return Array.from(this.agentEvents.values()).filter(e => e.status === "pending");
+    return await db
+      .select()
+      .from(agentEvents)
+      .where(eq(agentEvents.status, "pending"))
+      .orderBy(agentEvents.createdAt);
   }
 
-  async updateAgentEventStatus(id: string, status: string): Promise<AgentEvent | undefined> {
-    const event = this.agentEvents.get(id);
-    if (!event) return undefined;
-    const updated = { ...event, status, processedAt: new Date() };
-    this.agentEvents.set(id, updated);
-    return updated;
-  }
-
-  // Cached Response methods
-  async getCachedResponse(keyHash: string): Promise<CachedResponse | undefined> {
-    const cached = Array.from(this.cachedResponses.values()).find(c => c.keyHash === keyHash);
-    if (cached && cached.expiresAt > new Date()) {
-      return cached;
+  async updateAgentEventStatus(
+    id: string,
+    status: string,
+    processedAt?: Date
+  ): Promise<AgentEvent | undefined> {
+    const updates: any = { status };
+    if (processedAt) {
+      updates.processedAt = processedAt;
     }
-    return undefined;
+
+    const result = await db
+      .update(agentEvents)
+      .set(updates)
+      .where(eq(agentEvents.id, id))
+      .returning();
+    return result[0];
   }
 
-  async createCachedResponse(insertResponse: InsertCachedResponse): Promise<CachedResponse> {
-    const id = randomUUID();
-    const response: CachedResponse = { 
-      id,
-      agent: insertResponse.agent,
-      keyHash: insertResponse.keyHash,
-      response: insertResponse.response,
-      language: insertResponse.language ?? "english",
-      expiresAt: insertResponse.expiresAt,
-      createdAt: new Date(),
-      lastUsedAt: new Date()
-    };
-    this.cachedResponses.set(id, response);
-    return response;
+  // ==================== CACHED RESPONSE METHODS ====================
+  async getCachedResponse(keyHash: string): Promise<CachedResponse | undefined> {
+    const result = await db
+      .select()
+      .from(cachedResponses)
+      .where(eq(cachedResponses.keyHash, keyHash));
+    return result[0];
+  }
+
+  async createCachedResponse(response: InsertCachedResponse): Promise<CachedResponse> {
+    const result = await db.insert(cachedResponses).values(response).returning();
+    return result[0];
   }
 
   async updateCachedResponseUsage(keyHash: string): Promise<void> {
-    const cached = Array.from(this.cachedResponses.values()).find(c => c.keyHash === keyHash);
-    if (cached) {
-      cached.lastUsedAt = new Date();
-      this.cachedResponses.set(cached.id, cached);
-    }
+    await db
+      .update(cachedResponses)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(cachedResponses.keyHash, keyHash));
   }
 
-  // Agent State methods
+  // ==================== AGENT STATE METHODS ====================
   async getAgentState(sessionId: string): Promise<AgentState | undefined> {
-    return Array.from(this.agentStates.values()).find(s => s.sessionId === sessionId);
+    const result = await db
+      .select()
+      .from(agentState)
+      .where(eq(agentState.sessionId, sessionId));
+    return result[0];
   }
 
-  async upsertAgentState(insertState: InsertAgentState): Promise<AgentState> {
-    const existing = await this.getAgentState(insertState.sessionId);
+  async upsertAgentState(state: InsertAgentState): Promise<AgentState> {
+    const existing = await this.getAgentState(state.sessionId);
+
     if (existing) {
-      const updated = { ...existing, state: insertState.state, updatedAt: new Date() };
-      this.agentStates.set(existing.id, updated);
-      return updated;
+      const result = await db
+        .update(agentState)
+        .set({ ...state, updatedAt: new Date() })
+        .where(eq(agentState.sessionId, state.sessionId))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(agentState).values(state).returning();
+      return result[0];
     }
-    const id = randomUUID();
-    const state: AgentState = { id, ...insertState, updatedAt: new Date() };
-    this.agentStates.set(id, state);
-    return state;
   }
 
-  // Knowledge Alert methods
-  async createKnowledgeAlert(insertAlert: InsertKnowledgeAlert): Promise<KnowledgeAlert> {
-    const id = randomUUID();
-    const alert: KnowledgeAlert = { 
-      id,
-      alertType: insertAlert.alertType,
-      signalDetails: insertAlert.signalDetails,
-      severity: insertAlert.severity,
-      status: insertAlert.status ?? "new",
-      acknowledgedBy: insertAlert.acknowledgedBy ?? null,
-      createdAt: new Date(),
-      acknowledgedAt: null
-    };
-    this.knowledgeAlerts.set(id, alert);
-    return alert;
+  // ==================== KNOWLEDGE ALERT METHODS ====================
+  async createKnowledgeAlert(alert: InsertKnowledgeAlert): Promise<KnowledgeAlert> {
+    const result = await db.insert(knowledgeAlerts).values(alert).returning();
+    return result[0];
   }
 
   async getAllKnowledgeAlerts(): Promise<KnowledgeAlert[]> {
-    return Array.from(this.knowledgeAlerts.values());
+    return await db.select().from(knowledgeAlerts).orderBy(desc(knowledgeAlerts.createdAt));
   }
 
   async getNewKnowledgeAlerts(): Promise<KnowledgeAlert[]> {
-    return Array.from(this.knowledgeAlerts.values()).filter(a => a.status === "new");
+    return await db
+      .select()
+      .from(knowledgeAlerts)
+      .where(eq(knowledgeAlerts.status, "new"))
+      .orderBy(desc(knowledgeAlerts.createdAt));
   }
 
-  async updateKnowledgeAlert(id: string, updates: Partial<KnowledgeAlert>): Promise<KnowledgeAlert | undefined> {
-    const alert = this.knowledgeAlerts.get(id);
-    if (!alert) return undefined;
-    const updated = { ...alert, ...updates };
-    if (updates.status && updates.status !== "new" && !updated.acknowledgedAt) {
-      updated.acknowledgedAt = new Date();
-    }
-    this.knowledgeAlerts.set(id, updated);
-    return updated;
+  async updateKnowledgeAlert(
+    id: string,
+    updates: Partial<KnowledgeAlert>
+  ): Promise<KnowledgeAlert | undefined> {
+    const result = await db
+      .update(knowledgeAlerts)
+      .set(updates)
+      .where(eq(knowledgeAlerts.id, id))
+      .returning();
+    return result[0];
   }
 
-  // Protocol Source methods
+  // ==================== PROTOCOL SOURCE METHODS ====================
   async getAllProtocolSources(): Promise<ProtocolSource[]> {
-    return Array.from(this.protocolSources.values());
+    return await db.select().from(protocolSources).orderBy(desc(protocolSources.lastSyncedAt));
   }
 
   async getProtocolSource(id: string): Promise<ProtocolSource | undefined> {
-    return this.protocolSources.get(id);
+    const result = await db.select().from(protocolSources).where(eq(protocolSources.id, id));
+    return result[0];
   }
 
-  async createProtocolSource(insertSource: InsertProtocolSource): Promise<ProtocolSource> {
-    const id = randomUUID();
-    const source: ProtocolSource = { 
-      id,
-      sourceName: insertSource.sourceName,
-      category: insertSource.category,
-      url: insertSource.url ?? null,
-      content: insertSource.content ?? null,
-      checksum: insertSource.checksum ?? null,
-      createdAt: new Date(),
-      lastSyncedAt: new Date()
-    };
-    this.protocolSources.set(id, source);
-    return source;
+  async createProtocolSource(source: InsertProtocolSource): Promise<ProtocolSource> {
+    const result = await db.insert(protocolSources).values(source).returning();
+    return result[0];
   }
 
-  async updateProtocolSource(id: string, updates: Partial<ProtocolSource>): Promise<ProtocolSource | undefined> {
-    const source = this.protocolSources.get(id);
-    if (!source) return undefined;
-    const updated = { ...source, ...updates };
-    this.protocolSources.set(id, updated);
-    return updated;
-  }
-
-  private seedWomensHealthTopics() {
-    const topics: Omit<WomensHealthAwareness, "id" | "createdAt">[] = [
-      {
-        topic: "breast-cancer",
-        title: "Breast Cancer Awareness",
-        description: "Breast cancer is one of the most common cancers affecting women worldwide. Early detection through regular screening and self-examination can significantly improve treatment outcomes.",
-        riskFactors: ["Age (over 50 years)", "Family history of breast cancer", "Personal history of breast conditions", "Early menstruation (before 12) or late menopause", "Never having children or late pregnancy", "Obesity and sedentary lifestyle", "Hormone replacement therapy"],
-        preventionTips: ["Perform monthly breast self-examinations", "Get regular mammograms (age 40+)", "Maintain healthy weight through diet and exercise", "Limit alcohol consumption", "Breastfeed if possible", "Avoid prolonged hormone therapy", "Know your family history"],
-        resources: ["Pakistan Cancer Society - Breast Cancer Awareness", "Shaukat Khanum Memorial Cancer Hospital", "World Health Organization - Breast Cancer"],
-        imageUrl: null
-      },
-      {
-        topic: "cervical-cancer",
-        title: "Cervical Cancer Prevention",
-        description: "Cervical cancer is preventable through HPV vaccination and regular Pap smear screening. Most cases are caused by Human Papillomavirus (HPV) infection.",
-        riskFactors: ["HPV infection", "Multiple sexual partners", "Early sexual activity", "Weakened immune system", "Smoking", "Long-term use of contraceptive pills"],
-        preventionTips: ["Get HPV vaccination (ages 9-26)", "Regular Pap smear tests (every 3 years for ages 21-65)", "Practice safe sex", "Quit smoking", "Maintain healthy immune system"],
-        resources: ["Pakistan Medical Association - Cervical Cancer Prevention", "WHO HPV Vaccination Program", "Ministry of Health Pakistan"],
-        imageUrl: null
-      },
-      {
-        topic: "maternal-health",
-        title: "Pregnancy & Maternal Health",
-        description: "Proper prenatal care and awareness of warning signs can ensure a healthy pregnancy and safe delivery for both mother and baby.",
-        riskFactors: ["Age under 18 or over 35", "Pre-existing conditions (diabetes, hypertension)", "Previous pregnancy complications", "Multiple pregnancies (twins/triplets)", "Obesity or being underweight", "Smoking or substance use"],
-        preventionTips: ["Attend all antenatal checkups", "Take prenatal vitamins (folic acid, iron)", "Eat nutritious diet", "Get recommended vaccinations", "Avoid alcohol, smoking, and drugs", "Manage stress and get adequate rest", "Monitor fetal movements"],
-        resources: ["Lady Health Workers Program Pakistan", "UNICEF Pakistan - Maternal Health", "Ministry of Health - Mother & Child Care"],
-        imageUrl: null
-      }
-    ];
-
-    topics.forEach(topic => {
-      const id = randomUUID();
-      this.womensHealthTopics.set(id, {
-        ...topic,
-        id,
-        createdAt: new Date()
-      });
-    });
+  async updateProtocolSource(
+    id: string,
+    updates: Partial<ProtocolSource>
+  ): Promise<ProtocolSource | undefined> {
+    const result = await db
+      .update(protocolSources)
+      .set(updates)
+      .where(eq(protocolSources.id, id))
+      .returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DrizzleStorage();

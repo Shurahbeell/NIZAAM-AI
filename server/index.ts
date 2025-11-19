@@ -3,8 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeMCP, startEventProcessing } from "./mcp/index";
 import { validatePIIProtectionConfig } from "./mcp/services/pii-protection";
+import cookieParser from "cookie-parser";
+import authRoutes from "./routes/auth";
 import facilitiesRoutes from "./routes/facilities";
 import photosRoutes from "./routes/photos";
+import emergenciesRoutes from "./routes/emergencies";
+import agentsRoutes from "./routes/agents";
 
 const app = express();
 
@@ -19,6 +23,7 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -59,8 +64,13 @@ app.use((req, res, next) => {
   await initializeMCP();
   startEventProcessing();
   
+  // Mount API routes
+  app.use("/api/auth", authRoutes);
+  app.use("/api/emergencies", emergenciesRoutes);
+  app.use("/api/agent", agentsRoutes);
   app.use("/api/facilities", facilitiesRoutes);
   app.use("/api/facilities", photosRoutes);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

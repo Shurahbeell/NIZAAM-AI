@@ -1,0 +1,205 @@
+You are now the lead full-stack engineer for this project.
+Your job is to FIX, COMPLETE, and FULLY SYNC this entire codebase.
+
+This is a full-stack TypeScript app using:
+- Vite + React + Tailwind (frontend)
+- Express + TypeScript (backend)
+- Drizzle ORM + Neon Postgres (database)
+- A custom MCP agent system
+- Shared schema + utils
+
+You MUST repair everything listed below and output EXACT code patches, full files, new files, and updated logic.
+
+========================================================================================================
+PART 1 — IMPLEMENT REAL AUTHENTICATION (CRITICAL)
+========================================================================================================
+Implement COMPLETELY WORKING AUTH for 2 roles:
+  • patient
+  • hospital (admin)
+
+BACKEND MUST INCLUDE:
+  ✔ POST /api/auth/register
+  ✔ POST /api/auth/login
+  ✔ GET /api/auth/me
+  ✔ secure password hashing (bcrypt)
+  ✔ JWT token issuing (HS256)
+  ✔ jwt middleware: requireAuth
+  ✔ role middleware: requireRole("patient"), requireRole("hospital")
+  ✔ validation via zod (for register + login)
+
+FRONTEND MUST INCLUDE:
+  ✔ Replace fake login with real API call
+  ✔ Remove the UI role-selector on login (role should come from backend user record)
+  ✔ Store JWT in localStorage
+  ✔ Decode token to get role + userId
+  ✔ Add global auth state using a small store (Zustand or Context)
+  ✔ Update RoleGuard to validate using decoded JWT + backend /auth/me
+
+SECURITY:
+  ✔ Never store plaintext passwords
+  ✔ Ensure password hashing on register
+  ✔ Compare hashed passwords on login
+  ✔ Ensure JWT expiration + verification
+
+========================================================================================================
+PART 2 — COMPLETE STORAGE LAYER (BACKEND DATA LOGIC)
+========================================================================================================
+Implement the FULL "IStorage" interface inside server/storage.ts.
+
+Implement all missing methods using Drizzle:
+  ✔ createUser
+  ✔ getUserByUsername
+  ✔ getUserById
+  ✔ getUserByPhone (if needed)
+  ✔ createEmergency
+  ✔ getEmergencies
+  ✔ getEmergencyById
+  ✔ updateEmergencyStatus
+  ✔ createAgentSession
+  ✔ saveAgentMessage
+  ✔ listAgentMessages
+  ✔ enqueueAgentEvent
+  ✔ dequeueAgentEvent
+  ✔ all other storage methods referenced in routes
+
+Every backend route should use the unified storage implementation.
+
+========================================================================================================
+PART 3 — ROUTING & MISSING MODULES
+========================================================================================================
+Fix the routing system:
+
+  ✔ Mount ALL existing route modules (facilities.ts, photos.ts, emergencies.ts, agents.ts)
+  ✔ Ensure they are prefixed cleanly (e.g., /api/facilities, /api/photos, /api/emergencies)
+  ✔ Add requireAuth on all agent-related endpoints
+  ✔ Add requireRole("hospital") to emergency status updates
+  ✔ Add requireRole("patient") to creating emergencies
+  ✔ Use zod validation for all incoming request bodies
+
+========================================================================================================
+PART 4 — BACKEND FIXES & IMPROVEMENTS
+========================================================================================================
+Fix core backend issues:
+  ✔ Add centralized error handler middleware
+  ✔ Add rate-limiting or at least debounce protection to agent endpoints
+  ✔ Add proper logging for failed DB operations
+  ✔ Fix Google Places integration: handle missing GOOGLE_API_KEY gracefully
+  ✔ Ensure events in MCP are associated with the correct userId
+
+========================================================================================================
+PART 5 — MCP AGENT SYSTEM FIXES
+========================================================================================================
+Fix the MCP system:
+
+  ✔ All agent sessions must store userId
+  ✔ All messages must store userId
+  ✔ All events must store userId
+  ✔ Protect every MCP endpoint with requireAuth
+  ✔ Prevent users from reading another user's session or messages
+  ✔ Add validation that userId === session.userId
+
+========================================================================================================
+PART 6 — EMERGENCY FLOW FIXES
+========================================================================================================
+Fix emergency features end-to-end:
+
+  ✔ Require patient authentication for POST /api/emergencies
+  ✔ Require hospital admin for PATCH /api/emergencies/:id/status
+  ✔ Each emergency must store the patient userId
+  ✔ Hospital dashboard must filter emergencies by hospitalId
+  ✔ Add timestamps + sorting (recent first)
+
+FRONTEND:
+  ✔ EmergencyButton must call /api/emergencies with JWT auth header
+  ✔ Hospital dashboard must call /api/emergencies with the hospital user's token
+
+========================================================================================================
+PART 7 — DATABASE + MIGRATIONS FIXES
+========================================================================================================
+Fix DB inconsistencies:
+
+  ✔ Regenerate FULL Drizzle migrations based on shared/schema.ts
+  ✔ Ensure these tables exist:
+        - users
+        - hospitals
+        - emergencies
+        - agent_sessions
+        - agent_messages
+        - agent_events
+  ✔ Ensure foreign keys exist (user ↔ hospital, emergency ↔ user, sessions ↔ users)
+  ✔ Add index on emergencies.createdAt
+  ✔ Add index on agent_events.createdAt
+
+Add a seed script:
+  ✔ scripts/seed.ts
+Seeds:
+  • 1 patient user
+  • 1 hospital admin user
+  • 2–3 hospitals
+  • optional sample emergency
+
+Add npm script:
+  "seed": "tsx scripts/seed.ts"
+
+========================================================================================================
+PART 8 — FRONTEND FIXES & ROLE SYNC
+========================================================================================================
+Fix issues on frontend:
+
+  ✔ Remove role dropdown on login page
+  ✔ Role must come from JWT token
+  ✔ Use localStorage for auth
+  ✔ Create a global state store (Zustand or React Context)
+  ✔ RoleGuard must verify JWT role, not UI state
+  ✔ Protect pages based on role
+  ✔ Update all fetch calls to include Authorization header
+
+Fix UI:
+  ✔ Show error messages on login fail
+  ✔ Show loading states during API calls
+  ✔ Redirect user after login based on role:
+        - patient → /dashboard
+        - hospital admin → /hospital-dashboard
+
+========================================================================================================
+PART 9 — GOOGLE MAPS & FACILITY SEARCH FIXES
+========================================================================================================
+Fix frontend map issues:
+
+  ✔ Make sure missing Google key doesn’t break app
+  ✔ Add fallback UI when map cannot load
+  ✔ Add loading + error states around facility search
+
+Fix backend:
+  ✔ Validate GOOGLE_API_KEY exists before API calls
+  ✔ Return meaningful error messages
+  ✔ Add caching for facility results (optional)
+
+========================================================================================================
+PART 10 — CLEANUP + QUALITY
+========================================================================================================
+Clean the codebase:
+
+  ✔ Remove unused imports
+  ✔ Remove unused route modules
+  ✔ Fix any TypeScript errors left in the project
+  ✔ Ensure tsconfig paths resolve correctly
+  ✔ Make sure development server runs cleanly
+  ✔ Improve README.md explaining:
+        - how to run
+        - how to migrate DB
+        - how to seed
+        - required environment variables
+        - how authentication works now
+        - how hospital dashboard works
+
+========================================================================================================
+OUTPUT FORMAT
+========================================================================================================
+When making changes, ALWAYS output:
+  ✔ Full file contents for new files
+  ✔ Precise patches for updated existing files
+  ✔ Explanations ONLY when necessary for context
+  ✔ No summaries — always give EXACT code
+
+Start applying ALL fixes now.
