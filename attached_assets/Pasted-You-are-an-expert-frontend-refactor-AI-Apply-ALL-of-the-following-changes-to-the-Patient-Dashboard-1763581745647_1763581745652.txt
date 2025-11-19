@@ -1,0 +1,174 @@
+You are an expert frontend refactor AI. Apply ALL of the following changes to the
+Patient Dashboard UI. DO NOT change icons, styles, unrelated files, or backend logic.
+
+=====================================================================
+📌 GLOBAL OBJECTIVE
+=====================================================================
+Update the Patient Dashboard so that it follows this EXACT UI order:
+
+1. Emergency Module (red SOS button — already exists)
+2. Notification Bar (already exists)
+
+3. MAIN MODULES (in EXACT ORDER):
+   1. Triage
+   2. Women’s Health   ← NEW MODULE
+   3. Program Eligibility
+   4. Facility Finder
+   5. Follow-Up
+   6. Health Analytics
+   7. Knowledge / Surveillance
+
+4. MICRO MODULES (now collapsed into a single dropdown menu):
+   - Quick Access
+   - My Files
+   - Medical History
+   - Conditions
+   - Medicines
+   - Appointments
+   - Programs
+   - Notifications (full page)
+   - Facility Browser
+
+Keep ALL icons the same. Reuse existing icons ONLY. No new icon imports.
+
+=====================================================================
+📌 PART A — ADD WOMEN’S HEALTH MAIN MODULE
+=====================================================================
+
+1. Create new module directory:
+
+   src/modules/women-health/
+
+2. Create component file:
+
+   src/modules/women-health/WomenHealthModule.jsx
+
+   Content:
+   ---------------------------------------------------------
+   import React from "react";
+
+   export default function WomenHealthModule() {
+     return (
+       <div className="page-container">
+         <h1>Women’s Health</h1>
+         <p>
+           Maternal health, menstrual cycle tracking, ANC/PNC schedules, and 
+           wellness tools for women's health.
+         </p>
+       </div>
+     );
+   }
+   ---------------------------------------------------------
+
+3. Register route in the main routes file
+   (example: src/routes/index.jsx or App.jsx)
+
+   ---------------------------------------------------------
+   {
+     path: "/women-health",
+     element: <WomenHealthModule />
+   }
+   ---------------------------------------------------------
+
+4. Add the module tile to dashboard's MAIN MODULE section.
+
+   In PatientDashboard.jsx (or equivalent):
+
+   Add this object EXACTLY under Triage:
+
+   ---------------------------------------------------------
+   {
+     title: "Women’s Health",
+     path: "/women-health",
+     icon: icons.womenHealth || icons.health || icons.default
+   }
+   ---------------------------------------------------------
+
+   IMPORTANT:
+   • Do NOT replace any existing icon imports.
+   • If icons.womenHealth doesn't exist, use ANY existing health-related icon.
+
+=====================================================================
+📌 PART B — REORDER MAIN MODULES
+=====================================================================
+
+Modify the module array so the order is:
+
+[
+  Triage,
+  Women’s Health,
+  Program Eligibility,
+  Facility Finder,
+  Follow-Up,
+  Health Analytics,
+  Knowledge
+]
+
+Do NOT change naming, paths, or icons of existing modules.
+
+=====================================================================
+📌 PART C — COLLAPSE MICRO MODULES INTO A DROPDOWN
+=====================================================================
+
+1. Find the MICRO MODULE block (usually below main modules).
+
+2. Wrap the entire micro-module list into a dropdown component.
+   If the project already has a "Dropdown" or "Accordion" component, use that.
+
+3. Create a dropdown titled:
+
+   “More Services”
+
+4. Inside the dropdown list include EXACTLY these items:
+
+   - Quick Access
+   - My Files
+   - Medical History
+   - Conditions
+   - Medicines
+   - Appointments
+   - Programs
+   - Notifications
+   - Facility Browser
+
+5. Keep the same onClick handlers, same icons, same paths.
+
+6. UI example snippet (modify as needed based on the project):
+
+   ---------------------------------------------------------
+   <Dropdown title="More Services">
+     {microModules.map((module) => (
+       <ModuleTile
+         key={module.title}
+         title={module.title}
+         icon={module.icon}
+         path={module.path}
+       />
+     ))}
+   </Dropdown>
+   ---------------------------------------------------------
+
+=====================================================================
+📌 PART D — DO NOT MODIFY
+=====================================================================
+
+❌ Emergency module  
+❌ Notification bar  
+❌ Existing icons  
+❌ Icon imports  
+❌ Tailwind / SCSS  
+❌ Backend APIs  
+❌ Other agent modules  
+
+=====================================================================
+📌 PART E — FINAL CHECKLIST
+=====================================================================
+
+✔ Women’s Health appears as a main module.  
+✔ Micro modules are collapsed into a dropdown.  
+✔ All icons remain unchanged.  
+✔ All existing features continue working.  
+✔ Routes added without breaking anything.  
+✔ Page builds without errors.
+
+Make these changes now.
