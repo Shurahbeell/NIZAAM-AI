@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { findNearbyFacilities } from "../mcp/agents/facility-finder-agent";
 import { cache } from "../config/cache";
-import { facilitiesRateLimiter } from "../middleware/debounce-or-rate";
+import { facilitiesRateLimiter } from "../middlewares/debounce-or-rate";
 
 const router = Router();
 
