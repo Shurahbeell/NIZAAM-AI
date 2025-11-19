@@ -2,10 +2,11 @@ import { useState } from "react";
 import DashboardCard from "@/components/DashboardCard";
 import EmergencyButton from "@/components/EmergencyButton";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, FileText, Beaker, BookOpen, Activity, Syringe, Brain, Heart, Baby, ChevronDown, Folder, History, AlertCircle } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, FileText, Beaker, BookOpen, Activity, Syringe, Brain, Heart, Baby, ChevronDown, Folder, History, AlertCircle, Grid3x3 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
@@ -202,17 +203,25 @@ export default function Dashboard() {
         </div>
 
         {/* MICRO MODULES - Collapsed into Dropdown */}
-        <div className="space-y-4">
+        <Card className="overflow-hidden">
           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="more-services" className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline" data-testid="accordion-more-services">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">More Services</span>
-                  <span className="text-xs text-muted-foreground">({microModules.length} services)</span>
+            <AccordionItem value="more-services" className="border-0">
+              <AccordionTrigger 
+                className="px-4 py-4 hover:no-underline hover-elevate" 
+                data-testid="accordion-more-services"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Grid3x3 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-sm font-semibold text-foreground">More Services</span>
+                    <span className="text-xs text-muted-foreground">{microModules.length} additional features</span>
+                  </div>
                 </div>
               </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-2 gap-4 pt-4">
+              <AccordionContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-4 pt-2">
                   {microModules.map((module) => (
                     <DashboardCard
                       key={module.title}
@@ -226,7 +235,7 @@ export default function Dashboard() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </div>
+        </Card>
       </div>
     </div>
   );
