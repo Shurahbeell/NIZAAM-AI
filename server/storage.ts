@@ -44,6 +44,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(id: string, profileData: Partial<User>): Promise<User | undefined>;
 
   // Hospital methods
   getAllHospitals(): Promise<Hospital[]>;
@@ -120,6 +121,36 @@ export class DrizzleStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async updateUserProfile(id: string, profileData: Partial<User>): Promise<User | undefined> {
+    // Only update profile fields, not password or role
+    const allowedFields = {
+      fullName: profileData.fullName,
+      phone: profileData.phone,
+      cnic: profileData.cnic,
+      address: profileData.address,
+      age: profileData.age,
+      bloodGroup: profileData.bloodGroup,
+      emergencyContact: profileData.emergencyContact,
+    };
+    
+    // Remove undefined values
+    const updateData = Object.fromEntries(
+      Object.entries(allowedFields).filter(([_, v]) => v !== undefined)
+    );
+    
+    if (Object.keys(updateData).length === 0) {
+      return this.getUser(id);
+    }
+    
+    const result = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+    
     return result[0];
   }
 

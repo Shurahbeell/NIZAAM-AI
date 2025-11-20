@@ -172,7 +172,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent" data-testid="text-greeting">
-                {greeting}, {user?.username || "Guest"}
+                {greeting}, {user?.fullName || user?.username || "Guest"}
               </h2>
               <p className="text-muted-foreground mt-1">How can we help you today?</p>
             </div>

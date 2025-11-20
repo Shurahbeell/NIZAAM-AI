@@ -6,6 +6,14 @@ export interface User {
   username: string;
   role: "patient" | "hospital";
   hospitalId?: string;
+  // Profile fields
+  fullName?: string;
+  phone?: string;
+  cnic?: string;
+  address?: string;
+  age?: number;
+  bloodGroup?: string;
+  emergencyContact?: string;
 }
 
 interface AuthState {

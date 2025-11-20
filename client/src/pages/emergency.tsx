@@ -7,6 +7,7 @@ import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Heart, Building2, CheckC
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuthStore } from "@/lib/auth";
 
 interface EmergencyData {
   id: string;
@@ -38,6 +39,7 @@ const symptomsMap: Record<string, string> = {
 
 export default function Emergency() {
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
   const [emergencyType, setEmergencyType] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -58,12 +60,15 @@ export default function Emergency() {
     }, 300);
 
     try {
+      // Get current location (simplified - in production use geolocation API)
+      const locationString = user?.address || "Location unavailable";
+      
       // Send emergency to backend (apiRequest throws on non-OK responses)
       await apiRequest("POST", "/api/emergencies", {
-        patientId: null,
-        patientName: "Ali Ahmed",
-        patientPhone: "+92 300 1234567",
-        location: "24.8607° N, 67.0011° E",
+        patientId: user?.id || null,
+        patientName: user?.fullName || user?.username || "Unknown",
+        patientPhone: user?.phone || "Phone not provided",
+        location: locationString,
         emergencyType: emergencyType,
         priority: priorityMap[emergencyType] || "medium",
         symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
@@ -185,7 +190,9 @@ export default function Emergency() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground font-medium">Name</p>
-                  <p className="font-bold text-foreground">Ali Ahmed</p>
+                  <p className="font-bold text-foreground" data-testid="text-patient-name">
+                    {user?.fullName || user?.username || "Not set"}
+                  </p>
                 </div>
               </div>
 
@@ -195,7 +202,9 @@ export default function Emergency() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground font-medium">Phone</p>
-                  <p className="font-bold text-foreground">+92 300 1234567</p>
+                  <p className="font-bold text-foreground" data-testid="text-patient-phone">
+                    {user?.phone || "Not set"}
+                  </p>
                 </div>
               </div>
 
@@ -205,7 +214,9 @@ export default function Emergency() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground font-medium">Location</p>
-                  <p className="font-bold text-foreground">24.8607° N, 67.0011° E</p>
+                  <p className="font-bold text-foreground" data-testid="text-patient-location">
+                    {user?.address || "Not set"}
+                  </p>
                 </div>
               </div>
             </div>

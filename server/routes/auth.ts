@@ -64,6 +64,14 @@ router.post("/register", async (req: Request, res: Response) => {
         username: user.username,
         role: user.role,
         hospitalId: user.hospitalId,
+        // Include profile fields
+        fullName: user.fullName,
+        phone: user.phone,
+        cnic: user.cnic,
+        address: user.address,
+        age: user.age,
+        bloodGroup: user.bloodGroup,
+        emergencyContact: user.emergencyContact,
       },
     };
 
@@ -111,6 +119,14 @@ router.post("/login", async (req: Request, res: Response) => {
         username: user.username,
         role: user.role,
         hospitalId: user.hospitalId,
+        // Include profile fields
+        fullName: user.fullName,
+        phone: user.phone,
+        cnic: user.cnic,
+        address: user.address,
+        age: user.age,
+        bloodGroup: user.bloodGroup,
+        emergencyContact: user.emergencyContact,
       },
     });
   } catch (error: any) {
@@ -139,10 +155,104 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
       username: user.username,
       role: user.role,
       hospitalId: user.hospitalId,
+      // Include profile fields
+      fullName: user.fullName,
+      phone: user.phone,
+      cnic: user.cnic,
+      address: user.address,
+      age: user.age,
+      bloodGroup: user.bloodGroup,
+      emergencyContact: user.emergencyContact,
     });
   } catch (error: any) {
     console.error("[Auth] Me error:", error);
     res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+// Get user by ID (protected - can only get own profile)
+router.get("/users/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Only allow users to get their own profile
+    if (req.user!.userId !== req.params.id) {
+      return res.status(403).json({ error: "Not authorized to view this profile" });
+    }
+
+    const user = await storage.getUser(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      hospitalId: user.hospitalId,
+      fullName: user.fullName,
+      phone: user.phone,
+      cnic: user.cnic,
+      address: user.address,
+      age: user.age,
+      bloodGroup: user.bloodGroup,
+      emergencyContact: user.emergencyContact,
+    });
+  } catch (error: any) {
+    console.error("[Auth] Get user error:", error);
+    res.status(500).json({ error: "Failed to get user" });
+  }
+});
+
+// Update user profile (protected - can only update own profile)
+const updateProfileSchema = z.object({
+  fullName: z.string().optional(),
+  phone: z.string().optional(),
+  cnic: z.string().optional(),
+  address: z.string().optional(),
+  age: z.union([z.number(), z.string()]).transform(val => {
+    if (typeof val === 'string') {
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+    return val;
+  }).optional(),
+  bloodGroup: z.string().optional(),
+  emergencyContact: z.string().optional(),
+});
+
+router.patch("/users/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Only allow users to update their own profile
+    if (req.user!.userId !== req.params.id) {
+      return res.status(403).json({ error: "Not authorized to update this profile" });
+    }
+
+    const data = updateProfileSchema.parse(req.body);
+    const updatedUser = await storage.updateUserProfile(req.params.id, data);
+    
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      role: updatedUser.role,
+      hospitalId: updatedUser.hospitalId,
+      fullName: updatedUser.fullName,
+      phone: updatedUser.phone,
+      cnic: updatedUser.cnic,
+      address: updatedUser.address,
+      age: updatedUser.age,
+      bloodGroup: updatedUser.bloodGroup,
+      emergencyContact: updatedUser.emergencyContact,
+    });
+  } catch (error: any) {
+    console.error("[Auth] Update profile error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid input", details: error.errors });
+    }
+    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 

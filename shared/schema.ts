@@ -9,6 +9,14 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("patient"), // "patient" or "hospital"
   hospitalId: varchar("hospital_id"), // null for patients
+  // Profile fields
+  fullName: text("full_name"),
+  phone: text("phone"),
+  cnic: text("cnic"),
+  address: text("address"),
+  age: integer("age"),
+  bloodGroup: text("blood_group"),
+  emergencyContact: text("emergency_contact"),
 });
 
 export const hospitals = pgTable("hospitals", {
