@@ -262,6 +262,47 @@ export const insertProtocolSourceSchema = createInsertSchema(protocolSources).om
   lastSyncedAt: true,
 });
 
+// Frontliners Table (Rescue 1122)
+export const frontliners = pgTable("frontliners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  vehicleType: text("vehicle_type"),
+  isAvailable: boolean("is_available").default(true),
+  currentLat: text("current_lat"),
+  currentLng: text("current_lng"),
+  lastSeenAt: timestamp("last_seen_at"),
+  organization: text("organization"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Emergency Cases Table
+export const emergencyCases = pgTable("emergency_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  patientId: varchar("patient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  originLat: text("origin_lat").notNull(),
+  originLng: text("origin_lng").notNull(),
+  assignedToType: text("assigned_to_type"), // 'frontliner' | 'hospital'
+  assignedToId: varchar("assigned_to_id"),
+  status: text("status").notNull().default("new"), // 'new' | 'assigned' | 'ack' | 'in_progress' | 'completed'
+  priority: integer("priority").default(1),
+  log: jsonb("log").default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFrontlinerSchema = createInsertSchema(frontliners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmergencyCaseSchema = createInsertSchema(emergencyCases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertHospital = z.infer<typeof insertHospitalSchema>;
@@ -293,3 +334,7 @@ export type InsertKnowledgeAlert = z.infer<typeof insertKnowledgeAlertSchema>;
 export type KnowledgeAlert = typeof knowledgeAlerts.$inferSelect;
 export type InsertProtocolSource = z.infer<typeof insertProtocolSourceSchema>;
 export type ProtocolSource = typeof protocolSources.$inferSelect;
+export type InsertFrontliner = z.infer<typeof insertFrontlinerSchema>;
+export type Frontliner = typeof frontliners.$inferSelect;
+export type InsertEmergencyCase = z.infer<typeof insertEmergencyCaseSchema>;
+export type EmergencyCase = typeof emergencyCases.$inferSelect;

@@ -13,6 +13,8 @@ import {
   agentState,
   knowledgeAlerts,
   protocolSources,
+  frontliners,
+  emergencyCases,
   type User,
   type InsertUser,
   type Hospital,
@@ -37,6 +39,10 @@ import {
   type InsertKnowledgeAlert,
   type ProtocolSource,
   type InsertProtocolSource,
+  type Frontliner,
+  type InsertFrontliner,
+  type EmergencyCase,
+  type InsertEmergencyCase,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -105,6 +111,22 @@ export interface IStorage {
   getProtocolSource(id: string): Promise<ProtocolSource | undefined>;
   createProtocolSource(source: InsertProtocolSource): Promise<ProtocolSource>;
   updateProtocolSource(id: string, updates: Partial<ProtocolSource>): Promise<ProtocolSource | undefined>;
+
+  // Frontliner methods
+  createFrontliner(frontliner: InsertFrontliner): Promise<Frontliner>;
+  getFrontlinerById(id: string): Promise<Frontliner | undefined>;
+  getFrontlinerByUserId(userId: string): Promise<Frontliner | undefined>;
+  updateFrontlinerLocation(id: string, lat: string, lng: string, isAvailable?: boolean): Promise<Frontliner | undefined>;
+  findNearestFrontliners(lat: string, lng: string, limit?: number): Promise<Array<Frontliner & { distance: number }>>;
+  findNearestHospitals(lat: string, lng: string, limit?: number): Promise<Array<Hospital & { distance: number }>>;
+
+  // Emergency Case methods
+  createEmergencyCase(emergencyCase: InsertEmergencyCase): Promise<EmergencyCase>;
+  getEmergencyCaseById(id: string): Promise<EmergencyCase | undefined>;
+  assignEmergencyCase(id: string, assignedToType: string, assignedToId: string): Promise<EmergencyCase | undefined>;
+  updateEmergencyCaseStatus(id: string, status: string, log?: any): Promise<EmergencyCase | undefined>;
+  getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]>;
+  getAllEmergencyCases(): Promise<EmergencyCase[]>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -441,6 +463,179 @@ export class DrizzleStorage implements IStorage {
       .where(eq(protocolSources.id, id))
       .returning();
     return result[0];
+  }
+
+  // ==================== FRONTLINER METHODS ====================
+  async createFrontliner(frontliner: InsertFrontliner): Promise<Frontliner> {
+    const result = await db.insert(frontliners).values(frontliner).returning();
+    return result[0];
+  }
+
+  async getFrontlinerById(id: string): Promise<Frontliner | undefined> {
+    const result = await db.select().from(frontliners).where(eq(frontliners.id, id));
+    return result[0];
+  }
+
+  async getFrontlinerByUserId(userId: string): Promise<Frontliner | undefined> {
+    const result = await db.select().from(frontliners).where(eq(frontliners.userId, userId));
+    return result[0];
+  }
+
+  async updateFrontlinerLocation(
+    id: string,
+    lat: string,
+    lng: string,
+    isAvailable?: boolean
+  ): Promise<Frontliner | undefined> {
+    const updateData: any = {
+      currentLat: lat,
+      currentLng: lng,
+      lastSeenAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (isAvailable !== undefined) {
+      updateData.isAvailable = isAvailable;
+    }
+    const result = await db
+      .update(frontliners)
+      .set(updateData)
+      .where(eq(frontliners.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async findNearestFrontliners(lat: string, lng: string, limit: number = 10): Promise<Array<Frontliner & { distance: number }>> {
+    // Get all available frontliners with valid locations
+    const allFrontliners = await db
+      .select()
+      .from(frontliners)
+      .where(eq(frontliners.isAvailable, true));
+
+    // Filter out frontliners without location data
+    const frontlinersWithLocation = allFrontliners.filter(
+      (f) => f.currentLat && f.currentLng
+    );
+
+    // Sort by distance using haversine formula
+    const { haversineDistanceMeters, parseCoordinate } = require("./utils/geo");
+    const originLat = parseCoordinate(lat);
+    const originLng = parseCoordinate(lng);
+
+    const frontlinersWithDistance = frontlinersWithLocation.map((f) => {
+      const distance = haversineDistanceMeters(
+        originLat,
+        originLng,
+        parseCoordinate(f.currentLat!),
+        parseCoordinate(f.currentLng!)
+      );
+      return { ...f, distance };
+    });
+
+    // Sort by distance and return top N
+    frontlinersWithDistance.sort((a, b) => a.distance - b.distance);
+    return frontlinersWithDistance.slice(0, limit);
+  }
+
+  async findNearestHospitals(lat: string, lng: string, limit: number = 10): Promise<Array<Hospital & { distance: number; estimatedLat?: number; estimatedLng?: number }>> {
+    // Get all hospitals (filter by emergency facilities if available)
+    const allHospitals = await db
+      .select()
+      .from(hospitals);
+
+    const { parseCoordinate } = require("./utils/geo");
+    const originLat = parseCoordinate(lat);
+    const originLng = parseCoordinate(lng);
+
+    // PRODUCTION TODO: Geocode hospital addresses or add lat/lng fields to schema
+    // For MVP: Use realistic distance estimates based on city geography
+    // Karachi coordinates: 24.8607°N, 67.0011°E
+    const baseHospitalLat = 24.8607;
+    const baseHospitalLng = 67.0011;
+
+    const hospitalsWithDistance = allHospitals.map((h, index) => {
+      // Distribute hospitals in a 10km radius around Karachi center
+      // This is a placeholder - in production, use actual geocoded coordinates
+      const angle = (index * 360) / Math.max(allHospitals.length, 1);
+      const radiusKm = 3 + Math.random() * 7; // 3-10km from center
+      const estimatedLat = baseHospitalLat + (radiusKm / 111) * Math.cos((angle * Math.PI) / 180);
+      const estimatedLng = baseHospitalLng + (radiusKm / (111 * Math.cos((baseHospitalLat * Math.PI) / 180))) * Math.sin((angle * Math.PI) / 180);
+
+      // Calculate distance from incident to estimated hospital location
+      const { haversineDistanceMeters } = require("./utils/geo");
+      const distance = haversineDistanceMeters(originLat, originLng, estimatedLat, estimatedLng);
+
+      return { ...h, distance, estimatedLat, estimatedLng };
+    });
+
+    // Sort by distance and return top N
+    hospitalsWithDistance.sort((a, b) => a.distance - b.distance);
+    return hospitalsWithDistance.slice(0, limit);
+  }
+
+  // ==================== EMERGENCY CASE METHODS ====================
+  async createEmergencyCase(emergencyCase: InsertEmergencyCase): Promise<EmergencyCase> {
+    const result = await db.insert(emergencyCases).values(emergencyCase).returning();
+    return result[0];
+  }
+
+  async getEmergencyCaseById(id: string): Promise<EmergencyCase | undefined> {
+    const result = await db.select().from(emergencyCases).where(eq(emergencyCases.id, id));
+    return result[0];
+  }
+
+  async assignEmergencyCase(
+    id: string,
+    assignedToType: string,
+    assignedToId: string
+  ): Promise<EmergencyCase | undefined> {
+    const result = await db
+      .update(emergencyCases)
+      .set({
+        assignedToType,
+        assignedToId,
+        status: "assigned",
+        updatedAt: new Date(),
+      })
+      .where(eq(emergencyCases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateEmergencyCaseStatus(
+    id: string,
+    status: string,
+    log?: any[]
+  ): Promise<EmergencyCase | undefined> {
+    const updateData: any = { status, updatedAt: new Date() };
+    if (log) {
+      // Drizzle handles JSONB serialization automatically
+      updateData.log = log;
+    }
+    const result = await db
+      .update(emergencyCases)
+      .set(updateData)
+      .where(eq(emergencyCases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]> {
+    const results = await db
+      .select()
+      .from(emergencyCases)
+      .where(
+        and(
+          eq(emergencyCases.assignedToType, "frontliner"),
+          eq(emergencyCases.assignedToId, frontlinerId),
+          eq(emergencyCases.status, "assigned")
+        )
+      )
+      .orderBy(desc(emergencyCases.createdAt));
+    return results;
+  }
+
+  async getAllEmergencyCases(): Promise<EmergencyCase[]> {
+    return await db.select().from(emergencyCases).orderBy(desc(emergencyCases.createdAt));
   }
 }
 

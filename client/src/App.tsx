@@ -30,6 +30,8 @@ import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
 import History from "@/pages/history";
 import Profile from "@/pages/profile";
+import FrontlinerDashboard from "@/pages/frontliner-dashboard";
+import DispatchMonitor from "@/pages/dispatch-monitor";
 
 function Router() {
   return (
@@ -101,6 +103,16 @@ function Router() {
       <Route path="/map" component={Map} />
       <Route path="/history" component={History} />
       <Route path="/profile" component={Profile} />
+      <Route path="/frontliner-dashboard">
+        <RoleGuard requiredRole="patient">
+          <FrontlinerDashboard />
+        </RoleGuard>
+      </Route>
+      <Route path="/dispatch-monitor">
+        <RoleGuard requiredRole="hospital">
+          <DispatchMonitor />
+        </RoleGuard>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

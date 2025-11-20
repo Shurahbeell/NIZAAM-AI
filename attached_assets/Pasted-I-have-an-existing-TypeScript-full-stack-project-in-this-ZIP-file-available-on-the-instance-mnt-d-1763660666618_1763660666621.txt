@@ -1,0 +1,717 @@
+I have an existing TypeScript full-stack project in this ZIP file available on the instance:
+
+/mnt/data/MobileFlowAuth (7).zip
+
+The project uses:
+
+Backend
+
+Node.js + Express (TypeScript)
+
+Drizzle ORM + PostgreSQL
+
+JWT authentication
+
+Zod validation
+
+File layout includes server/, server/routes/, server/storage.ts, shared/schema.ts
+
+Frontend
+
+React + TypeScript + Vite
+
+Zustand auth store in client/src/lib/auth.ts
+
+Pages in client/src/pages/
+
+TailwindCSS + ShadCN UI
+
+The project currently has Patient and Hospital modules. Add a complete, production-quality Emergency Frontliners (Rescue 1122) module that integrates fully with existing modules and matches code style and patterns.
+
+REQUIREMENTS — generate all files and modifications below, exactly in the file-by-file format requested:
+
+GOAL: Add backend + frontend + DB + realtime sync + routing logic that chooses between assigning a Rescue frontliner or a Hospital based on ETA (distance + expected speed). Use WebSockets for realtime events and Redis GEO for fast geospatial lookup (or DB fallback). Maintain strict RBAC, Zod validation, and use Drizzle for DB operations. Provide migrations and sample seed data.
+
+--- FILE: server/migrations/0001_create_frontliners_and_emergency_cases.sql ---
+
+-- Migration: create frontliners and emergency_cases tables
+CREATE TABLE IF NOT EXISTS frontliners (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vehicle_type TEXT,
+  is_available BOOLEAN DEFAULT TRUE,
+  current_lat DOUBLE PRECISION,
+  current_lng DOUBLE PRECISION,
+  last_seen_at TIMESTAMP,
+  organization TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS emergency_cases (
+  id SERIAL PRIMARY KEY,
+  patient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  origin_lat DOUBLE PRECISION NOT NULL,
+  origin_lng DOUBLE PRECISION NOT NULL,
+  assigned_to_type TEXT,
+  assigned_to_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'new',
+  priority INTEGER DEFAULT 1,
+  log JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
+--- FILE: shared/schema.ts (ADDITIONS) ---
+
+// Additions to shared schema/types
+export type Frontliner = {
+  id: number;
+  userId: number;
+  vehicleType?: string;
+  isAvailable: boolean;
+  currentLat?: number | null;
+  currentLng?: number | null;
+  lastSeenAt?: string | null;
+  organization?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EmergencyCase = {
+  id: number;
+  patientId: number;
+  originLat: number;
+  originLng: number;
+  assignedToType?: 'frontliner' | 'hospital' | null;
+  assignedToId?: number | null;
+  status: 'new' | 'assigned' | 'ack' | 'in_progress' | 'completed';
+  priority?: number;
+  log?: any;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+
+--- FILE: server/storage.ts (ADDITIONS & UPDATES) ---
+
+// Add these functions to server/storage.ts following existing patterns (Drizzle usage)
+import { db } from './db'; // adjust if different in project
+import type { Frontliner, EmergencyCase } from '../shared/schema';
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+
+// FRONTLINER STORAGE
+export async function registerFrontliner(data: Partial<Frontliner>) {
+  const result = await db.insert('frontliners').values({
+    user_id: data.userId,
+    vehicle_type: data.vehicleType || null,
+    is_available: data.isAvailable ?? true,
+    current_lat: data.currentLat ?? null,
+    current_lng: data.currentLng ?? null,
+    last_seen_at: data.lastSeenAt ?? null,
+    organization: data.organization ?? null
+  }).returning('*');
+  return result[0];
+}
+
+export async function updateFrontlinerLocation(frontlinerId: number, lat: number, lng: number, isAvailable?: boolean) {
+  await db.update('frontliners').set({
+    current_lat: lat,
+    current_lng: lng,
+    last_seen_at: new Date(),
+    is_available: isAvailable ?? true,
+    updated_at: new Date()
+  }).where('id', frontlinerId);
+
+  // Update Redis GEO index
+  if (process.env.REDIS_URL) {
+    await redis.geoadd('frontliners_geo', lng, lat, String(frontlinerId));
+  }
+  return getFrontlinerById(frontlinerId);
+}
+
+export async function getFrontlinerById(id: number) {
+  const rows = await db.select().from('frontliners').where('id', id).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function findNearestFrontliners(lat: number, lng: number, radiusMeters = 5000, limit = 5) {
+  if (process.env.REDIS_URL) {
+    const results = await redis.georadius('frontliners_geo', lng, lat, radiusMeters, 'm', 'WITHDIST', 'COUNT', limit, 'ASC');
+    // results: [[member, dist], ...]
+    const ids = results.map((r: any) => Number(r[0]));
+    if (ids.length === 0) return [];
+    const rows = await db.select().from('frontliners').whereIn('id', ids);
+    // attach distances preserving order
+    const mapped = ids.map((id: number) => {
+      const row = rows.find((r: any) => r.id === id);
+      return { ...row };
+    }).filter(Boolean);
+    return mapped;
+  } else {
+    // Fallback: simple DB query using haversine approx (not ideal, but functional)
+    const rows = await db.query(/* raw SQL implementing distance ordering limited by radius */);
+    return rows;
+  }
+}
+
+// EMERGENCY CASES
+export async function createEmergencyCase(payload: Partial<EmergencyCase>) {
+  const res = await db.insert('emergency_cases').values({
+    patient_id: payload.patientId,
+    origin_lat: payload.originLat,
+    origin_lng: payload.originLng,
+    assigned_to_type: payload.assignedToType ?? null,
+    assigned_to_id: payload.assignedToId ?? null,
+    status: payload.status ?? 'new',
+    priority: payload.priority ?? 1,
+    log: JSON.stringify(payload.log ?? []),
+    created_at: new Date(),
+    updated_at: new Date()
+  }).returning('*');
+  return res[0];
+}
+
+export async function assignCase(caseId: number, assignedToType: 'frontliner' | 'hospital', assignedToId: number) {
+  await db.update('emergency_cases').set({
+    assigned_to_type: assignedToType,
+    assigned_to_id: assignedToId,
+    status: 'assigned',
+    updated_at: new Date()
+  }).where('id', caseId);
+  const rows = await db.select().from('emergency_cases').where('id', caseId).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateCaseStatus(caseId: number, status: string, actor: { id: number; type: string }, note?: string) {
+  const rows = await db.select().from('emergency_cases').where('id', caseId).limit(1);
+  const c = rows[0];
+  const log = Array.isArray(c.log) ? c.log : JSON.parse(c.log ?? '[]');
+  log.push({ at: new Date().toISOString(), by: actor, status, note });
+  await db.update('emergency_cases').set({
+    status,
+    log: JSON.stringify(log),
+    updated_at: new Date()
+  }).where('id', caseId);
+  const updated = await db.select().from('emergency_cases').where('id', caseId).limit(1);
+  return updated[0];
+}
+
+export async function getOpenCasesForFrontliner(frontlinerId: number) {
+  const rows = await db.select().from('emergency_cases').where('assigned_to_type', 'frontliner').andWhere('assigned_to_id', frontlinerId).andWhere('status', '!=', 'completed');
+  return rows;
+}
+
+
+--- FILE: server/routes/frontliners.ts ---
+
+import express from 'express';
+import { z } from 'zod';
+import { requireAuth, requireRole } from './middleware/auth'; // adjust to existing middleware
+import { registerFrontliner, updateFrontlinerLocation, getFrontlinerById, getOpenCasesForFrontliner } from '../storage';
+
+const router = express.Router();
+
+// Register frontliner (link to an existing user)
+const registerSchema = z.object({
+  userId: z.number(),
+  vehicleType: z.string().optional(),
+  organization: z.string().optional()
+});
+
+router.post('/register', requireAuth, requireRole(['dispatcher','admin']), async (req, res) => {
+  try {
+    const body = registerSchema.parse(req.body);
+    const f = await registerFrontliner({ userId: body.userId, vehicleType: body.vehicleType, organization: body.organization });
+    res.json({ success: true, frontliner: f });
+  } catch (err) {
+    res.status(400).json({ error: String(err) });
+  }
+});
+
+const locSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  isAvailable: z.boolean().optional()
+});
+
+router.patch('/:id/location', requireAuth, requireRole(['frontliner']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = locSchema.parse(req.body);
+    const updated = await updateFrontlinerLocation(Number(id), body.lat, body.lng, body.isAvailable);
+    res.json({ success: true, frontliner: updated });
+    // emit socket event via ws module (server/ws) - ensure ws module exports emitter
+    try { (req.app.get('ws') as any).to(`frontliner:${id}`).emit('frontliner.location', updated); } catch(e) {}
+  } catch (err) {
+    res.status(400).json({ error: String(err) });
+  }
+});
+
+router.get('/:id/cases', requireAuth, requireRole(['frontliner']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cases = await getOpenCasesForFrontliner(Number(id));
+    res.json({ success: true, cases });
+  } catch (err) {
+    res.status(400).json({ error: String(err) });
+  }
+});
+
+export default router;
+
+
+--- FILE: server/routes/dispatch.ts ---
+
+import express from 'express';
+import { z } from 'zod';
+import { requireAuth, requireRole } from './middleware/auth';
+import { createEmergencyCase, findNearestFrontliners, assignCase, updateCaseStatus, getFrontlinerById } from '../storage';
+import { computeETA_MS } from '../utils/geo'; // create helper functions file
+const router = express.Router();
+
+const dispatchSchema = z.object({
+  patientId: z.number(),
+  originLat: z.number(),
+  originLng: z.number(),
+  priority: z.number().optional(),
+  notes: z.string().optional()
+});
+
+router.post('/create', requireAuth, requireRole(['patient']), async (req, res) => {
+  try {
+    const body = dispatchSchema.parse(req.body);
+    // Validate patient owns patientId
+    if (req.user.id !== body.patientId) return res.status(403).json({ error: 'Forbidden' });
+    // Create case
+    const emergency = await createEmergencyCase({
+      patientId: body.patientId,
+      originLat: body.originLat,
+      originLng: body.originLng,
+      status: 'new',
+      priority: body.priority ?? 1,
+      log: [{ at: new Date().toISOString(), note: 'created' }]
+    });
+
+    // Find nearest frontliners
+    const frontliners = await findNearestFrontliners(body.originLat, body.originLng, Number(process.env.FRONTLINER_SEARCH_RADIUS_METERS || 5000), 5);
+
+    // TODO: implement findNearestHospitals similar to findNearestFrontliners
+    // For now, fetch candidate hospitals from DB (implement separately)
+    const hospitalCandidates: Array<any> = []; // populate with real query in production
+
+    // Compute ETA
+    const candidateETAs: Array<{ type: 'frontliner'|'hospital'; id: number; etaMs: number; meta?: any }> = [];
+
+    for (const f of frontliners) {
+      if (!f.is_available) continue;
+      const etaMs = computeETA_MS(body.originLat, body.originLng, Number(f.currentLat ?? 0), Number(f.currentLng ?? 0), Number(process.env.FRONTLINER_DEFAULT_SPEED_KMH || 40));
+      candidateETAs.push({ type: 'frontliner', id: f.id, etaMs, meta: f });
+    }
+
+    // hospitalCandidates processing - omitted here but expected by generator
+
+    // Simple decision
+    let chosen: { type: 'frontliner'|'hospital'; id: number } | null = null;
+    candidateETAs.sort((a,b) => a.etaMs - b.etaMs);
+    const best = candidateETAs[0];
+    // placeholder hospital ETA big number
+    const bestHospitalETA = 999999999;
+    if (best && best.etaMs + Number(process.env.FRONTLINER_ADVANTAGE_MS || 0) < bestHospitalETA) {
+      chosen = { type: 'frontliner', id: best.id };
+    } else {
+      // fallback: assign to nearest hospital (needs implementation)
+      chosen = null;
+    }
+
+    if (chosen) {
+      await assignCase(emergency.id, chosen.type, chosen.id);
+      const assigned = await assignCase(emergency.id, chosen.type, chosen.id);
+      // emit ws events
+      try {
+        const ws = req.app.get('ws') as any;
+        ws.to(`patient:${body.patientId}`).emit('case.created', assigned);
+        if (chosen.type === 'frontliner') ws.to(`frontliner:${chosen.id}`).emit('case.assigned', assigned);
+        // notify hospitals as appropriate
+      } catch (e) {}
+      return res.json({ success: true, case: assigned });
+    } else {
+      // fallback handling
+      return res.json({ success: true, case: emergency, note: 'No frontliner chosen; hospital assignment required (not implemented).' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: String(err) });
+  }
+});
+
+router.patch('/:caseId/status', requireAuth, async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { status, note } = req.body;
+    const actor = { id: req.user.id, type: req.user.role };
+    const updated = await updateCaseStatus(Number(caseId), status, actor, note);
+    try {
+      const ws = req.app.get('ws') as any;
+      ws.emit('case.updated', updated);
+    } catch (e) {}
+    res.json({ success: true, case: updated });
+  } catch (err) {
+    res.status(400).json({ error: String(err) });
+  }
+});
+
+export default router;
+
+
+--- FILE: server/utils/geo.ts ---
+
+// Utility helpers for distance and ETA computations
+export function haversineDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRad = (v: number) => v * Math.PI / 180;
+  const R = 6371000; // meters
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+export function computeETA_MS(lat1: number, lon1: number, lat2: number, lon2: number, speedKmh = 40) {
+  const dist = haversineDistanceMeters(lat1, lon1, lat2, lon2);
+  const speedMs = (speedKmh * 1000) / 3600;
+  if (speedMs <= 0) return Infinity;
+  const eta = dist / speedMs;
+  return Math.round(eta * 1000); // in milliseconds
+}
+
+
+--- FILE: server/ws.ts ---
+
+import { Server as HttpServer } from 'http';
+import { Server as IOServer } from 'socket.io';
+import jwt from 'jsonwebtoken';
+
+let io: IOServer | null = null;
+
+export function initWebsocket(server: HttpServer, app: any) {
+  io = new IOServer(server, {
+    path: process.env.SOCKET_IO_PATH || '/socket.io',
+    cors: { origin: '*' }
+  });
+
+  io.on('connection', socket => {
+    // authenticate
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (!token) {
+      socket.disconnect(true);
+      return;
+    }
+    try {
+      const payload: any = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+      socket.data.user = payload;
+      // subscribe to channels
+      socket.join(`user:${payload.id}`);
+      socket.join(`${payload.role}:${payload.id}`);
+      socket.join(`patient:${payload.id}`);
+      if (payload.role === 'hospital') socket.join(`hospital:${payload.hospitalId || payload.id}`);
+      // handle location updates from frontliners
+      socket.on('frontliner:updateLocation', async (data) => {
+        const { lat, lng, isAvailable } = data;
+        // update Redis GEO and DB via storage function
+        try {
+          const { updateFrontlinerLocation } = require('./storage');
+          const frontliner = await updateFrontlinerLocation(payload.frontlinerId || payload.id, lat, lng, isAvailable);
+          io?.to(`frontliner:${frontliner.id}`).emit('frontliner.location', frontliner);
+        } catch(e) {}
+      });
+
+      // subscriptions
+      socket.on('subscribe:patient', () => socket.join(`patient:${payload.id}`));
+      socket.on('subscribe:frontliner', (id) => socket.join(`frontliner:${id}`));
+      socket.on('subscribe:hospital', (id) => socket.join(`hospital:${id}`));
+    } catch (e) {
+      socket.disconnect(true);
+    }
+  });
+
+  // attach to app for use in routes
+  app.set('ws', io);
+  return io;
+}
+
+export function getIoInstance() {
+  return io;
+}
+
+
+--- FILE: server/index.ts (PATCH) ---
+
+// Ensure server initializes websocket and attaches to app
+import http from 'http';
+import app from './app'; // existing express app
+import { initWebsocket } from './ws';
+
+const server = http.createServer(app);
+initWebsocket(server, app);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server listening on ${PORT}`);
+});
+
+
+--- FILE: client/src/lib/socket.ts ---
+
+import { io, Socket } from 'socket.io-client';
+let socket: Socket | null = null;
+
+export function connectSocket(token: string) {
+  if (socket) return socket;
+  socket = io(process.env.VITE_API_BASE_URL || '', {
+    path: process.env.VITE_SOCKET_PATH || '/socket.io',
+    auth: { token }
+  });
+  socket.on('connect', () => {
+    console.log('socket connected', socket?.id);
+  });
+  return socket;
+}
+
+export function getSocket() {
+  return socket;
+}
+
+
+--- FILE: client/src/lib/frontliner.ts ---
+
+import axios from 'axios';
+import type { Frontliner } from '../../shared/schema';
+
+export async function registerFrontlinerAPI(data: { userId: number; vehicleType?: string; organization?: string }) {
+  const res = await axios.post('/api/frontliners/register', data);
+  return res.data;
+}
+
+export async function updateLocationAPI(id: number, lat: number, lng: number, isAvailable?: boolean) {
+  const res = await axios.patch(`/api/frontliners/${id}/location`, { lat, lng, isAvailable });
+  return res.data;
+}
+
+export async function getCasesForFrontliner(id: number) {
+  const res = await axios.get(`/api/frontliners/${id}/cases`);
+  return res.data;
+}
+
+
+--- FILE: client/src/pages/frontliner-dashboard.tsx ---
+
+import React, { useEffect, useState } from 'react';
+import { getSocket, connectSocket } from '../lib/socket';
+import { getCasesForFrontliner } from '../lib/frontliner';
+import { useAuthStore } from '../lib/auth';
+
+const FrontlinerDashboard: React.FC = () => {
+  const user = useAuthStore(state => state.user);
+  const token = useAuthStore(state => state.token);
+  const [cases, setCases] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'frontliner') return;
+    if (token) connectSocket(token);
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('subscribe:frontliner', user.frontlinerId || user.id);
+      socket.on('case.assigned', (c: any) => {
+        setCases(prev => [c, ...prev]);
+      });
+      socket.on('case.updated', (c: any) => {
+        setCases(prev => prev.map(p => p.id === c.id ? c : p));
+      });
+    }
+    // initial fetch
+    (async () => {
+      try {
+        const res = await getCasesForFrontliner(user.frontlinerId || user.id);
+        setCases(res.cases || []);
+      } catch (e) {}
+    })();
+    return () => {
+      if (socket) {
+        socket.off('case.assigned');
+        socket.off('case.updated');
+      }
+    };
+  }, [user, token]);
+
+  const handleAction = async (caseId: number, action: 'ack'|'in_progress'|'completed') => {
+    try {
+      await fetch(`/api/dispatch/${caseId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: action }) });
+    } catch (e) { console.error(e); }
+  };
+
+  return (
+    <div className="p-4">
+      <h1 className="text-xl font-semibold mb-4">Frontliner Dashboard</h1>
+      <div>
+        {cases.length === 0 ? <p>No active cases</p> : cases.map(c => (
+          <div key={c.id} className="border p-3 mb-3 rounded">
+            <div className="flex justify-between">
+              <div>
+                <strong>Case #{c.id}</strong>
+                <div>Patient ID: {c.patientId}</div>
+                <div>Status: {c.status}</div>
+                <div>Priority: {c.priority}</div>
+                <div>Location: {c.originLat}, {c.originLng}</div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => handleAction(c.id, 'ack')} className="btn">Acknowledge</button>
+                <button onClick={() => handleAction(c.id, 'in_progress')} className="btn">In Progress</button>
+                <button onClick={() => handleAction(c.id, 'completed')} className="btn">Complete</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default FrontlinerDashboard;
+
+
+--- FILE: client/src/pages/dispatch-monitor.tsx ---
+
+import React, { useEffect, useState } from 'react';
+import { getSocket, connectSocket } from '../lib/socket';
+import { useAuthStore } from '../lib/auth';
+
+const DispatchMonitor: React.FC = () => {
+  const user = useAuthStore(s => s.user);
+  const token = useAuthStore(s => s.token);
+  const [events, setEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    connectSocket(token);
+    const socket = getSocket();
+    if (!socket) return;
+    socket.on('case.created', (c: any) => setEvents(prev => [ { type: 'created', data: c }, ...prev ]));
+    socket.on('case.assigned', (c: any) => setEvents(prev => [ { type: 'assigned', data: c }, ...prev ]));
+    return () => {
+      socket?.off('case.created');
+      socket?.off('case.assigned');
+    };
+  }, [token]);
+
+  return (
+    <div className="p-4">
+      <h1 className="text-xl font-semibold mb-4">Dispatch Monitor</h1>
+      <div>
+        {events.map((e, i) => (
+          <div key={i} className="border p-2 mb-2">
+            <div><strong>{e.type}</strong></div>
+            <pre className="text-sm">{JSON.stringify(e.data, null, 2)}</pre>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default DispatchMonitor;
+
+
+--- FILE: client/src/lib/auth.ts (PATCH ADDITIONS) ---
+
+// Ensure User interface includes frontliner info
+export interface User {
+  id: number;
+  username: string;
+  role: string;
+  hospitalId?: number;
+  frontlinerId?: number;
+  fullName?: string;
+  phone?: string;
+  cnic?: string;
+  address?: string;
+  age?: number;
+  bloodGroup?: string;
+  emergencyContact?: string;
+}
+
+
+--- FILE: client/src/pages/profile.tsx (PATCH SNIPPET) ---
+
+// Add optional fields for frontliner registration in profile page save flow
+// When user.role === 'frontliner' show extra inputs for vehicleType and organization
+// On save, call API to register frontliner if frontlinerId not present
+
+
+--- FILE: replit/collections/FrontlinerModule.http ---
+
+# Thunder Client / HTTP collection - sample flows
+### Create emergency case
+POST /api/dispatch/create
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "patientId": 1,
+  "originLat": 24.8615,
+  "originLng": 67.0099,
+  "priority": 2,
+  "notes": "Accident on road"
+}
+
+### Update frontliner location
+PATCH /api/frontliners/1/location
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "lat": 24.8600,
+  "lng": 67.0100,
+  "isAvailable": true
+}
+
+
+ENVIRONMENT VARIABLES (ADD TO .env / Replit secrets)
+
+REDIS_URL=redis://127.0.0.1:6379
+FRONTLINER_SEARCH_RADIUS_METERS=5000
+FRONTLINER_DEFAULT_SPEED_KMH=40
+AMBULANCE_DEFAULT_SPEED_KMH=60
+FRONTLINER_ADVANTAGE_MS=15000
+VITE_SOCKET_PATH=/socket.io
+SOCKET_IO_PATH=/socket.io
+
+
+ADDITIONAL NOTES FOR THE GENERATOR:
+
+Reuse existing JWT middleware, error handling and DB connection patterns.
+
+Use Redis GEO for frontliners_geo key; update it whenever frontliner location updates. Provide DB fallback queries where Redis is absent.
+
+Ensure WebSocket auth via JWT on connect; use socket.data.user pattern.
+
+Emit events to the following rooms:
+
+patient:{patientId}
+
+frontliner:{frontlinerId}
+
+hospital:{hospitalId}
+
+dispatcher:{dispatcherId} (if applicable)
+
+Seed 3 frontliners and 2 hospitals with coordinates for local testing (include in a seeds SQL file if project uses seeds).
+
+Provide TODO comments where exact integration depends on existing project naming conventions (DB helper names, middleware paths).
+
+All endpoints must use Zod validation and strip sensitive data from responses.
