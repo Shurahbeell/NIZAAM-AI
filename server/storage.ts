@@ -116,6 +116,7 @@ export interface IStorage {
   createFrontliner(frontliner: InsertFrontliner): Promise<Frontliner>;
   getFrontlinerById(id: string): Promise<Frontliner | undefined>;
   getFrontlinerByUserId(userId: string): Promise<Frontliner | undefined>;
+  ensureFrontlinerProfile(userId: string): Promise<Frontliner>;
   updateFrontlinerLocation(id: string, lat: string, lng: string, isAvailable?: boolean): Promise<Frontliner | undefined>;
   findNearestFrontliners(lat: string, lng: string, limit?: number): Promise<Array<Frontliner & { distance: number }>>;
   findNearestHospitals(lat: string, lng: string, limit?: number): Promise<Array<Hospital & { distance: number }>>;
@@ -479,6 +480,29 @@ export class DrizzleStorage implements IStorage {
   async getFrontlinerByUserId(userId: string): Promise<Frontliner | undefined> {
     const result = await db.select().from(frontliners).where(eq(frontliners.userId, userId));
     return result[0];
+  }
+
+  async ensureFrontlinerProfile(userId: string): Promise<Frontliner> {
+    const existing = await this.getFrontlinerByUserId(userId);
+    if (existing) {
+      return existing;
+    }
+
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const newProfile: InsertFrontliner = {
+      userId: userId,
+      organization: "Rescue 1122",
+      vehicleType: "Ambulance",
+      currentLat: "24.8607",
+      currentLng: "67.0011",
+      isAvailable: true,
+    };
+
+    return await this.createFrontliner(newProfile);
   }
 
   async updateFrontlinerLocation(
