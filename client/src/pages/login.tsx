@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { Heart, AlertCircle } from "lucide-react";
+import { Heart, AlertCircle, Activity, Shield } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -59,83 +59,168 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-2">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-primary/60 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="w-full max-w-md space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Logo & Header */}
+        <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Heart className="w-8 h-8 text-primary" />
+            <div className="relative group">
+              <div className="absolute inset-0 bg-white/30 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+              <div className="relative w-20 h-20 rounded-3xl bg-white shadow-2xl flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                <Heart className="w-10 h-10 text-primary animate-pulse" />
+              </div>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">HealthCare Pakistan</h1>
-          <p className="text-muted-foreground">Your health, our priority</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">HealthCare Pakistan</h1>
+            <p className="text-white/90 text-lg">Your health, our priority</p>
+          </div>
         </div>
 
-        <Card className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
+        {/* Main Card */}
+        <Card className="backdrop-blur-sm bg-white/95 shadow-2xl border-white/20 rounded-3xl overflow-hidden">
+          <CardContent className="p-8">
+            {/* Tab Switcher */}
+            <div className="flex gap-2 p-1 bg-muted rounded-2xl mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(true);
+                  setError("");
+                }}
                 disabled={isLoading}
-                data-testid="input-username"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  isLogin
+                    ? "bg-white text-primary shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-login-tab"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(false);
+                  setError("");
+                }}
                 disabled={isLoading}
-                data-testid="input-password"
-              />
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  !isLogin
+                    ? "bg-white text-primary shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-register-tab"
+              >
+                Register
+              </button>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-submit">
-              {isLoading ? "Please wait..." : isLogin ? "Login" : "Register"}
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <Alert variant="destructive" className="rounded-xl animate-in slide-in-from-top-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-          <div className="mt-6 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-              }}
-              className="text-primary hover:underline"
-              data-testid="button-toggle-mode"
-              disabled={isLoading}
-            >
-              {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
-            </button>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-semibold text-foreground">
+                  Username
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    data-testid="input-username"
+                    className="h-12 rounded-xl border-2 border-border focus:border-primary transition-all duration-300 pl-4 text-base"
+                  />
+                </div>
+              </div>
 
-          <div className="mt-6 p-4 bg-muted rounded-lg text-sm space-y-2">
-            <p className="font-semibold">Demo Credentials:</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Patient: username=<strong>patient</strong>, password=<strong>patient123</strong></p>
-              <p>Hospital: username=<strong>jinnah_admin</strong>, password=<strong>hospital123</strong></p>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-semibold text-foreground">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    data-testid="input-password"
+                    className="h-12 rounded-xl border-2 border-border focus:border-primary transition-all duration-300 pl-4 text-base"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 text-white font-semibold text-base"
+                disabled={isLoading}
+                data-testid="button-submit"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Please wait...
+                  </div>
+                ) : (
+                  isLogin ? "Login" : "Create Account"
+                )}
+              </Button>
+            </form>
+
+            {/* Demo Credentials */}
+            <div className="mt-6 p-4 bg-gradient-to-br from-accent to-accent/50 rounded-2xl space-y-3 border border-accent/20">
+              <div className="flex items-center gap-2 text-primary">
+                <Shield className="w-4 h-4" />
+                <p className="font-semibold text-sm">Demo Credentials:</p>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-start gap-2 p-2 bg-white/50 rounded-lg">
+                  <Activity className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Patient Account</p>
+                    <p className="text-muted-foreground">
+                      <strong>patient</strong> / <strong>patient123</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-white/50 rounded-lg">
+                  <Heart className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Hospital Admin</p>
+                    <p className="text-muted-foreground">
+                      <strong>jinnah_admin</strong> / <strong>hospital123</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-white/80 text-sm">
+            Powered by AI-driven healthcare technology
+          </p>
+        </div>
       </div>
     </div>
   );
