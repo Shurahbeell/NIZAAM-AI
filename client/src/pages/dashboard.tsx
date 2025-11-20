@@ -12,9 +12,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useAuthStore } from "@/lib/auth";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
   const [greeting] = useState(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -169,8 +171,8 @@ export default function Dashboard() {
         <Card className="p-6 bg-gradient-to-br from-white to-accent/30 shadow-xl border-none">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {greeting}, Ali
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent" data-testid="text-greeting">
+                {greeting}, {user?.username || "Guest"}
               </h2>
               <p className="text-muted-foreground mt-1">How can we help you today?</p>
             </div>
