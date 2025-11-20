@@ -14,14 +14,9 @@ export default function FrontlinerDashboard() {
   const { toast } = useToast();
   const [frontlinerId, setFrontlinerId] = useState<string | null>(null);
 
-  // Get frontliner profile
+  // Get frontliner profile (auto-creates if missing)
   const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery({
-    queryKey: ["/api/frontliners/user", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const response = await apiRequest("GET", `/api/frontliners/user/${user.id}`);
-      return response as any;
-    },
+    queryKey: ["/api/frontliners/me"],
     enabled: !!user?.id,
   });
 
