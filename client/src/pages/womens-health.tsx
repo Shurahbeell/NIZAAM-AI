@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, Calendar, AlertTriangle, Baby, Search, Bell, Stethoscope, BookOpen, Activity } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, AlertTriangle, Baby, Search, Bell, Stethoscope, BookOpen, Activity, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -328,7 +328,6 @@ export default function WomensHealth() {
     const input = symptomInput.toLowerCase();
     let result: SymptomCheckResult;
 
-    // Simple rule-based analysis
     const criticalSymptoms = ["lump", "bleeding", "severe pain", "discharge", "fever"];
     const moderateSymptoms = ["irregular", "missed period", "pain", "cramps"];
     
@@ -392,69 +391,86 @@ export default function WomensHealth() {
 
   if (selectedTopic) {
     return (
-      <div className="min-h-screen bg-background pb-24">
-        <header className="border-b sticky top-0 bg-background z-10">
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent/10 to-background pb-24">
+        {/* Header */}
+        <header className="sticky top-0 bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg z-20 backdrop-blur-sm">
           <div className="p-4 flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSelectedTopic(null)}
               data-testid="button-back-topic"
+              className="text-white hover:bg-white/20"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-xl font-semibold text-foreground">{selectedTopic.title}</h1>
+              <h1 className="text-xl font-bold text-white">{selectedTopic.title}</h1>
             </div>
           </div>
         </header>
 
-        <div className="p-4 space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-muted-foreground leading-relaxed">{selectedTopic.description}</p>
-            </CardContent>
+        <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* Description */}
+          <Card className="p-6 border-none shadow-xl bg-gradient-to-br from-white to-accent/20 rounded-2xl">
+            <p className="text-muted-foreground leading-relaxed">{selectedTopic.description}</p>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-destructive">Risk Factors</CardTitle>
+          {/* Risk Factors */}
+          <Card className="border-2 border-destructive/20 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-4 bg-gradient-to-r from-destructive/10 to-destructive/5">
+              <CardTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Risk Factors
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
+            <CardContent className="pt-4">
+              <ul className="space-y-3">
                 {selectedTopic.riskFactors.map((factor, index) => (
-                  <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                    <span className="text-destructive mt-1">•</span>
-                    <span>{factor}</span>
+                  <li key={index} className="flex items-start gap-3 p-3 bg-accent/30 rounded-xl">
+                    <div className="w-6 h-6 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-destructive text-sm font-bold">!</span>
+                    </div>
+                    <span className="text-sm text-foreground">{factor}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-primary">Prevention Tips</CardTitle>
+          {/* Prevention Tips */}
+          <Card className="border-2 border-primary/20 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-4 bg-gradient-to-r from-primary/10 to-primary/5">
+              <CardTitle className="text-primary flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Prevention Tips
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
+            <CardContent className="pt-4">
+              <ul className="space-y-3">
                 {selectedTopic.preventionTips.map((tip, index) => (
-                  <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                    <span className="text-primary mt-1">✓</span>
-                    <span>{tip}</span>
+                  <li key={index} className="flex items-start gap-3 p-3 bg-accent/30 rounded-xl">
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-sm text-foreground">{tip}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* AI Symptom Checker */}
+          <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
             <CardHeader>
-              <CardTitle>AI Symptom Checker</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Stethoscope className="w-5 h-5 text-primary" />
+                AI Symptom Checker
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="symptoms">Describe your symptoms</Label>
+                <Label htmlFor="symptoms" className="font-semibold">Describe your symptoms</Label>
                 <Textarea
                   id="symptoms"
                   placeholder="E.g., irregular periods, breast lump, unusual discharge..."
@@ -462,34 +478,36 @@ export default function WomensHealth() {
                   onChange={(e) => setSymptomInput(e.target.value)}
                   rows={4}
                   data-testid="textarea-symptoms"
+                  className="rounded-xl border-2"
                 />
               </div>
-              <Button onClick={analyzeSymptoms} className="w-full" data-testid="button-analyze">
+              <Button 
+                onClick={analyzeSymptoms} 
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-300" 
+                data-testid="button-analyze"
+              >
                 Analyze Symptoms
               </Button>
 
               {symptomResult && (
-                <Card className={`${
-                  symptomResult.riskLevel === "high" ? "border-destructive bg-destructive/10" :
-                  symptomResult.riskLevel === "medium" ? "border-orange-500 bg-orange-500/10" :
-                  "border-primary bg-primary/10"
+                <Card className={`rounded-2xl border-2 ${
+                  symptomResult.riskLevel === "high" ? "border-destructive/30 bg-gradient-to-br from-destructive/10 to-destructive/5" :
+                  symptomResult.riskLevel === "medium" ? "border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-orange-500/5" :
+                  "border-green-500/30 bg-gradient-to-br from-green-500/10 to-green-500/5"
                 }`}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={
-                        symptomResult.riskLevel === "high" ? "destructive" :
-                        symptomResult.riskLevel === "medium" ? "default" :
-                        "secondary"
-                      } className="uppercase">
-                        {symptomResult.riskLevel} Risk
-                      </Badge>
-                    </div>
+                  <CardContent className="p-5 space-y-4">
+                    <Badge variant={
+                      symptomResult.riskLevel === "high" ? "destructive" :
+                      "default"
+                    } className="uppercase text-xs px-3 py-1">
+                      {symptomResult.riskLevel} Risk
+                    </Badge>
                     <div>
-                      <p className="font-semibold text-foreground mb-1">Recommendation:</p>
+                      <p className="font-bold text-foreground mb-2">Recommendation:</p>
                       <p className="text-sm text-muted-foreground">{symptomResult.recommendation}</p>
                     </div>
                     <div>
-                      <p className="font-semibold text-foreground mb-1">Advice:</p>
+                      <p className="font-bold text-foreground mb-2">Advice:</p>
                       <p className="text-sm text-muted-foreground">{symptomResult.advice}</p>
                     </div>
                   </CardContent>
@@ -498,16 +516,20 @@ export default function WomensHealth() {
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Set Reminders */}
+          <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
             <CardHeader>
-              <CardTitle>Set Screening Reminders</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Set Screening Reminders
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {selectedTopic.topic === "breast-cancer" && (
                 <>
                   <Button
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start h-12 rounded-xl border-2 hover:bg-accent/50 hover:border-primary/30"
                     onClick={() => addReminder(selectedTopic.topic, "Breast Self-Exam", "monthly")}
                     data-testid="button-reminder-self-exam"
                   >
@@ -516,7 +538,7 @@ export default function WomensHealth() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start h-12 rounded-xl border-2 hover:bg-accent/50 hover:border-primary/30"
                     onClick={() => addReminder(selectedTopic.topic, "Mammogram", "yearly")}
                     data-testid="button-reminder-mammogram"
                   >
@@ -528,7 +550,7 @@ export default function WomensHealth() {
               {selectedTopic.topic === "cervical-cancer" && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full justify-start h-12 rounded-xl border-2 hover:bg-accent/50 hover:border-primary/30"
                   onClick={() => addReminder(selectedTopic.topic, "Pap Smear", "yearly")}
                   data-testid="button-reminder-pap"
                 >
@@ -539,14 +561,21 @@ export default function WomensHealth() {
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Resources */}
+          <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
             <CardHeader>
-              <CardTitle>Resources</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-primary" />
+                Resources
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
                 {selectedTopic.resources.map((resource, index) => (
-                  <li key={index} className="text-sm text-primary">• {resource}</li>
+                  <li key={index} className="text-sm text-primary flex items-start gap-2 p-2 bg-accent/30 rounded-lg">
+                    <span className="text-primary mt-0.5">•</span>
+                    {resource}
+                  </li>
                 ))}
               </ul>
             </CardContent>
@@ -557,66 +586,74 @@ export default function WomensHealth() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <header className="border-b sticky top-0 bg-background z-10">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/10 to-background pb-24">
+      {/* Header */}
+      <header className="sticky top-0 bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg z-20 backdrop-blur-sm">
         <div className="p-4 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setLocation("/dashboard")}
             data-testid="button-back"
+            className="text-white hover:bg-white/20"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-foreground">Women's Health</h1>
-            <p className="text-xs text-muted-foreground">Complete health & awareness center</p>
+          <div className="flex-1 flex items-center gap-2">
+            <Heart className="w-6 h-6 text-white" />
+            <div>
+              <h1 className="text-xl font-bold text-white">Women's Health</h1>
+              <p className="text-xs text-white/80">Complete health & awareness center</p>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="p-4">
+      <div className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Tabs defaultValue="awareness" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="awareness" data-testid="tab-awareness">Awareness</TabsTrigger>
-            <TabsTrigger value="period" data-testid="tab-period">Period</TabsTrigger>
-            <TabsTrigger value="pregnancy" data-testid="tab-pregnancy">Pregnancy</TabsTrigger>
-            <TabsTrigger value="reminders" data-testid="tab-reminders">
+          <TabsList className="grid w-full grid-cols-4 h-12 rounded-xl bg-muted p-1">
+            <TabsTrigger value="awareness" data-testid="tab-awareness" className="rounded-lg">Awareness</TabsTrigger>
+            <TabsTrigger value="period" data-testid="tab-period" className="rounded-lg">Period</TabsTrigger>
+            <TabsTrigger value="pregnancy" data-testid="tab-pregnancy" className="rounded-lg">Pregnancy</TabsTrigger>
+            <TabsTrigger value="reminders" data-testid="tab-reminders" className="rounded-lg">
               Reminders
               {activeReminders.length > 0 && (
-                <Badge variant="destructive" className="ml-1 text-xs px-1">{activeReminders.length}</Badge>
+                <Badge variant="destructive" className="ml-1 text-xs px-1.5">{activeReminders.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="awareness" className="space-y-4">
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 placeholder="Search health topics..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-14 rounded-xl border-2 text-base shadow-md"
                 data-testid="input-search-topics"
               />
             </div>
 
-            <div className="grid gap-3">
+            {/* Topics */}
+            <div className="grid gap-4">
               {filteredTopics.map((topic) => {
                 const Icon = topic.icon;
                 return (
                   <Card
                     key={topic.id}
-                    className="cursor-pointer hover-elevate"
+                    className="cursor-pointer border-none shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-white to-accent/20 overflow-hidden relative group"
                     onClick={() => setSelectedTopic(topic)}
                     data-testid={`topic-card-${topic.topic}`}
                   >
-                    <CardContent className="p-4 flex items-start gap-3">
-                      <div className={`w-12 h-12 rounded-full bg-${topic.color}-500/10 flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`w-6 h-6 text-${topic.color}-500`} />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <CardContent className="p-5 flex items-start gap-4 relative z-10">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center shadow-md flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="w-7 h-7 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">{topic.title}</h3>
+                        <h3 className="font-bold text-foreground mb-1 text-base">{topic.title}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-2">{topic.description}</p>
                       </div>
                     </CardContent>
@@ -626,207 +663,188 @@ export default function WomensHealth() {
             </div>
           </TabsContent>
 
+          {/* Period Tracking Tab */}
           <TabsContent value="period" className="space-y-4">
             {nextPeriod && (
-              <Card className="border-primary bg-primary/5">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-primary" />
+              <Card className="p-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border-2 border-pink-500/20 shadow-lg rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-pink-600" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">Next Period Expected</p>
-                    <p className="text-sm text-muted-foreground">
-                      {nextPeriod.toLocaleDateString()}
-                    </p>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Next Period Expected</p>
+                    <p className="text-lg font-bold text-pink-600">{nextPeriod.toLocaleDateString()}</p>
                   </div>
-                </CardContent>
+                </div>
               </Card>
             )}
 
-            <Card>
+            <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
               <CardHeader>
                 <CardTitle>Log Period</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="period-date">Last Period Start Date</Label>
+                  <Label htmlFor="period-date" className="font-semibold">Last Period Start Date</Label>
                   <Input
                     id="period-date"
                     type="date"
                     value={lastPeriodDate}
                     onChange={(e) => setLastPeriodDate(e.target.value)}
                     data-testid="input-period-date"
+                    className="h-12 rounded-xl border-2"
                   />
                 </div>
-                <Button onClick={savePeriod} className="w-full" data-testid="button-save-period">
-                  Log Period
+                <Button onClick={savePeriod} className="w-full h-11 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500" data-testid="button-save-period">
+                  Save Period Entry
                 </Button>
               </CardContent>
             </Card>
 
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">Period History</h2>
-              {periodEntries.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                    <p className="text-muted-foreground">No period data yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {periodEntries.map((entry, index) => (
-                    <Card key={index}>
-                      <CardContent className="p-3">
-                        <p className="text-sm font-medium">
-                          {new Date(entry.startDate).toLocaleDateString()}
-                        </p>
-                        <Badge variant="outline" className="mt-1 capitalize">{entry.flow} flow</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="pregnancy" className="space-y-4">
-            {isPregnant && dueDate && (
-              <Card className="border-primary bg-primary/5">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Baby className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">Week {pregnancyWeek} of Pregnancy</p>
-                      <p className="text-sm text-muted-foreground">
-                        Due date: {new Date(dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full" 
-                      style={{ width: `${(pregnancyWeek / 40) * 100}%` }}
-                    />
+            {periodEntries.length > 0 && (
+              <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
+                <CardHeader>
+                  <CardTitle>Period History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {periodEntries.slice(0, 6).map((entry, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-accent/30 rounded-xl">
+                        <span className="text-sm font-medium text-foreground">{new Date(entry.startDate).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="capitalize">{entry.flow} flow</Badge>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
 
-            <Card>
+          {/* Pregnancy Tab */}
+          <TabsContent value="pregnancy" className="space-y-4">
+            {isPregnant && pregnancyWeek > 0 && (
+              <Card className="p-5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-2 border-blue-500/20 shadow-lg rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Baby className="w-7 h-7 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Pregnancy Progress</p>
+                    <p className="text-2xl font-bold text-blue-600">Week {pregnancyWeek}</p>
+                    <p className="text-xs text-muted-foreground">Due: {new Date(dueDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
               <CardHeader>
                 <CardTitle>Pregnancy Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    id="pregnant"
                     checked={isPregnant}
                     onChange={(e) => setIsPregnant(e.target.checked)}
-                    className="w-4 h-4"
+                    id="is-pregnant"
+                    className="w-4 h-4 rounded"
                     data-testid="checkbox-pregnant"
                   />
-                  <Label htmlFor="pregnant">I am currently pregnant</Label>
+                  <Label htmlFor="is-pregnant" className="font-semibold cursor-pointer">I am currently pregnant</Label>
                 </div>
-
+                
                 {isPregnant && (
-                  <div className="space-y-2">
-                    <Label htmlFor="due-date">Expected Due Date</Label>
-                    <Input
-                      id="due-date"
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      data-testid="input-due-date"
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="due-date" className="font-semibold">Expected Due Date</Label>
+                      <Input
+                        id="due-date"
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        data-testid="input-due-date"
+                        className="h-12 rounded-xl border-2"
+                      />
+                    </div>
+                    <Button onClick={savePregnancyInfo} className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500" data-testid="button-save-pregnancy">
+                      Save Pregnancy Info
+                    </Button>
+                  </>
                 )}
-
-                <Button onClick={savePregnancyInfo} className="w-full" data-testid="button-save-pregnancy">
-                  Save Information
-                </Button>
               </CardContent>
             </Card>
 
             {isPregnant && (
               <>
-                <Card className="bg-destructive/10 border-destructive/20">
+                <Card className="border-2 border-destructive/20 shadow-xl rounded-2xl bg-gradient-to-br from-destructive/5 to-transparent">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive">
+                    <CardTitle className="text-destructive flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5" />
-                      Danger Signs - Seek Immediate Care
+                      Danger Signs - Seek Help Immediately
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {dangerSigns.map((sign, index) => (
-                        <li key={index} className="text-sm text-muted-foreground">
-                          • {sign}
+                      {dangerSigns.map((sign, idx) => (
+                        <li key={idx} className="text-sm text-foreground flex items-start gap-2 p-2 bg-destructive/10 rounded-lg">
+                          <span className="text-destructive mt-0.5">•</span>
+                          {sign}
                         </li>
                       ))}
                     </ul>
                   </CardContent>
                 </Card>
 
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground mb-3">Antenatal Care Schedule</h2>
-                  <div className="space-y-2">
-                    {maternalReminders.map((reminder, index) => (
-                      <Card key={index}>
-                        <CardContent className="p-3">
-                          <p className="text-sm font-medium">Week {reminder.week}</p>
-                          <p className="text-sm text-muted-foreground">{reminder.reminder}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      Antenatal Care Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {maternalReminders.map((item, idx) => (
+                        <div key={idx} className="p-4 bg-accent/30 rounded-xl">
+                          <p className="font-bold text-primary text-sm">Week {item.week}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{item.reminder}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
           </TabsContent>
 
+          {/* Reminders Tab */}
           <TabsContent value="reminders" className="space-y-4">
             {reminders.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Bell className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-2">No screening reminders set</p>
-                  <p className="text-sm text-muted-foreground">
-                    Visit awareness topics to set up reminders for screenings
-                  </p>
-                </CardContent>
+              <Card className="p-8 text-center border-none shadow-xl rounded-2xl bg-gradient-to-br from-white to-accent/20">
+                <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <p className="text-muted-foreground">No screening reminders set yet.</p>
+                <p className="text-sm text-muted-foreground mt-2">Browse awareness topics to set up reminders for regular screenings.</p>
               </Card>
             ) : (
               <div className="space-y-3">
                 {reminders.map((reminder) => (
-                  <Card key={reminder.id} data-testid={`reminder-card-${reminder.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Bell className="w-4 h-4 text-primary" />
-                            <h3 className="font-semibold text-foreground">{reminder.reminderType}</h3>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-1 capitalize">
-                            Topic: {reminder.topic.replace("-", " ")}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Next due: {new Date(reminder.nextDueDate).toLocaleDateString()}
-                          </p>
-                          <Badge variant="outline" className="mt-2 capitalize">{reminder.frequency}</Badge>
-                        </div>
-                        <Button
-                          variant={reminder.isEnabled ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => toggleReminder(reminder.id)}
-                          data-testid={`button-toggle-${reminder.id}`}
-                        >
-                          {reminder.isEnabled ? "Enabled" : "Disabled"}
-                        </Button>
+                  <Card key={reminder.id} className="border-none shadow-lg rounded-2xl bg-gradient-to-br from-white to-accent/20">
+                    <CardContent className="p-4 flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">{reminder.reminderType}</p>
+                        <p className="text-sm text-muted-foreground">Due: {new Date(reminder.nextDueDate).toLocaleDateString()}</p>
+                        <Badge variant="outline" className="mt-2 capitalize text-xs">{reminder.frequency}</Badge>
                       </div>
+                      <Button
+                        variant={reminder.isEnabled ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleReminder(reminder.id)}
+                        data-testid={`button-toggle-reminder-${reminder.id}`}
+                        className="rounded-lg"
+                      >
+                        {reminder.isEnabled ? "On" : "Off"}
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
