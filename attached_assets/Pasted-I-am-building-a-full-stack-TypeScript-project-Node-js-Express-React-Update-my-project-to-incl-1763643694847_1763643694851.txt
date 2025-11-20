@@ -1,0 +1,121 @@
+I am building a full-stack TypeScript project (Node.js + Express + React).
+Update my project to include a complete dynamic user profile system exactly as described below.
+Implement EVERYTHING in this prompt — backend + frontend — and remove all hardcoded user data.
+
+✅ BACKEND REQUIREMENTS
+1. Update Database Schema
+
+Extend the users table with these 7 additional fields:
+
+fullName
+
+phone
+
+cnic
+
+address
+
+age
+
+bloodGroup
+
+emergencyContact
+
+2. Storage Methods (server/storage.ts)
+
+Implement:
+
+getUserById(id) → returns full user profile
+
+updateUserProfile(id, data) → updates ONLY the authenticated user
+
+Must enforce self-only authorization
+
+Do NOT allow changing: role, password, or id
+
+3. Auth Routes (server/routes/auth.ts)
+
+Fix login & register so responses return the full user object, including all 7 profile fields
+
+Add protected routes:
+
+GET /api/auth/users/:id       → profile fetch (self only)
+PATCH /api/auth/users/:id     → profile update (self only)
+
+
+Validation & security rules:
+
+Age must accept both string and number → convert internally
+
+All routes require JWT authentication
+
+Patients can only access/update their own profile
+
+Use Zod validation for all fields
+
+🖥️ FRONTEND REQUIREMENTS
+4. Auth Store (client/src/lib/auth.ts)
+
+Extend the User interface with all 7 profile fields
+
+Login/register must store the full returned user object
+
+Must stay reactive and update on every backend response
+
+5. Profile Page (client/src/pages/profile.tsx)
+
+Remove ALL hardcoded values
+
+Load data from auth store user
+
+Sync using useEffect
+
+Save changes using: PATCH /api/auth/users/:id
+
+Use the server's returned user data, not merged data
+
+Trim whitespace and validate empty fields
+
+Add strong error logging for debugging
+
+6. Emergency Page (client/src/pages/emergency.tsx)
+
+Replace all hardcoded fields:
+
+Name → user.fullName || user.username
+
+Phone → user.phone
+
+Address → user.address
+
+Must block emergency submission if required profile fields are missing.
+
+7. Dashboard (client/src/pages/dashboard.tsx)
+
+Remove all hardcoded names
+
+Greet with: user.fullName || user.username
+
+Make all dashboard elements dynamic
+
+🔒 SECURITY REQUIREMENTS
+
+JWT required for all profile routes
+
+Users can ONLY view/update their own profile
+
+Sensitive fields (role, password, id) cannot be modified
+
+Zod validation on all endpoints
+
+🔄 REQUIRED DATA FLOW
+Register or Login  
+→ Backend returns FULL user object  
+→ Auth store receives full user  
+→ Profile, Emergency, and Dashboard auto-sync to updated user data
+
+✔️ FINAL INSTRUCTION
+
+Implement ALL backend and frontend updates EXACTLY as specified.
+Remove ALL hardcoded user data from every file in the project.
+Everything should be fully dynamic and synchronized with the authenticated user.
