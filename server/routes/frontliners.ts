@@ -8,7 +8,7 @@ const router = Router();
 // Get current user's frontliner profile (auto-creates if missing)
 router.get("/me", requireAuth, requireRole("frontliner"), async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
     
     // Ensure frontliner profile exists (auto-creates if missing)
     const frontliner = await storage.ensureFrontlinerProfile(userId);

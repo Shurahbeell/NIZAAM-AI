@@ -15,8 +15,13 @@ export default function FrontlinerDashboard() {
   const [frontlinerId, setFrontlinerId] = useState<string | null>(null);
 
   // Get frontliner profile (auto-creates if missing)
-  const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery({
+  const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery<{ frontliner: any }>({
     queryKey: ["/api/frontliners/me"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/frontliners/me");
+      const data = await response.json();
+      return data;
+    },
     enabled: !!user?.id,
   });
 
@@ -32,7 +37,8 @@ export default function FrontlinerDashboard() {
     queryFn: async () => {
       if (!frontlinerId) return { cases: [] };
       const response = await apiRequest("GET", `/api/frontliners/${frontlinerId}/cases`);
-      return response as any;
+      const data = await response.json();
+      return data;
     },
     enabled: !!frontlinerId,
     refetchInterval: 3000, // Refresh every 3 seconds
