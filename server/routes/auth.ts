@@ -104,6 +104,11 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
+    // Auto-create frontliner profile if user is a frontliner
+    if (user.role === "frontliner") {
+      await storage.ensureFrontlinerProfile(user.id);
+    }
+
     // Generate token
     const token = generateToken({
       userId: user.id,
