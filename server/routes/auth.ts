@@ -40,6 +40,13 @@ router.post("/register", async (req: Request, res: Response) => {
       hospitalId: data.hospitalId,
     });
 
+    console.log("[Auth] 🔍 NEW USER CREATED:", {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      requestedUsername: data.username,
+    });
+
     // Generate token
     const token = generateToken({
       userId: user.id,
@@ -48,7 +55,9 @@ router.post("/register", async (req: Request, res: Response) => {
       hospitalId: user.hospitalId || undefined,
     });
 
-    res.json({
+    console.log("[Auth] 🔑 TOKEN GENERATED FOR:", user.username, "ID:", user.id);
+
+    const response = {
       token,
       user: {
         id: user.id,
@@ -56,7 +65,11 @@ router.post("/register", async (req: Request, res: Response) => {
         role: user.role,
         hospitalId: user.hospitalId,
       },
-    });
+    };
+
+    console.log("[Auth] 📤 SENDING RESPONSE:", JSON.stringify(response.user));
+
+    res.json(response);
   } catch (error: any) {
     console.error("[Auth] Register error:", error);
     if (error instanceof z.ZodError) {

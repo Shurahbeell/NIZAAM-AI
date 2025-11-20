@@ -21,8 +21,41 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       token: null,
       user: null,
-      setAuth: (token, user) => set({ token, user }),
-      logout: () => set({ token: null, user: null }),
+      setAuth: (token, user) => {
+        const oldState = get();
+        console.log("[Auth Store] 🔄 setAuth called:", {
+          NEW_USER: { username: user.username, id: user.id, role: user.role },
+          OLD_USER: oldState.user ? { username: oldState.user.username, id: oldState.user.id, role: oldState.user.role } : null,
+          tokenChanged: oldState.token !== token
+        });
+        
+        // CRITICAL FIX: Explicitly set both token AND user in a single state update
+        // This ensures localStorage persistence happens with the correct values
+        set({ token, user });
+        
+        console.log("[Auth Store] ✅ State updated. Verifying...");
+        const newState = get();
+        console.log("[Auth Store] 📊 Verification:", {
+          storedUser: newState.user ? { username: newState.user.username, id: newState.user.id } : null,
+          tokensMatch: newState.token === token,
+          usersMatch: newState.user?.id === user.id
+        });
+        
+        // Double-check localStorage
+        const localStorageValue = localStorage.getItem("auth-storage");
+        if (localStorageValue) {
+          const parsed = JSON.parse(localStorageValue);
+          console.log("[Auth Store] 💾 localStorage check:", {
+            storedUsername: parsed.state?.user?.username,
+            storedUserId: parsed.state?.user?.id,
+            matchesExpected: parsed.state?.user?.id === user.id
+          });
+        }
+      },
+      logout: () => {
+        console.log("[Auth Store] 🚪 Logging out");
+        set({ token: null, user: null });
+      },
       isAuthenticated: () => !!get().token && !!get().user,
     }),
     {
