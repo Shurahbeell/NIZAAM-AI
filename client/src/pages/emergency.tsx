@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Heart, Building2, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
+import { apiRequest } from "@/lib/queryClient";
 
 interface EmergencyData {
   id: string;
@@ -57,28 +58,21 @@ export default function Emergency() {
     }, 300);
 
     try {
-      // Send emergency to backend
-      const response = await fetch("/api/emergencies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId: null,
-          patientName: "Ali Ahmed",
-          patientPhone: "+92 300 1234567",
-          location: "24.8607° N, 67.0011° E",
-          emergencyType: emergencyType,
-          priority: priorityMap[emergencyType] || "medium",
-          symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
-          status: "active",
-          assignedHospitalId: null,
-          notes: null
-        })
+      // Send emergency to backend (apiRequest throws on non-OK responses)
+      await apiRequest("POST", "/api/emergencies", {
+        patientId: null,
+        patientName: "Ali Ahmed",
+        patientPhone: "+92 300 1234567",
+        location: "24.8607° N, 67.0011° E",
+        emergencyType: emergencyType,
+        priority: priorityMap[emergencyType] || "medium",
+        symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
+        status: "active",
+        assignedHospitalId: null,
+        notes: null
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to send emergency");
-      }
-
+      // If we reach here, the request was successful
       setTimeout(() => {
         setIsSending(false);
         setIsSent(true);
@@ -86,6 +80,7 @@ export default function Emergency() {
     } catch (error) {
       console.error("Failed to send emergency:", error);
       setIsSending(false);
+      clearInterval(setProgress as any);
     }
   };
 
