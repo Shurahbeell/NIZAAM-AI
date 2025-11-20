@@ -4,59 +4,87 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* LIGHT MODE - Hospital Grade Color Scheme */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0,102,204, .15);
+  --badge-outline: rgba(0,102,204, .08);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
-  --background: 0 0% 100%;
-  --foreground: 0 0% 0%;
-  --border: 0 0% 96.47%;
-  --card: 0 0% 96.47%;
-  --card-foreground: 0 0% 0%;
-  --card-border: 0 0% 94%;
-  --sidebar: 180 6.6667% 97.0588%;
-  --sidebar-foreground: 210 25% 7.8431%;
-  --sidebar-border: 205.0000 25.0000% 90.5882%;
-  --sidebar-primary: 203.8863 88.2845% 53.1373%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 211.5789 51.3514% 92.7451%;
-  --sidebar-accent-foreground: 203.8863 88.2845% 53.1373%;
-  --sidebar-ring: 202.8169 89.1213% 53.1373%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 0%;
-  --popover-border: 0 0% 96%;
-  --primary: 96 85.19% 73.53%;
-  --primary-foreground: 0 0% 0%;
-  --secondary: 0 0% 0%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 0 0% 96.08%;
-  --muted-foreground: 0 0% 52.94%;
-  --accent: 254.21 100% 92.55%;
-  --accent-foreground: 0 0% 0%;
-  --destructive: 2.04 74.62% 61.37%;
-  --destructive-foreground: 0 0% 100%;
-  --input: 0 0% 0%;
-  --ring: 0 0% 0%;
-  --chart-1: 203.8863 88.2845% 53.1373%;
-  --chart-2: 159.7826 100% 36.0784%;
-  --chart-3: 42.0290 92.8251% 56.2745%;
-  --chart-4: 147.1429 78.5047% 41.9608%;
-  --chart-5: 341.4894 75.2000% 50.9804%;
-  --font-sans: 'Space Grotesk', sans-serif;
-  --font-serif: 'Geist', sans-serif;
-  --font-mono: 'Geist Mono', monospace;
-  --radius: 0rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --elevate-1: rgba(0,102,204, .04);
+  --elevate-2: rgba(0,102,204, .10);
+  
+  /* Hospital Color Palette */
+  --background: 210 100% 99%;                /* Soft White #F9FCFF */
+  --foreground: 215 25% 12%;                 /* Primary Text #1E293B */
+  --border: 214 32% 91%;                     /* Light Gray Border */
+  
+  /* Card Colors */
+  --card: 0 0% 100%;                         /* Pure White #FFFFFF */
+  --card-foreground: 215 25% 12%;            /* Primary Text */
+  --card-border: 214 32% 96%;                /* Soft Gray Border */
+  
+  /* Sidebar Colors - Medical Blue Theme */
+  --sidebar: 210 100% 99%;                   /* Soft White Background */
+  --sidebar-foreground: 215 25% 12%;         /* Primary Text */
+  --sidebar-border: 214 32% 91%;             /* Light Border */
+  --sidebar-primary: 210 100% 40%;           /* Medical Blue #0066CC */
+  --sidebar-primary-foreground: 0 0% 100%;   /* White Text */
+  --sidebar-accent: 210 100% 97%;            /* Very Light Blue */
+  --sidebar-accent-foreground: 210 100% 40%; /* Medical Blue */
+  --sidebar-ring: 210 100% 40%;              /* Medical Blue Ring */
+  
+  /* Popover Colors */
+  --popover: 0 0% 100%;                      /* Pure White */
+  --popover-foreground: 215 25% 12%;         /* Primary Text */
+  --popover-border: 214 32% 96%;             /* Soft Gray */
+  
+  /* Primary = Medical Blue */
+  --primary: 210 100% 40%;                   /* Medical Blue #0066CC */
+  --primary-foreground: 0 0% 100%;           /* White Text */
+  
+  /* Secondary = Healthcare Teal */
+  --secondary: 180 100% 33%;                 /* Healthcare Teal #00A8A8 */
+  --secondary-foreground: 0 0% 100%;         /* White Text */
+  
+  /* Muted = Soft Gray */
+  --muted: 214 32% 96%;                      /* Soft Gray #F1F5F9 */
+  --muted-foreground: 215 15% 46%;           /* Secondary Text #64748B */
+  
+  /* Accent = Light Blue Tint */
+  --accent: 210 100% 97%;                    /* Light Blue Tint #EBF5FF */
+  --accent-foreground: 210 100% 40%;         /* Medical Blue */
+  
+  /* Destructive = Emergency Red */
+  --destructive: 3 76% 56%;                  /* Emergency Red #E53935 */
+  --destructive-foreground: 0 0% 100%;       /* White Text */
+  
+  /* Input & Ring */
+  --input: 214 32% 91%;                      /* Border Color */
+  --ring: 210 100% 40%;                      /* Medical Blue Focus Ring */
+  /* Chart Colors - Hospital Theme */
+  --chart-1: 210 100% 40%;                   /* Medical Blue */
+  --chart-2: 180 100% 33%;                   /* Healthcare Teal */
+  --chart-3: 142 76% 36%;                    /* Success Green #10B981 */
+  --chart-4: 38 92% 50%;                     /* Warning Amber #F59E0B */
+  --chart-5: 3 76% 56%;                      /* Emergency Red */
+  
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-serif: 'Inter', sans-serif;
+  --font-mono: 'Menlo', 'Monaco', monospace;
+  
+  /* Border Radius - Modern Rounded Corners */
+  --radius: 1rem;                            /* 16px for rounded-2xl effect */
+  
+  /* Soft Shadows - Hospital Grade */
+  --shadow-2xs: 0px 1px 2px 0px rgba(30, 41, 59, 0.05);
+  --shadow-xs: 0px 1px 3px 0px rgba(30, 41, 59, 0.08);
+  --shadow-sm: 0px 2px 4px 0px rgba(30, 41, 59, 0.06), 0px 1px 2px -1px rgba(30, 41, 59, 0.04);
+  --shadow: 0px 4px 6px -1px rgba(30, 41, 59, 0.08), 0px 2px 4px -2px rgba(30, 41, 59, 0.04);
+  --shadow-md: 0px 6px 12px -2px rgba(30, 41, 59, 0.10), 0px 3px 6px -3px rgba(30, 41, 59, 0.06);
+  --shadow-lg: 0px 10px 20px -5px rgba(30, 41, 59, 0.12), 0px 5px 10px -5px rgba(30, 41, 59, 0.08);
+  --shadow-xl: 0px 20px 30px -10px rgba(30, 41, 59, 0.15), 0px 10px 15px -8px rgba(30, 41, 59, 0.10);
+  --shadow-2xl: 0px 25px 40px -15px rgba(30, 41, 59, 0.20), 0px 15px 25px -10px rgba(30, 41, 59, 0.12);
+  
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -124,19 +152,22 @@
   --destructive-foreground: 0 0% 100%;
   --input: 207.6923 27.6596% 18.4314%;
   --ring: 202.8169 89.1213% 53.1373%;
-  --chart-1: 203.8863 88.2845% 53.1373%;
-  --chart-2: 159.7826 100% 36.0784%;
-  --chart-3: 42.0290 92.8251% 56.2745%;
-  --chart-4: 147.1429 78.5047% 41.9608%;
-  --chart-5: 341.4894 75.2000% 50.9804%;
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  /* Chart Colors - Hospital Theme (Dark Mode) */
+  --chart-1: 210 100% 50%;                   /* Brighter Medical Blue */
+  --chart-2: 180 100% 40%;                   /* Brighter Healthcare Teal */
+  --chart-3: 142 76% 45%;                    /* Brighter Success Green */
+  --chart-4: 38 92% 60%;                     /* Brighter Warning Amber */
+  --chart-5: 3 76% 60%;                      /* Brighter Emergency Red */
+  
+  /* Soft Shadows - Dark Mode */
+  --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.20);
+  --shadow-xs: 0px 1px 3px 0px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0px 2px 4px 0px rgba(0, 0, 0, 0.20), 0px 1px 2px -1px rgba(0, 0, 0, 0.15);
+  --shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.25), 0px 2px 4px -2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0px 6px 12px -2px rgba(0, 0, 0, 0.30), 0px 3px 6px -3px rgba(0, 0, 0, 0.20);
+  --shadow-lg: 0px 10px 20px -5px rgba(0, 0, 0, 0.35), 0px 5px 10px -5px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0px 20px 30px -10px rgba(0, 0, 0, 0.40), 0px 10px 15px -8px rgba(0, 0, 0, 0.30);
+  --shadow-2xl: 0px 25px 40px -15px rgba(0, 0, 0, 0.50), 0px 15px 25px -10px rgba(0, 0, 0, 0.35);
 
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));

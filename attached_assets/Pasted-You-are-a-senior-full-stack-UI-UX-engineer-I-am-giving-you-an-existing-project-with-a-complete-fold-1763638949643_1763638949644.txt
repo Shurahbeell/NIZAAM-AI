@@ -1,0 +1,60 @@
+You are a senior full-stack UI/UX engineer. I am giving you an existing project with a complete folder structure and functional code. Your job is to upgrade ONLY the frontend UI (NOT the backend and NOT the logic), and keep the entire structure, functions, screens, and logic the same — only redesign the visual part.
+
+🔥 GOAL:
+Transform the current UI into a **modern, professional hospital-grade interface** with a clean and premium look suitable for a Hackathon demo.
+
+🎨 COLOR PALETTE (Hospital Standard):
+- Medical Blue: #0066CC  
+- Healthcare Teal: #00A8A8  
+- Soft White Backgrounds: #F9FCFF  
+- Soft Gray for Cards: #F1F5F9  
+- Emergency Red (sparingly): #E53935  
+- Pure White: #FFFFFF  
+Use gradients like:  
+- Blue → Teal  
+- Teal → White
+
+📌 IMPORTANT RULES:
+1. DO NOT change any backend code.
+2. DO NOT change any route names or API calls.
+3. DO NOT change any file/directory structure.
+4. DO NOT remove existing functionality.
+5. DO NOT rename components or screens.
+6. You CAN rewrite component JSX, styling, and layout to be modern & appealing.
+7. You CAN add animations, transitions, hover effects, modals, and micro-interactions.
+8. You CAN use TailwindCSS (preferred), or keep the current CSS system but upgrade styling.
+9. You CAN add icons using Heroicons / Lucide.
+10. You CAN add loading skeletons and spinners.
+
+✨ MAKE THE UI:
+- Highly interactive
+- Beautiful and minimal
+- Properly spaced using modern spacing rules
+- Card-based layouts
+- Rounded corners (rounded-2xl)
+- Soft shadows and blur effects
+- Polished gradients with professional hospital colors
+- Mobile-friendly responsive layouts
+
+📱 SCREENS TO UPGRADE:
+- Login / Signup  
+- Patient Dashboard  
+- Hospital Dashboard  
+- Emergency Reporting Flow  
+- Medicine & Disease Search UI  
+- Health Awareness Section  
+- Photo Upload UI  
+- Facility listings  
+- Any agent interaction screen  
+
+🎯 DESIGN GOALS:
+- Clean hospital aesthetic (similar to Mayo Clinic / Cleveland Clinic apps)
+- Modern animations (fade, slide, scale)
+- Consistent spacing + typography hierarchy
+- Professional UI components (cards, badges, alerts)
+- Add “Wow Factor” suitable for judges
+- Looks like a real medical product ready for production
+
+📌 KEEP ALL LOGIC STRICTLY THE SAME — only replace UI code with upgraded modern components and styling.
+
+Now scan all frontend files and automatically apply the upgraded UI design everywhere. Use the hospital color palette, modern components, smooth transitions, and improved layout while preserving all logic and structure. Make it feel premium and hackathon-ready.
