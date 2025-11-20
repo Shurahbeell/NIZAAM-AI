@@ -5,6 +5,21 @@ import { requireAuth, requireRole } from "../middleware/auth";
 
 const router = Router();
 
+// Get current user's frontliner profile (auto-creates if missing)
+router.get("/me", requireAuth, requireRole("frontliner"), async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    
+    // Ensure frontliner profile exists (auto-creates if missing)
+    const frontliner = await storage.ensureFrontlinerProfile(userId);
+    
+    res.json({ success: true, frontliner });
+  } catch (error: any) {
+    console.error("[Frontliners] Get profile error:", error);
+    res.status(500).json({ error: "Failed to get frontliner profile" });
+  }
+});
+
 // Register frontliner (create a frontliner profile for an existing user)
 const registerFrontlinerSchema = z.object({
   userId: z.string(),
