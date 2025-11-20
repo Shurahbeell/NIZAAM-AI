@@ -15,7 +15,7 @@ export default function DispatchMonitor() {
       const response = await apiRequest("GET", "/api/dispatch/cases");
       return response as any;
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 3000, // Refresh every 3 seconds
   });
 
   const cases = casesData?.cases || [];

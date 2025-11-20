@@ -9,7 +9,7 @@ const router = Router();
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(4),
-  role: z.enum(["patient", "hospital"]),
+  role: z.enum(["patient", "hospital", "frontliner"]),
   hospitalId: z.string().optional(),
 });
 
@@ -51,7 +51,7 @@ router.post("/register", async (req: Request, res: Response) => {
     const token = generateToken({
       userId: user.id,
       username: user.username,
-      role: user.role as "patient" | "hospital",
+      role: user.role as "patient" | "hospital" | "frontliner",
       hospitalId: user.hospitalId || undefined,
     });
 
@@ -108,7 +108,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const token = generateToken({
       userId: user.id,
       username: user.username,
-      role: user.role as "patient" | "hospital",
+      role: user.role as "patient" | "hospital" | "frontliner",
       hospitalId: user.hospitalId || undefined,
     });
 

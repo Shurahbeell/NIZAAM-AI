@@ -48,6 +48,8 @@ export default function Login() {
       // Redirect based on role
       if (data.user.role === "hospital") {
         setLocation("/hospital-dashboard");
+      } else if (data.user.role === "frontliner") {
+        setLocation("/frontliner-dashboard");
       } else {
         setLocation("/dashboard");
       }
@@ -207,6 +209,15 @@ export default function Login() {
                     <p className="font-medium text-foreground">Hospital Admin</p>
                     <p className="text-muted-foreground">
                       <strong>jinnah_admin</strong> / <strong>hospital123</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-white/50 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Rescue 1122</p>
+                    <p className="text-muted-foreground">
+                      <strong>rescue1122</strong> / <strong>frontliner123</strong>
                     </p>
                   </div>
                 </div>

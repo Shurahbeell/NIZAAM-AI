@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/lib/auth";
 
-interface RoleGuardProps {
-  requiredRole: "patient" | "hospital" | "frontliner";
+interface MultiRoleGuardProps {
+  allowedRoles: Array<"patient" | "hospital" | "frontliner">;
   children: React.ReactNode;
 }
 
-export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
+export default function MultiRoleGuard({ allowedRoles, children }: MultiRoleGuardProps) {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuthStore();
 
@@ -17,7 +17,7 @@ export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
       return;
     }
 
-    if (user && user.role !== requiredRole) {
+    if (user && !allowedRoles.includes(user.role)) {
       // Wrong role, redirect to appropriate dashboard
       if (user.role === "hospital") {
         setLocation("/hospital-dashboard");
@@ -27,14 +27,14 @@ export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
         setLocation("/dashboard");
       }
     }
-  }, [user, isAuthenticated, requiredRole, setLocation]);
+  }, [user, isAuthenticated, allowedRoles, setLocation]);
 
   if (!isAuthenticated() || !user) {
     return null;
   }
 
-  // Only render children if role matches
-  if (user.role === requiredRole) {
+  // Only render children if role is allowed
+  if (allowedRoles.includes(user.role)) {
     return <>{children}</>;
   }
 

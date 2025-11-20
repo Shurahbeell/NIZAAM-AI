@@ -21,7 +21,7 @@ const SECRET = JWT_SECRET || DEV_SECRET;
 export interface JWTPayload {
   userId: string;
   username: string;
-  role: "patient" | "hospital";
+  role: "patient" | "hospital" | "frontliner";
   hospitalId?: string;
 }
 
@@ -51,7 +51,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function requireRole(...roles: ("patient" | "hospital")[]) {
+export function requireRole(...roles: ("patient" | "hospital" | "frontliner")[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: "Authentication required" });

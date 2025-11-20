@@ -1,0 +1,132 @@
+You are modifying an existing full-stack TypeScript project.
+Here is the project zip file:
+/mnt/data/MobileFlowAuth (7).zip
+
+Analyze this entire codebase deeply and generate the missing Emergency Frontliner (Rescue 1122) module pages, routes, RBAC logic, and role-based redirects.
+Everything MUST integrate perfectly with the existing Patient and Hospital modules.
+
+Your Tasks
+1. Understand the existing system
+
+The system already contains:
+
+Patient module
+
+Hospital module
+
+Emergency request system
+
+Dispatch logic that selects the best responder (hospital or frontliner)
+
+Frontliner backend API routes
+
+Dispatch backend routes
+
+BUT the frontend Rescue module (Frontliner Login → Dashboard) is missing.
+
+2. Implement / Fix These Frontend Components
+A. Add role-based login redirect
+
+Modify the login success logic so that:
+
+role = "patient"       → redirect to /dashboard  
+role = "hospital"      → redirect to /hospital-dashboard  
+role = "frontliner"    → redirect to /frontliner-dashboard  
+
+
+Ensure this is implemented in the correct file (auth store or login page).
+
+B. Add missing Rescue Dashboard routes
+
+Add these routes in the router:
+
+/frontliner-dashboard
+/dispatch-monitor
+
+
+Wrapped in proper RBAC:
+
+/frontliner-dashboard → only frontliners
+
+/dispatch-monitor → frontliners or hospitals
+
+C. Implement the actual pages
+
+Create:
+
+client/src/pages/frontliner-dashboard.tsx
+client/src/pages/dispatch-monitor.tsx
+
+Both should:
+
+Fetch assigned emergency cases
+
+Poll every 3 seconds
+
+Display case details (location, distance, ETA, patient name)
+
+Allow updating status (Accepted, En-Route, Arrived, Completed)
+
+Match the existing UI style of the project
+
+No placeholders.
+Use real API endpoints that already exist in the backend.
+
+D. Update navigation
+
+Add conditional UI:
+
+If user.role === "frontliner"
+    show “Frontliner Dashboard”
+
+E. Fix RoleGuard
+
+Ensure:
+
+frontliner → allowed in frontliner routes
+hospital → allowed in hospital + dispatch routes
+patient → allowed ONLY in patient routes
+
+3. Ensure Full System Sync
+
+Make sure:
+
+Emergency requests from patients can be assigned to frontliners
+
+Hospital & Rescue dashboards see the same emergency timeline
+
+Audit logs stay consistent
+
+Distance-based routing remains correct
+
+Everything works without code duplication
+
+4. Validation
+
+Before finishing, validate:
+
+Pages render successfully
+
+Role-based redirects work
+
+Unauthorized users cannot view rescue pages
+
+Emergency flows update in real time
+
+No missing imports, functions, or API paths
+
+5. Output
+
+Provide:
+
+The updated code for all modified files
+
+The new React pages for the Rescue module
+
+The router updates
+
+The RBAC fixes
+
+Any required backend adjustments
+
+A final summary of all changes

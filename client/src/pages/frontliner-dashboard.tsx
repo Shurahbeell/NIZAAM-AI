@@ -40,7 +40,7 @@ export default function FrontlinerDashboard() {
       return response as any;
     },
     enabled: !!frontlinerId,
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 3000, // Refresh every 3 seconds
   });
 
   // Update case status

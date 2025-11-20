@@ -26,6 +26,7 @@ import HospitalPrescriptions from "@/pages/hospital-prescriptions";
 import HospitalReports from "@/pages/hospital-reports";
 import HospitalEmergencies from "@/pages/hospital-emergencies";
 import RoleGuard from "@/components/RoleGuard";
+import MultiRoleGuard from "@/components/MultiRoleGuard";
 import Emergency from "@/pages/emergency";
 import Map from "@/pages/map";
 import History from "@/pages/history";
@@ -104,14 +105,14 @@ function Router() {
       <Route path="/history" component={History} />
       <Route path="/profile" component={Profile} />
       <Route path="/frontliner-dashboard">
-        <RoleGuard requiredRole="patient">
+        <RoleGuard requiredRole="frontliner">
           <FrontlinerDashboard />
         </RoleGuard>
       </Route>
       <Route path="/dispatch-monitor">
-        <RoleGuard requiredRole="hospital">
+        <MultiRoleGuard allowedRoles={["hospital", "frontliner"]}>
           <DispatchMonitor />
-        </RoleGuard>
+        </MultiRoleGuard>
       </Route>
       <Route component={NotFound} />
     </Switch>
