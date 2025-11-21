@@ -1,4 +1,4 @@
-import { openai, eventBus, MCP_CONFIG } from "../index";
+import { gemini, eventBus, MCP_CONFIG } from "../index";
 import { storage } from "../../storage";
 import { translationService } from "../services/translation";
 import { piiProtection } from "../services/pii-protection";
@@ -18,7 +18,7 @@ import { URGENCY_LEVELS, EVENT_TYPES } from "@shared/agents/constants";
  */
 export class TriageAgent implements Agent {
   name = "Triage Agent";
-  description = "Analyzes symptoms and classifies medical urgency using GPT-5 few-shot learning";
+  description = "Analyzes symptoms and classifies medical urgency using Gemini 2.5 Flash few-shot learning";
   capabilities = [
     "symptom_analysis",
     "urgency_classification",
@@ -151,13 +151,15 @@ export class TriageAgent implements Agent {
     ];
     
     try {
-      const response = await openai.chat.completions.create({
+      const response = await gemini.models.generateContent({
         model: MCP_CONFIG.model,
-        messages,
-        max_completion_tokens: MCP_CONFIG.maxTokens
+        contents: messages.map(m => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }]
+        }))
       });
       
-      const content = response.choices[0].message.content || "";
+      const content = response.text || "";
       
       // Parse structured response
       const triageData = this.parseTriageResponse(content);

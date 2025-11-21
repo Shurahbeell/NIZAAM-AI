@@ -1,4 +1,4 @@
-import { openai } from "../index";
+import { gemini } from "../index";
 
 export interface TranslationResult {
   translatedText: string;
@@ -8,7 +8,7 @@ export interface TranslationResult {
 
 /**
  * Translation service for Urdu/English bilingual support
- * Uses GPT-5 for high-quality contextual translation
+ * Uses Gemini 2.5 Flash for high-quality contextual translation
  */
 export class TranslationService {
   /**
@@ -22,17 +22,14 @@ export class TranslationService {
     const systemPrompt = this.getTranslationPrompt(targetLanguage, context);
     
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-5",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: text }
-        ],
-        temperature: 1,
-        max_completion_tokens: 2000
+      const response = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          { role: "user", parts: [{ text: systemPrompt + "\n\n" + text }] }
+        ]
       });
       
-      return response.choices[0].message.content?.trim() || text;
+      return response.text?.trim() || text;
     } catch (error) {
       console.error("[Translation] Error translating text:", error);
       return text; // Fallback to original text
