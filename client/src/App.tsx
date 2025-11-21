@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LanguageContext, useLanguageProvider } from "@/lib/useLanguage";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/onboarding";
 import Login from "@/pages/login";
@@ -35,6 +36,7 @@ import FrontlinerDashboard from "@/pages/frontliner-dashboard";
 import DispatchMonitor from "@/pages/dispatch-monitor";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import LanguageSelector from "@/components/LanguageSelector";
 
 function Router() {
   return (
@@ -127,12 +129,25 @@ function Router() {
   );
 }
 
+function AppContent() {
+  const languageContext = useLanguageProvider();
+
+  return (
+    <LanguageContext.Provider value={languageContext}>
+      <div dir={languageContext.dir} className={languageContext.language === 'ur' ? 'text-right' : 'text-left'}>
+        <LanguageSelector />
+        <Router />
+      </div>
+    </LanguageContext.Provider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <AppContent />
       </TooltipProvider>
     </QueryClientProvider>
   );
