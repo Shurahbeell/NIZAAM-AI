@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,8 +35,15 @@ const timeMap: Record<string, string> = {
   "16:00": "4:00 PM"
 };
 
+interface Hospital {
+  id: string;
+  name: string;
+}
+
 interface Appointment {
   id: string;
+  hospitalId: string;
+  hospitalName: string;
   doctorName: string;
   department: string;
   date: string;
@@ -72,11 +81,26 @@ const defaultAppointments: Appointment[] = [
 export default function Appointments() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [hospital, setHospital] = useState("");
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [activeTab, setActiveTab] = useState("book");
+
+  // Fetch registered hospitals
+  const { data: hospitals = [] } = useQuery({
+    queryKey: ["/api/admin/hospitals"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/admin/hospitals");
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch hospitals:", error);
+        return [];
+      }
+    },
+  });
   
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const stored = localStorage.getItem("healthAppointments");
@@ -95,7 +119,7 @@ export default function Appointments() {
   }, [appointments]);
 
   const handleBook = () => {
-    if (!department || !doctor || !date || !time) {
+    if (!hospital || !department || !doctor || !date || !time) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields to book an appointment",
@@ -110,8 +134,13 @@ export default function Appointments() {
       year: 'numeric' 
     });
 
+    const selectedHospital = hospitals.find((h: Hospital) => h.id === hospital);
+    const hospitalName = selectedHospital?.name || hospital;
+
     const newAppointment: Appointment = {
       id: Date.now().toString(),
+      hospitalId: hospital,
+      hospitalName: hospitalName,
       doctorName: doctorMap[doctor] || doctor,
       department: departmentMap[department] || department,
       date: formattedDate,
@@ -123,9 +152,10 @@ export default function Appointments() {
 
     toast({
       title: "Appointment Booked!",
-      description: `Your appointment with ${newAppointment.doctorName} has been scheduled for ${formattedDate} at ${newAppointment.time}`,
+      description: `Your appointment with ${newAppointment.doctorName} at ${hospitalName} has been scheduled for ${formattedDate} at ${newAppointment.time}`,
     });
 
+    setHospital("");
     setDepartment("");
     setDoctor("");
     setDate(undefined);
@@ -157,6 +187,24 @@ export default function Appointments() {
         <TabsContent value="book" className="space-y-6 mt-6">
           <Card className="p-6">
             <form className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="hospital">Hospital</Label>
+                <Select value={hospital} onValueChange={setHospital}>
+                  <SelectTrigger id="hospital" data-testid="select-hospital">
+                    <SelectValue placeholder="Select hospital" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hospitals.length === 0 ? (
+                      <SelectItem value="no-hospitals" disabled>No hospitals available</SelectItem>
+                    ) : (
+                      hospitals.map((h: Hospital) => (
+                        <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Select value={department} onValueChange={setDepartment}>
@@ -214,7 +262,7 @@ export default function Appointments() {
                 </Select>
               </div>
 
-              <Button type="button" className="w-full" onClick={handleBook} data-testid="button-book-appointment">
+              <Button type="button" className="w-full" onClick={handleBook} disabled={!hospital} data-testid="button-book-appointment">
                 Book Appointment
               </Button>
             </form>
@@ -236,7 +284,7 @@ export default function Appointments() {
                 time={appointment.time}
                 status={appointment.status}
               />
-            ))
+            )).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           )}
         </TabsContent>
       </Tabs>
