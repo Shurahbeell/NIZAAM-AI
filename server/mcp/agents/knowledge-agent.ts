@@ -52,18 +52,18 @@ export class KnowledgeAgent implements Agent {
   async handleMessage(
     sessionId: string,
     message: string,
-    language: string = "english"
+    language: string = "en"
   ): Promise<string> {
     try {
-      console.log(`[KnowledgeAgent] Processing message in ${language}`);
+      console.log(`[KnowledgeAgent] Processing message in language: ${language}`);
       
-      // Detect and translate Urdu input to English for GPT-5
-      const detectedLanguage = await translationService.detectLanguage(message);
-      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      // Map language codes: en -> en, ur/ru -> ur for processing
+      const isUrdu = language === "ur" || language === "ru";
       
+      // Translate to English for processing if needed
       let processedMessage = message;
-      if (userLanguage === "urdu") {
-        processedMessage = await translationService.translate(message, "english", "Outbreak monitoring");
+      if (isUrdu) {
+        processedMessage = await translationService.translate(message, "en", "Health programs");
       }
       
       // Anonymize all data before processing
@@ -71,15 +71,17 @@ export class KnowledgeAgent implements Agent {
       const anonymizedMessage = anonymizedResult.minimized;
       
       // Analyze patterns and detect potential outbreaks
-      const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "english");
+      const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "en");
       
       // Generate response in English first
-      const response = await this.generateResponse(analysis, "english");
+      const response = await this.generateResponse(analysis, "en");
       
-      // Translate response to Urdu if needed
-      const localizedResponse = userLanguage === "urdu"
-        ? await translationService.translate(response.text, "urdu", "Outbreak monitoring response")
-        : response.text;
+      // Translate response back to user's language
+      let responseContent = response.text;
+      if (isUrdu) {
+        // Translate to Urdu script
+        responseContent = await translationService.translate(response.text, "ur", "Health programs response");
+      }
       
       // Process escalations if needed
       if (analysis.alerts.some(a => a.shouldEscalate)) {
@@ -89,22 +91,22 @@ export class KnowledgeAgent implements Agent {
       await storage.createAgentMessage({
         sessionId,
         senderType: "agent",
-        content: localizedResponse,
+        content: responseContent,
         metadata: {
           patterns: analysis.patterns,
           alerts: analysis.alerts,
           trends: analysis.trends
         },
-        language: userLanguage
+        language: isUrdu ? "ur" : "en"
       });
       
-      return localizedResponse;
+      return responseContent;
       
     } catch (error) {
       console.error("[KnowledgeAgent] Error:", error);
-      const fallback = "I monitor health patterns and can detect potential outbreaks. Please tell me about your health concerns.";
-      return language === "urdu"
-        ? await translationService.translate(fallback, "urdu")
+      const fallback = "I can help you find information about health programs. Please tell me what you'd like to know.";
+      return language !== "en"
+        ? await translationService.translate(fallback, "ur")
         : fallback;
     }
   }
