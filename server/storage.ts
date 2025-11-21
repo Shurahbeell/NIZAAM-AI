@@ -51,6 +51,9 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: string, profileData: Partial<User>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: string): Promise<void>;
+  getUsersByRole(role: string): Promise<User[]>;
 
   // Hospital methods
   getAllHospitals(): Promise<Hospital[]>;
@@ -173,6 +176,19 @@ export class DrizzleStorage implements IStorage {
       .set(updateData)
       .where(eq(users.id, id))
       .returning();
+    return result[0];
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role));
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
     
     return result[0];
   }

@@ -7,7 +7,8 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("patient"), // "patient" or "hospital"
+  role: text("role").notNull().default("patient"), // "patient", "hospital", "frontliner", "admin"
+  isAdmin: boolean("is_admin").default(false),
   hospitalId: varchar("hospital_id"), // null for patients
   // Profile fields
   fullName: text("full_name"),
