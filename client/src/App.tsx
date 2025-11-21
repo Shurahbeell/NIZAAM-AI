@@ -37,6 +37,7 @@ import DispatchMonitor from "@/pages/dispatch-monitor";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import LanguageSelector from "@/components/LanguageSelector";
+import UserManual from "@/pages/user-manual";
 
 function Router() {
   return (
@@ -124,6 +125,7 @@ function Router() {
           <AdminDashboard />
         </RoleGuard>
       </Route>
+      <Route path="/user-manual" component={UserManual} />
       <Route component={NotFound} />
     </Switch>
   );
