@@ -6,12 +6,16 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Trash2, LogOut, Plus, Users, Hospital, Ambulance } from "lucide-react";
+import { Trash2, LogOut, Plus, Users, Hospital, Ambulance, Map } from "lucide-react";
+import LocationPicker from "@/components/LocationPicker";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [tab, setTab] = useState<"users" | "register-hospital" | "register-frontliner">("users");
+  const [showHospitalMap, setShowHospitalMap] = useState(false);
+  const [showFrontlinerCurrentMap, setShowFrontlinerCurrentMap] = useState(false);
+  const [showFrontlinerBaseMap, setShowFrontlinerBaseMap] = useState(false);
   const [hospitalForm, setHospitalForm] = useState({
     username: "", password: "", hospitalName: "", hospitalAddress: "", hospitalPhone: "", hospitalType: "government" as "government" | "private", latitude: "", longitude: "",
   });
@@ -183,20 +187,39 @@ export default function AdminDashboard() {
                 onChange={(e) => setHospitalForm({ ...hospitalForm, hospitalPhone: e.target.value })}
                 data-testid="input-hospital-phone"
               />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Latitude"
-                  value={hospitalForm.latitude || ""}
-                  onChange={(e) => setHospitalForm({ ...hospitalForm, latitude: e.target.value })}
-                  data-testid="input-hospital-latitude"
-                />
-                <Input
-                  placeholder="Longitude"
-                  value={hospitalForm.longitude || ""}
-                  onChange={(e) => setHospitalForm({ ...hospitalForm, longitude: e.target.value })}
-                  data-testid="input-hospital-longitude"
-                />
-              </div>
+              {!showHospitalMap ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowHospitalMap(true)}
+                  className="w-full"
+                  data-testid="button-open-hospital-map"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  {hospitalForm.latitude ? `Location: ${hospitalForm.latitude}, ${hospitalForm.longitude}` : "Select Location on Map"}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <LocationPicker
+                    onLocationSelect={(lat, lng) => {
+                      setHospitalForm({ ...hospitalForm, latitude: lat, longitude: lng });
+                      setShowHospitalMap(false);
+                    }}
+                    initialLat={hospitalForm.latitude || "24.8607"}
+                    initialLng={hospitalForm.longitude || "67.0011"}
+                    title="Hospital Location"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHospitalMap(false)}
+                    data-testid="button-close-hospital-map"
+                  >
+                    Close Map
+                  </Button>
+                </div>
+              )}
               <select
                 value={hospitalForm.hospitalType}
                 onChange={(e) => setHospitalForm({ ...hospitalForm, hospitalType: e.target.value as any })}
@@ -260,35 +283,74 @@ export default function AdminDashboard() {
                 <option value="Car">Car</option>
               </select>
               <div className="text-sm font-semibold">Current Location</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Current Latitude"
-                  value={frontlinerForm.currentLatitude}
-                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, currentLatitude: e.target.value })}
-                  data-testid="input-current-latitude"
-                />
-                <Input
-                  placeholder="Current Longitude"
-                  value={frontlinerForm.currentLongitude}
-                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, currentLongitude: e.target.value })}
-                  data-testid="input-current-longitude"
-                />
-              </div>
+              {!showFrontlinerCurrentMap ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowFrontlinerCurrentMap(true)}
+                  className="w-full"
+                  data-testid="button-open-current-map"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  {frontlinerForm.currentLatitude ? `Location: ${frontlinerForm.currentLatitude}, ${frontlinerForm.currentLongitude}` : "Select Current Location"}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <LocationPicker
+                    onLocationSelect={(lat, lng) => {
+                      setFrontlinerForm({ ...frontlinerForm, currentLatitude: lat, currentLongitude: lng });
+                      setShowFrontlinerCurrentMap(false);
+                    }}
+                    initialLat={frontlinerForm.currentLatitude || "24.8607"}
+                    initialLng={frontlinerForm.currentLongitude || "67.0011"}
+                    title="Current Location"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFrontlinerCurrentMap(false)}
+                    data-testid="button-close-current-map"
+                  >
+                    Close Map
+                  </Button>
+                </div>
+              )}
+
               <div className="text-sm font-semibold">Base Station Location</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Base Latitude"
-                  value={frontlinerForm.baseLatitude}
-                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, baseLatitude: e.target.value })}
-                  data-testid="input-base-latitude"
-                />
-                <Input
-                  placeholder="Base Longitude"
-                  value={frontlinerForm.baseLongitude}
-                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, baseLongitude: e.target.value })}
-                  data-testid="input-base-longitude"
-                />
-              </div>
+              {!showFrontlinerBaseMap ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowFrontlinerBaseMap(true)}
+                  className="w-full"
+                  data-testid="button-open-base-map"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  {frontlinerForm.baseLatitude ? `Location: ${frontlinerForm.baseLatitude}, ${frontlinerForm.baseLongitude}` : "Select Base Station Location"}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <LocationPicker
+                    onLocationSelect={(lat, lng) => {
+                      setFrontlinerForm({ ...frontlinerForm, baseLatitude: lat, baseLongitude: lng });
+                      setShowFrontlinerBaseMap(false);
+                    }}
+                    initialLat={frontlinerForm.baseLatitude || "24.8607"}
+                    initialLng={frontlinerForm.baseLongitude || "67.0011"}
+                    title="Base Station Location"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFrontlinerBaseMap(false)}
+                    data-testid="button-close-base-map"
+                  >
+                    Close Map
+                  </Button>
+                </div>
+              )}
               <Button
                 onClick={() => registerFrontlinerMutation.mutate()}
                 disabled={registerFrontlinerMutation.isPending || !frontlinerForm.currentLatitude || !frontlinerForm.currentLongitude || !frontlinerForm.baseLatitude || !frontlinerForm.baseLongitude}
