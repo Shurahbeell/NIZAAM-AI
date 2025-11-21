@@ -286,4 +286,15 @@ router.delete("/users/:id", requireAuth, requireAdmin, async (req: Request, res:
   }
 });
 
+// Get all hospitals (public - used by appointments booking)
+router.get("/hospitals", async (req: Request, res: Response) => {
+  try {
+    const hospitals = await storage.getAllHospitals();
+    res.json(hospitals.map(h => ({ id: h.id, name: h.name, address: h.address, phone: h.phone, type: h.type })));
+  } catch (error: any) {
+    console.error("[Admin] Get hospitals error:", error);
+    res.status(500).json({ error: "Failed to fetch hospitals" });
+  }
+});
+
 export default router;
