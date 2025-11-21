@@ -4,6 +4,15 @@ import { storage } from "../storage";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { insertEmergencySchema } from "@shared/schema";
 
+// Priority mapping from string to number
+const priorityStringToNumber: Record<string, number> = {
+  "critical": 5,
+  "high": 4,
+  "medium": 3,
+  "low": 2,
+  "unknown": 1,
+};
+
 const router = Router();
 
 // Helper: Find nearest 1122 frontliner and route emergency
@@ -62,12 +71,13 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
     
     if (assignment) {
       // Create emergency case and assign to frontliner
+      const priorityNumber = priorityStringToNumber[priority as string] || 3;
       const emergencyCase = await storage.createEmergencyCase({
         patientId: req.user!.userId,
         originLat: lat || "0",
         originLng: lng || "0",
         status: "assigned",
-        priority: priority ? parseInt(priority as string) : 3,
+        priority: priorityNumber,
         assignedToType: assignment.type,
         assignedToId: assignment.id,
       });
