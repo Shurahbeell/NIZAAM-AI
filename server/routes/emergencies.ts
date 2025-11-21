@@ -61,11 +61,17 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
     const assignment = await routeToNearestFrontliner(lat, lng, emergency);
     
     if (assignment) {
-      // Update emergency with assignment
-      await storage.updateEmergencyCaseStatus(emergency.id, "assigned", { 
-        assignedToType: assignment.type, 
-        assignedToId: assignment.id 
+      // Create emergency case and assign to frontliner
+      const emergencyCase = await storage.createEmergencyCase({
+        patientId: req.user!.userId,
+        originLat: lat || "0",
+        originLng: lng || "0",
+        status: "assigned",
+        priority: priority ? parseInt(priority as string) : 3,
+        assignedToType: assignment.type,
+        assignedToId: assignment.id,
       });
+      console.log(`[Emergencies] Created case ${emergencyCase.id} and assigned to ${assignment.type} ${assignment.id}`);
     }
 
     // Trigger emergency event for MCP system
