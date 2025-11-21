@@ -6,7 +6,7 @@ export default function LanguageSelector() {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex gap-2">
+    <div className="fixed top-4 left-4 z-50 flex gap-2">
       <Button
         variant={language === 'en' ? 'default' : 'outline'}
         size="sm"
@@ -32,7 +32,7 @@ export default function LanguageSelector() {
         data-testid="button-lang-ru"
         className="min-w-[80px]"
       >
-        Roman
+        Urdu
       </Button>
     </div>
   );

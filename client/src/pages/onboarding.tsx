@@ -45,7 +45,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex justify-end p-4">
+      <div className="flex justify-end p-4 pr-24">
         <Button variant="ghost" onClick={handleSkip} data-testid="button-skip">
           Skip
         </Button>
