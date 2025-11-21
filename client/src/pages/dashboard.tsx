@@ -13,7 +13,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useAuthStore } from "@/lib/auth";
-import LanguageSelector from "@/components/LanguageSelector";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -134,14 +133,11 @@ export default function Dashboard() {
       {/* Header with gradient background */}
       <header className="sticky top-0 bg-gradient-to-r from-primary to-secondary shadow-lg z-20 backdrop-blur-sm">
         <div className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div>
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
               <Heart className="w-5 h-5 animate-pulse" />
               HealthCare
             </h1>
-            <div className="opacity-75">
-              <LanguageSelector />
-            </div>
           </div>
           <div className="flex items-center gap-3">
             <Button 

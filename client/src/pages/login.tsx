@@ -7,7 +7,6 @@ import { useLocation } from "wouter";
 import { Heart, AlertCircle, Activity, Shield } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import LanguageSelector from "@/components/LanguageSelector";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -63,11 +62,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-primary/60 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Language Selector */}
-      <div className="absolute top-4 left-4 z-20">
-        <LanguageSelector />
-      </div>
-
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>

@@ -4,18 +4,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, X, Loader2 } from "lucide-react";
+import { ArrowLeft, User, X, Loader2, Globe } from "lucide-react";
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/useLanguage";
+import { Language } from "@/lib/translations";
 
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { user, setAuth, token } = useAuthStore();
   const { toast } = useToast();
+  const { language, setLanguage } = useLanguage();
   const [medicalTags, setMedicalTags] = useState(["Diabetes", "Hypertension"]);
   const [newTag, setNewTag] = useState("");
 
@@ -252,6 +255,39 @@ export default function Profile() {
                 <Button onClick={handleAddTag} data-testid="button-add-tag">Add</Button>
               </div>
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Globe className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-foreground">Language</h3>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={language === 'en' ? 'default' : 'outline'}
+              onClick={() => setLanguage('en')}
+              data-testid="button-lang-en-profile"
+              className="flex-1 min-w-[100px]"
+            >
+              English
+            </Button>
+            <Button
+              variant={language === 'ur' ? 'default' : 'outline'}
+              onClick={() => setLanguage('ur')}
+              data-testid="button-lang-ur-profile"
+              className="flex-1 min-w-[100px]"
+            >
+              اردو
+            </Button>
+            <Button
+              variant={language === 'ru' ? 'default' : 'outline'}
+              onClick={() => setLanguage('ru')}
+              data-testid="button-lang-ru-profile"
+              className="flex-1 min-w-[100px]"
+            >
+              Urdu
+            </Button>
           </div>
         </Card>
 
