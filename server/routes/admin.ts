@@ -16,11 +16,71 @@ const requireAdmin = (req: Request, res: Response, next: Function) => {
   });
 };
 
+// Bootstrap: Create first admin account (only works if no admins exist)
+const bootstrapSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(4),
+  bootstrapKey: z.string(),
+});
+
+router.post("/bootstrap", async (req: Request, res: Response) => {
+  try {
+    const { username, password, bootstrapKey } = bootstrapSchema.parse(req.body);
+
+    // Verify bootstrap key from environment
+    const validBootstrapKey = process.env.BOOTSTRAP_KEY || "bootstrap-1122-admin";
+    if (bootstrapKey !== validBootstrapKey) {
+      return res.status(403).json({ error: "Invalid bootstrap key" });
+    }
+
+    // Check if any admin exists
+    const existingAdmins = await storage.getUsersByRole("admin");
+    if (existingAdmins.length > 0) {
+      return res.status(400).json({ error: "Admin account already exists. Use /login instead." });
+    }
+
+    // Check if username exists
+    const existing = await storage.getUserByUsername(username);
+    if (existing) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    // Hash password and create admin user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await storage.createUser({
+      username,
+      password: hashedPassword,
+      role: "admin",
+    });
+
+    // Generate token for immediate login
+    const token = generateToken({
+      userId: user.id,
+      username: user.username,
+      role: "admin" as any,
+    });
+
+    console.log(`[Admin] Bootstrap: First admin account created - ${username}`);
+
+    res.json({
+      token,
+      user: { id: user.id, username: user.username, role: "admin" },
+      message: "Admin account created successfully. You are now logged in.",
+    });
+  } catch (error: any) {
+    console.error("[Admin] Bootstrap error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+    res.status(500).json({ error: "Bootstrap failed" });
+  }
+});
+
 // Admin login
 const adminLoginSchema = z.object({
   username: z.string(),
   password: z.string(),
-  adminKey: z.string(), // Hardcoded or env-based admin key for first login
+  adminKey: z.string(),
 });
 
 router.post("/login", async (req: Request, res: Response) => {
