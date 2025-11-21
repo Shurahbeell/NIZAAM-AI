@@ -1,5 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { db } from "./db";
+import { haversineDistanceMeters, parseCoordinate } from "./utils/geo";
 import {
   users,
   hospitals,
@@ -555,7 +556,6 @@ export class DrizzleStorage implements IStorage {
     );
 
     // Sort by distance using haversine formula
-    const { haversineDistanceMeters, parseCoordinate } = require("./utils/geo");
     const originLat = parseCoordinate(lat);
     const originLng = parseCoordinate(lng);
 
@@ -580,7 +580,6 @@ export class DrizzleStorage implements IStorage {
       .select()
       .from(hospitals);
 
-    const { parseCoordinate } = require("./utils/geo");
     const originLat = parseCoordinate(lat);
     const originLng = parseCoordinate(lng);
 
@@ -599,7 +598,6 @@ export class DrizzleStorage implements IStorage {
       const estimatedLng = baseHospitalLng + (radiusKm / (111 * Math.cos((baseHospitalLat * Math.PI) / 180))) * Math.sin((angle * Math.PI) / 180);
 
       // Calculate distance from incident to estimated hospital location
-      const { haversineDistanceMeters } = require("./utils/geo");
       const distance = haversineDistanceMeters(originLat, originLng, estimatedLat, estimatedLng);
 
       return { ...h, distance, estimatedLat, estimatedLng };
