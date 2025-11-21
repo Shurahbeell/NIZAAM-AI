@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,96 @@ import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
-import { Ambulance, MapPin, Clock, AlertCircle } from "lucide-react";
+import { Ambulance, MapPin, Clock, AlertCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface EmergencyCaseWithPatient {
+  id: string;
+  patientId: string;
+  patientName?: string;
+  originLat: string;
+  originLng: string;
+  priority: number;
+  status: string;
+  createdAt: string;
+}
+
+interface DirectionsMapProps {
+  originLat: string;
+  originLng: string;
+  frontlinerLat?: string;
+  frontlinerLng?: string;
+}
+
+// Directions Map Component
+function DirectionsMap({ originLat, originLng, frontlinerLat, frontlinerLng }: DirectionsMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<any>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || map) return;
+
+    const google = (window as any).google;
+    if (!google) {
+      console.warn("Google Maps API not loaded");
+      return;
+    }
+
+    const originLat_num = parseFloat(originLat);
+    const originLng_num = parseFloat(originLng);
+
+    // Create map centered on emergency location
+    const mapInstance = new google.maps.Map(mapRef.current, {
+      zoom: 15,
+      center: { lat: originLat_num, lng: originLng_num },
+      mapTypeControl: false,
+      fullscreenControl: false,
+    });
+
+    // Emergency marker (red)
+    new google.maps.Marker({
+      position: { lat: originLat_num, lng: originLng_num },
+      map: mapInstance,
+      title: "Emergency Location",
+      icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+    });
+
+    // Frontliner marker if available (blue)
+    if (frontlinerLat && frontlinerLng) {
+      const frontlinerLat_num = parseFloat(frontlinerLat);
+      const frontlinerLng_num = parseFloat(frontlinerLng);
+      new google.maps.Marker({
+        position: { lat: frontlinerLat_num, lng: frontlinerLng_num },
+        map: mapInstance,
+        title: "Your Location",
+        icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+      });
+
+      // Draw line between frontliner and emergency
+      new google.maps.Polyline({
+        path: [
+          { lat: frontlinerLat_num, lng: frontlinerLng_num },
+          { lat: originLat_num, lng: originLng_num },
+        ],
+        geodesic: true,
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.7,
+        strokeWeight: 2,
+        map: mapInstance,
+      });
+    }
+
+    setMap(mapInstance);
+  }, [originLat, originLng, frontlinerLat, frontlinerLng]);
+
+  return <div ref={mapRef} className="w-full h-64 rounded-md border" />;
+}
 
 export default function FrontlinerDashboard() {
   const { user } = useAuthStore();
   const { toast } = useToast();
   const [frontlinerId, setFrontlinerId] = useState<string | null>(null);
+  const [expandedCase, setExpandedCase] = useState<string | null>(null);
 
   // Get frontliner profile (auto-creates if missing)
   const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery<{ frontliner: any }>({
@@ -147,65 +230,89 @@ export default function FrontlinerDashboard() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {cases.map((emergencyCase: any) => (
-            <Card key={emergencyCase.id} className="p-4" data-testid={`card-case-${emergencyCase.id}`}>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold" data-testid={`text-case-id-${emergencyCase.id}`}>
-                      Case #{emergencyCase.id.substring(0, 8)}
-                    </h3>
-                    <Badge variant={emergencyCase.priority >= 3 ? "destructive" : "secondary"}>
-                      Priority {emergencyCase.priority}
-                    </Badge>
-                    <Badge variant="outline">{emergencyCase.status}</Badge>
+          {cases.map((emergencyCase: EmergencyCaseWithPatient) => (
+            <Card key={emergencyCase.id} className="overflow-hidden" data-testid={`card-case-${emergencyCase.id}`}>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-semibold" data-testid={`text-case-id-${emergencyCase.id}`}>
+                        Case #{emergencyCase.id.substring(0, 8)}
+                      </h3>
+                      <Badge variant={emergencyCase.priority >= 3 ? "destructive" : "secondary"}>
+                        Priority {emergencyCase.priority}
+                      </Badge>
+                      <Badge variant="outline">{emergencyCase.status}</Badge>
+                    </div>
+
+                    {/* Patient Name */}
+                    <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-950 p-2 rounded">
+                      <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Patient</p>
+                        <p className="font-semibold text-foreground" data-testid={`text-patient-name-${emergencyCase.id}`}>
+                          {emergencyCase.patientName || "Unknown Patient"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        Location: {emergencyCase.originLat}, {emergencyCase.originLng}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        Created: {new Date(emergencyCase.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Map */}
+                    <div className="mt-3 mb-3">
+                      <p className="text-xs font-semibold mb-2 text-muted-foreground">Directions to Emergency</p>
+                      <DirectionsMap 
+                        originLat={emergencyCase.originLat} 
+                        originLng={emergencyCase.originLng}
+                        frontlinerLat={frontlinerData?.frontliner?.currentLat}
+                        frontlinerLng={frontlinerData?.frontliner?.currentLng}
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      Location: {emergencyCase.originLat}, {emergencyCase.originLng}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      Created: {new Date(emergencyCase.createdAt).toLocaleString()}
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    {emergencyCase.status === "assigned" && (
+                      <>
+                        <Button
+                          onClick={() => handleAction(emergencyCase.id, "ack")}
+                          disabled={updateStatusMutation.isPending}
+                          size="sm"
+                          data-testid={`button-acknowledge-${emergencyCase.id}`}
+                        >
+                          Acknowledge
+                        </Button>
+                        <Button
+                          onClick={() => handleAction(emergencyCase.id, "in_progress")}
+                          disabled={updateStatusMutation.isPending}
+                          variant="secondary"
+                          size="sm"
+                          data-testid={`button-in-progress-${emergencyCase.id}`}
+                        >
+                          Start Response
+                        </Button>
+                      </>
+                    )}
+                    {(emergencyCase.status === "ack" || emergencyCase.status === "in_progress") && (
+                      <Button
+                        onClick={() => handleAction(emergencyCase.id, "completed")}
+                        disabled={updateStatusMutation.isPending}
+                        variant="default"
+                        size="sm"
+                        data-testid={`button-complete-${emergencyCase.id}`}
+                      >
+                        Mark Complete
+                      </Button>
+                    )}
                   </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  {emergencyCase.status === "assigned" && (
-                    <>
-                      <Button
-                        onClick={() => handleAction(emergencyCase.id, "ack")}
-                        disabled={updateStatusMutation.isPending}
-                        size="sm"
-                        data-testid={`button-acknowledge-${emergencyCase.id}`}
-                      >
-                        Acknowledge
-                      </Button>
-                      <Button
-                        onClick={() => handleAction(emergencyCase.id, "in_progress")}
-                        disabled={updateStatusMutation.isPending}
-                        variant="secondary"
-                        size="sm"
-                        data-testid={`button-in-progress-${emergencyCase.id}`}
-                      >
-                        Start Response
-                      </Button>
-                    </>
-                  )}
-                  {(emergencyCase.status === "ack" || emergencyCase.status === "in_progress") && (
-                    <Button
-                      onClick={() => handleAction(emergencyCase.id, "completed")}
-                      disabled={updateStatusMutation.isPending}
-                      variant="default"
-                      size="sm"
-                      data-testid={`button-complete-${emergencyCase.id}`}
-                    >
-                      Mark Complete
-                    </Button>
-                  )}
                 </div>
               </div>
             </Card>

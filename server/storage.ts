@@ -655,10 +655,21 @@ export class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]> {
+  async getOpenCasesForFrontliner(frontlinerId: string): Promise<any[]> {
     const results = await db
-      .select()
+      .select({
+        id: emergencyCases.id,
+        patientId: emergencyCases.patientId,
+        patientName: users.fullName,
+        originLat: emergencyCases.originLat,
+        originLng: emergencyCases.originLng,
+        status: emergencyCases.status,
+        priority: emergencyCases.priority,
+        createdAt: emergencyCases.createdAt,
+        updatedAt: emergencyCases.updatedAt,
+      })
       .from(emergencyCases)
+      .leftJoin(users, eq(emergencyCases.patientId, users.id))
       .where(
         and(
           eq(emergencyCases.assignedToType, "frontliner"),
