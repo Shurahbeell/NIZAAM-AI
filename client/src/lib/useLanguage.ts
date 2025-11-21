@@ -22,8 +22,13 @@ export function useLanguageProvider() {
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('language') as Language;
-      return saved || 'en';
+      // Validate that the saved language is valid
+      if (saved && ['en', 'ur', 'ru'].includes(saved)) {
+        return saved;
+      }
     }
+    // Default to English
+    localStorage.removeItem('language');
     return 'en';
   });
 
@@ -35,7 +40,13 @@ export function useLanguageProvider() {
   }, [language]);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
+    if (['en', 'ur', 'ru'].includes(lang)) {
+      setLanguageState(lang);
+      localStorage.setItem('language', lang);
+      // Immediately update document direction
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
+    }
   };
 
   const t = (key: string): string => {
