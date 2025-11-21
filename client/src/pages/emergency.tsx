@@ -60,10 +60,28 @@ export default function Emergency() {
     }, 300);
 
     try {
-      // Get current location (simplified - in production use geolocation API)
-      const locationString = user?.address || "Location unavailable";
-      
-      // Send emergency to backend (apiRequest throws on non-OK responses)
+      // Get current GPS location using Geolocation API
+      let lat: string | null = null;
+      let lng: string | null = null;
+      let locationString = user?.address || "Location unavailable";
+
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationCoordinates>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(pos.coords),
+            (err) => reject(err),
+            { timeout: 5000, enableHighAccuracy: true }
+          );
+        });
+        lat = position.latitude.toString();
+        lng = position.longitude.toString();
+        locationString = `${lat}, ${lng}`;
+        console.log(`[Emergency] Using current location: ${locationString}`);
+      } else {
+        console.warn("[Emergency] Geolocation API not available");
+      }
+
+      // Send emergency to backend with GPS coordinates
       await apiRequest("POST", "/api/emergencies", {
         patientId: user?.id || null,
         patientName: user?.fullName || user?.username || "Unknown",
@@ -73,6 +91,8 @@ export default function Emergency() {
         priority: priorityMap[emergencyType] || "medium",
         symptoms: symptomsMap[emergencyType] || "Emergency medical attention required",
         status: "active",
+        lat,
+        lng,
         assignedHospitalId: null,
         notes: null
       });
@@ -85,7 +105,7 @@ export default function Emergency() {
     } catch (error) {
       console.error("Failed to send emergency:", error);
       setIsSending(false);
-      clearInterval(setProgress as any);
+      clearInterval(interval);
     }
   };
 
