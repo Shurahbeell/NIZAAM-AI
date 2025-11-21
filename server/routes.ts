@@ -109,7 +109,7 @@ router.post("/api/mcp/facility/search", async (req: Request, res: Response) => {
     
     // Create search message for Facility Finder agent
     const searchMessage = language === "urdu" 
-      ? `${city} میں میرے قریب ترین صحت کی سہولیات تلاش کریں۔`
+      ? `${city} mein mere qareeb tarin sehat ki sahooliyat talaash karen.`
       : `Find nearby healthcare facilities in ${city}.`;
     
     // Route to Facility Finder agent (returns text response)
