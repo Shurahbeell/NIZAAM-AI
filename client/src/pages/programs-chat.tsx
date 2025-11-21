@@ -5,37 +5,73 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Mic, Building2, Sparkles, Info } from "lucide-react";
 import { useLocation } from "wouter";
-import { healthPrograms } from "@shared/health-programs";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/useLanguage";
+import type { AgentSession, AgentMessage } from "@shared/schema";
 
 export default function ProgramsChat() {
   const [, setLocation] = useLocation();
-  const { language } = useLanguage();
+  const { toast } = useToast();
   const [message, setMessage] = useState("");
-  
-  // Map global language to chat language (en/ur/ru -> english/urdu)
-  const getChatLanguage = (): "english" | "urdu" => {
-    return language === 'en' ? 'english' : 'urdu';
-  };
-
-  const getWelcomeMessage = () => {
-    const chatLang = getChatLanguage();
-    if (chatLang === "urdu") {
-      return "Pakistan Health Programs Advisor mein khush aamdeed! Main sab sarkaari sehat programs ke barey mein jaankari frah ne mein madad kar sakta hoon.\n\nAap mujh se pooch sakte hain:\n• 'Sab programs' dekhnay ke liye\n• Kisi khaas program ke barey mein (masalan 'Sehat Card')\n• 'Mein kis program ke liye qualify hoon?' apni details ke saath\n• 'Kaun se documents chahiye?'";
-    }
-    return "Welcome to Pakistan Health Programs Advisor! I can help you find information about all government health programs.\n\nYou can ask me:\n• 'List all programs' to see all 20 available programs\n• About specific programs (e.g., 'Tell me about Sehat Card')\n• 'Which program am I eligible for?' with your details\n• 'What documents are needed?'";
-  };
-  
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: getWelcomeMessage(),
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { language: globalLanguage } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Create agent session on mount
+  useEffect(() => {
+    if (sessionId) return;
+    
+    const initSession = async () => {
+      try {
+        const response = await apiRequest("POST", "/api/agent/sessions", {
+          userId: "demo-user",
+          agent: "knowledge",
+          language: globalLanguage
+        });
+        const session: AgentSession = await response.json();
+        setSessionId(session.id);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to start chat session. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+    initSession();
+  }, [sessionId, toast, globalLanguage]);
+
+  // Fetch conversation history
+  const { data: messages = [], isLoading } = useQuery<AgentMessage[]>({
+    queryKey: ["/api/agent/messages", sessionId],
+    enabled: !!sessionId
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (userMessage: string) => {
+      const response = await apiRequest("POST", "/api/agent/chat", {
+        sessionId,
+        agentName: "knowledge",
+        message: userMessage,
+        language: globalLanguage
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/messages", sessionId] });
+      scrollToBottom();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,82 +81,11 @@ export default function ProgramsChat() {
     scrollToBottom();
   }, [messages]);
 
-  const formatProgramsResponse = (userQuery: string) => {
-    const query = userQuery.toLowerCase();
-    const chatLang = getChatLanguage();
-    
-    if (query.includes("all programs") || query.includes("list all") || query.includes("show all") || 
-        query.includes("sab programs") || query.includes("tamam programs")) {
-      let response = chatLang === "urdu" ? "Pakistan ke tamam sehat programs:\n\n" : "Here are all available Pakistan health programs:\n\n";
-      healthPrograms.forEach((program, index) => {
-        response += `${index + 1}. ${program.name}\n`;
-      });
-      response += chatLang === "urdu" ? "\n\nKisi khaas program ke barey mein poochain ya 'Mein kis program ke liye qualify hoon?' likhen." 
-                                        : "\n\nAsk about any specific program to learn more, or ask 'Which program am I eligible for?' with your details.";
-      return response;
-    }
-    
-    if (query.includes("eligible") || query.includes("qualify") || query.includes("qualify") || query.includes("muasir")) {
-      return chatLang === "urdu" 
-        ? "Apni eligibility check karnay ke liye mujhe batain:\n• Apka shehr/province\n• Apni umar\n• Income level (kam/درمیانی/zyada)\n• Koi health condition (pregnancy, TB, kidney, etc.)\n• Kya aap BISP mein registered hain\n\nPhir main aapko best programs bataunga."
-        : "To check which programs you're eligible for, please tell me:\n• Your province\n• Your age\n• Your income level (low/middle/high)\n• Any specific health condition (pregnancy, TB, kidney, etc.)\n• Whether you're registered in BISP\n\nI'll then recommend the best programs for you.";
-    }
-    
-    if (query.includes("documents") || query.includes("what do i need") || query.includes("kaun documents") || query.includes("kaunse kagzat")) {
-      return chatLang === "urdu"
-        ? "**Zaruri Documents:**\n\n• CNIC (Computerized National Identity Card)\n• B-Form (bachchon ke liye)\n• Hospital slip/medical records\n• Doctor prescription (agar zaruri ho)\n• Income proof (Bait-ul-Mal aur dusre programs ke liye)\n\nKuch programs ko aur documents chahiye hon sakte hain."
-        : "**Common Documents Needed:**\n\n• CNIC (Computerized National Identity Card)\n• B-Form (for children)\n• Hospital slip/medical records\n• Doctor prescription (if applicable)\n• Proof of income (for Bait-ul-Mal and means-tested programs)\n\nSpecific programs may need additional documents. Ask about a specific program for exact requirements.";
-    }
-    
-    const matchedProgram = healthPrograms.find(p => 
-      p.name.toLowerCase().includes(query) || 
-      query.includes(p.name.toLowerCase().split(" ")[0])
-    );
-    
-    if (matchedProgram) {
-      return `### ${matchedProgram.name}\n\n` +
-        `• **Purpose:** ${matchedProgram.purpose}\n\n` +
-        `• **Eligibility:** ${matchedProgram.eligibility}\n\n` +
-        `• **Benefits:** ${matchedProgram.benefits}\n\n` +
-        `• **Required Documents:** ${matchedProgram.required_documents.join(", ")}\n\n` +
-        `• **Cost:** ${matchedProgram.cost}\n\n` +
-        `• **How to Apply:** ${matchedProgram.how_to_apply}\n\n` +
-        `*Note: ${matchedProgram.notes}*`;
-    }
-    
-    return chatLang === "urdu"
-      ? "Main Pakistan sehat programs ke barey mein jaankari frah ne mein madad kar sakta hoon. Aap pooch sakte hain:\n\n• 'Sab programs' dekhnay ke liye\n• Kisi program ke barey mein\n• 'Mein kis program ke liye qualify hoon?' apni details ke saath\n• 'Kaun se documents chahiye?'"
-      : "I can help you with information about Pakistan health programs. You can:\n\n• Ask 'list all programs' to see all available programs\n• Ask about specific programs (e.g., 'Tell me about Sehat Card')\n• Ask 'Which program am I eligible for?' with your details\n• Ask 'What documents are needed?'";
-  };
-
   const handleSend = () => {
-    if (!message.trim()) return;
-
-    const newMessage = {
-      id: messages.length + 1,
-      text: message,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages([...messages, newMessage]);
-    const userQuery = message;
+    if (!message.trim() || !sessionId) return;
+    
+    sendMessageMutation.mutate(message);
     setMessage("");
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const responseText = formatProgramsResponse(userQuery);
-      
-      const aiResponse = {
-        id: messages.length + 2,
-        text: responseText,
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-      scrollToBottom();
-    }, 1500);
   };
 
   return (
@@ -143,11 +108,11 @@ export default function ProgramsChat() {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">
-                {getChatLanguage() === "urdu" ? "Sehat Programs" : "Health Programs"}
+                {globalLanguage !== "en" ? "Sehat Programs" : "Health Programs"}
               </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {getChatLanguage() === "urdu" ? "Pakistan sarkaari programs" : "Pakistan government programs"}
+                {globalLanguage !== "en" ? "Pakistan sarkaari programs" : "Pakistan government programs"}
               </p>
             </div>
           </div>
@@ -156,17 +121,58 @@ export default function ProgramsChat() {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((msg) => (
-          <ChatBubble
-            key={msg.id}
-            message={msg.text}
-            isUser={msg.isUser}
-            timestamp={msg.timestamp}
-          />
-        ))}
+        {/* Welcome message */}
+        {(!messages || messages.length === 0) && (
+          <Card className="p-6 mb-6 border-none shadow-xl bg-gradient-to-br from-white to-accent/30 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="flex gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0 shadow-md">
+                <Info className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg mb-2">
+                  {globalLanguage !== "en" 
+                    ? "Khush aamdeed!" 
+                    : "Welcome!"}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {globalLanguage !== "en"
+                    ? "Main aapko Pakistan ke sab sarkaari sehat programs ke barey mein jaankari dene mein madad kar sakta hoon."
+                    : "I can help you find information about all Pakistan government health programs."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {globalLanguage !== "en"
+                    ? "Aap poochen:\n• 'Sab programs' dekhnay ke liye\n• Kisi khaas program ke barey mein\n• Apni eligibility check karnay ke liye"
+                    : "You can ask:\n• 'List all programs' to see available programs\n• About specific programs\n• To check your eligibility"}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Messages */}
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading conversation...</p>
+            </div>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <ChatBubble
+              key={msg.id}
+              message={msg.content}
+              isUser={msg.senderType === "user"}
+              timestamp={msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }) : undefined}
+            />
+          ))
+        )}
         
         {/* Typing indicator */}
-        {isTyping && (
+        {sendMessageMutation.isPending && (
           <div className="flex gap-3 mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="w-10 h-10" />
             <div className="flex gap-1.5 bg-white border border-border px-5 py-4 rounded-2xl shadow-md">
@@ -186,11 +192,12 @@ export default function ProgramsChat() {
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={getChatLanguage() === "urdu" ? "Sehat programs ke barey mein pochain..." : "Ask about health programs..."}
+            onKeyPress={(e) => e.key === 'Enter' && !sendMessageMutation.isPending && handleSend()}
+            placeholder={globalLanguage !== "en" ? "Sehat programs ke barey mein pochain..." : "Ask about health programs..."}
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             data-testid="input-message"
-            dir={getChatLanguage() === "urdu" ? "rtl" : "ltr"}
+            disabled={!sessionId || sendMessageMutation.isPending}
+            dir={globalLanguage === "ur" ? "rtl" : "ltr"}
           />
           <Button 
             variant="ghost" 
@@ -205,14 +212,17 @@ export default function ProgramsChat() {
             onClick={handleSend} 
             size="icon" 
             data-testid="button-send"
+            disabled={!sessionId || sendMessageMutation.isPending || !message.trim()}
             className="w-12 h-12 rounded-xl bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-300"
           >
             <Send className="w-5 h-5" />
           </Button>
         </div>
         <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1.5">
-          <Building2 className="w-3 h-3" />
-          20+ Pakistan government health programs available
+          <Sparkles className="w-3 h-3" />
+          {globalLanguage !== "en"
+            ? "Gemini se taaqatwar • 20+ Pakistan sehat programs"
+            : "Powered by Gemini • 20+ Pakistan health programs"}
         </p>
       </div>
     </div>
