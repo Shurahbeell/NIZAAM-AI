@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 export interface User {
   id: string;
   username: string;
-  role: "patient" | "hospital" | "frontliner";
+  role: "patient" | "hospital" | "frontliner" | "admin";
   hospitalId?: string;
   // Profile fields
   fullName?: string;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuthStore } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { LogIn, Shield, Plus } from "lucide-react";
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { setAuth } = useAuthStore();
   const [isBootstrap, setIsBootstrap] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +25,7 @@ export default function AdminLogin() {
       return res.json();
     },
     onSuccess: (data) => {
-      localStorage.setItem("token", data.token);
+      setAuth(data.token, { ...data.user, role: "admin" });
       toast({ title: "Success", description: "Logged in as admin" });
       setLocation("/admin-dashboard");
     },
@@ -39,7 +41,7 @@ export default function AdminLogin() {
       return res.json();
     },
     onSuccess: (data) => {
-      localStorage.setItem("token", data.token);
+      setAuth(data.token, { ...data.user, role: "admin" });
       toast({ title: "Success", description: "Admin account created! Logging you in..." });
       setTimeout(() => setLocation("/admin-dashboard"), 1000);
     },
