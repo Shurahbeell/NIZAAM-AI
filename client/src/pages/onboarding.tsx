@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import OnboardingSlide from "@/components/OnboardingSlide";
 import { Bot, AlertTriangle, Calendar, ClipboardList } from "lucide-react";
 import { useLocation } from "wouter";
+import LanguageSelector from "@/components/LanguageSelector";
 
 const slides = [
   {
@@ -45,7 +46,8 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex justify-end p-4 pr-24">
+      <div className="flex justify-between items-center p-4">
+        <div><LanguageSelector /></div>
         <Button variant="ghost" onClick={handleSkip} data-testid="button-skip">
           Skip
         </Button>
