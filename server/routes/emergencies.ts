@@ -38,8 +38,17 @@ async function routeToNearestFrontliner(lat?: string, lng?: string, emergency: a
       return null;
     }
 
+    // Get the frontliner user's full name
+    let frontlinerName = nearest.organization || "Rescue 1122";
+    if (nearest.userId) {
+      const user = await storage.getUser(nearest.userId);
+      if (user?.fullName) {
+        frontlinerName = user.fullName;
+      }
+    }
+
     console.log(`[Emergency Routing] Routing to Rescue 1122 frontliner at distance ${nearest.distance}m`);
-    return { type: "frontliner", id: nearest.id, name: nearest.organization };
+    return { type: "frontliner", id: nearest.id, name: frontlinerName };
   } catch (error) {
     console.error("[Emergency Routing] Error finding frontliners:", error);
     return null;
