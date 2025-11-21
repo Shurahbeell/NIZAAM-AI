@@ -10,13 +10,19 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { AgentSession, AgentMessage } from "@shared/schema";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function SymptomChat() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"english" | "urdu">("english");
+  const { language: globalLanguage } = useLanguage();
+  
+  // Map global language to chat language (en/ur/ru -> english/urdu)
+  const getChatLanguage = (): "english" | "urdu" => {
+    return globalLanguage === 'en' ? 'english' : 'urdu';
+  };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Create agent session on mount (only once)
@@ -28,7 +34,7 @@ export default function SymptomChat() {
         const response = await apiRequest("POST", "/api/agent/sessions", {
           userId: "demo-user",
           agent: "triage",
-          language: "english"
+          language: getChatLanguage()
         });
         const session: AgentSession = await response.json();
         setSessionId(session.id);
@@ -41,7 +47,7 @@ export default function SymptomChat() {
       }
     };
     initSession();
-  }, [sessionId, toast]);
+  }, [sessionId, toast, globalLanguage]);
 
   // Fetch conversation history
   const { data: messages = [], isLoading } = useQuery<AgentMessage[]>({
@@ -56,7 +62,7 @@ export default function SymptomChat() {
         sessionId,
         agentName: "triage",
         message: userMessage,
-        language
+        language: getChatLanguage()
       });
       return response.json();
     },
@@ -88,12 +94,10 @@ export default function SymptomChat() {
     setMessage("");
   };
 
-  const toggleLanguage = () => {
-    const newLanguage = language === "english" ? "urdu" : "english";
-    setLanguage(newLanguage);
+  const handleLanguageToggle = () => {
     toast({
-      title: language === "english" ? "Zuban tabdeel hogai" : "Language Changed",
-      description: language === "english" ? "Urdu mein muntaqal kiya gaya" : "Switched to English"
+      title: globalLanguage === "en" ? "لغت تبدیل کی" : "Language Changed",
+      description: globalLanguage === "en" ? "اردو میں منتقل کیا گیا" : "Switched to English"
     });
   };
 

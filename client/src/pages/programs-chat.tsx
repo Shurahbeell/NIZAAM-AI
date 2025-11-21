@@ -6,9 +6,11 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Mic, Building2, Sparkles, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { healthPrograms } from "@shared/health-programs";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function ProgramsChat() {
   const [, setLocation] = useLocation();
+  const { language } = useLanguage();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
     {
