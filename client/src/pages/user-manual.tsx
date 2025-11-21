@@ -411,7 +411,7 @@ const faqItems: FAQItem[] = [
 ];
 
 export default function UserManual() {
-  const { language, changeLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
 
@@ -455,7 +455,7 @@ export default function UserManual() {
             </div>
             <Button
               variant="outline"
-              onClick={() => changeLanguage(isUrdu ? "en" : "ur")}
+              onClick={() => setLanguage(isUrdu ? "en" : "ur")}
               data-testid="button-language-toggle"
             >
               {isUrdu ? "English" : "اردو"}
