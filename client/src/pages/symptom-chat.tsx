@@ -147,18 +147,18 @@ export default function SymptomChat() {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">
-                {language === "urdu" ? "Alamaat ka jaiza" : "Symptom Triage"}
+                {getChatLanguage() === "urdu" ? "Alamaat ka jaiza" : "Symptom Triage"}
               </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {language === "urdu" ? "AI se taaqatwar sehat ka jaiza" : "AI-powered health assessment"}
+                {getChatLanguage() === "urdu" ? "AI se taaqatwar sehat ka jaiza" : "AI-powered health assessment"}
               </p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleLanguage}
+            onClick={handleLanguageToggle}
             data-testid="button-language-toggle"
             className="text-white hover:bg-white/20 rounded-xl"
           >
@@ -178,12 +178,12 @@ export default function SymptomChat() {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-lg mb-2">
-                  {language === "urdu" 
+                  {getChatLanguage() === "urdu" 
                     ? "Khush aamdeed!" 
                     : "Welcome!"}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {language === "urdu"
+                  {getChatLanguage() === "urdu"
                     ? "Main aapka AI triage assistant hoon. Main aapki alamaat ko samjhne aur munasib nigah dasht ki rahnumayee mein madad kar sakta hoon."
                     : "I'm your AI Triage Assistant powered by Gemini. I can help you understand your symptoms and guide you to appropriate care."}
                 </p>
@@ -194,10 +194,10 @@ export default function SymptomChat() {
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-semibold text-destructive mb-1">
-                        {language === "urdu" ? "Ahem Note" : "Important Note"}
+                        {getChatLanguage() === "urdu" ? "Ahem Note" : "Important Note"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {language === "urdu"
+                        {getChatLanguage() === "urdu"
                           ? "Main doctor nahin hoon. Ye tibbi masla nahin hai — behad karam sahi takhnis ke liye doctor se rujoo karen."
                           : "I am NOT a doctor. This is not medical advice — please consult a doctor for proper diagnosis."}
                       </p>
@@ -253,7 +253,7 @@ export default function SymptomChat() {
                         data-testid="badge-confidence"
                         className="shadow-sm px-3 py-1"
                       >
-                        {language === "urdu" ? "Aitemaad" : "Confidence"}: {Math.round(confidence * 100)}%
+                        {getChatLanguage() === "urdu" ? "Aitemaad" : "Confidence"}: {Math.round(confidence * 100)}%
                       </Badge>
                     )}
                   </div>
@@ -285,11 +285,11 @@ export default function SymptomChat() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !sendMessageMutation.isPending && handleSend()}
-            placeholder={language === "urdu" ? "Apni alamaat bayan karen..." : "Describe your symptoms..."}
+            placeholder={getChatLanguage() === "urdu" ? "Apni alamaat bayan karen..." : "Describe your symptoms..."}
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             disabled={!sessionId || sendMessageMutation.isPending}
             data-testid="input-message"
-            dir={language === "urdu" ? "rtl" : "ltr"}
+            dir={getChatLanguage() === "urdu" ? "rtl" : "ltr"}
           />
           <Button 
             variant="ghost" 
@@ -312,7 +312,7 @@ export default function SymptomChat() {
         </div>
         <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1.5">
           <Sparkles className="w-3 h-3" />
-          {language === "urdu" 
+          {getChatLanguage() === "urdu" 
             ? "Gemini se taaqatwar • Thanvi alamaat ka andaza nahin" 
             : "Powered by Gemini • Not a substitute for professional medical advice"}
         </p>

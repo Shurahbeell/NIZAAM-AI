@@ -12,12 +12,26 @@ export default function ProgramsChat() {
   const [, setLocation] = useLocation();
   const { language } = useLanguage();
   const [message, setMessage] = useState("");
+  
+  // Map global language to chat language (en/ur/ru -> english/urdu)
+  const getChatLanguage = (): "english" | "urdu" => {
+    return language === 'en' ? 'english' : 'urdu';
+  };
+
+  const getWelcomeMessage = () => {
+    const chatLang = getChatLanguage();
+    if (chatLang === "urdu") {
+      return "Pakistan Health Programs Advisor mein khush aamdeed! Main sab sarkaari sehat programs ke barey mein jaankari frah ne mein madad kar sakta hoon.\n\nAap mujh se pooch sakte hain:\n• 'Sab programs' dekhnay ke liye\n• Kisi khaas program ke barey mein (masalan 'Sehat Card')\n• 'Mein kis program ke liye qualify hoon?' apni details ke saath\n• 'Kaun se documents chahiye?'";
+    }
+    return "Welcome to Pakistan Health Programs Advisor! I can help you find information about all government health programs.\n\nYou can ask me:\n• 'List all programs' to see all 20 available programs\n• About specific programs (e.g., 'Tell me about Sehat Card')\n• 'Which program am I eligible for?' with your details\n• 'What documents are needed?'";
+  };
+  
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Welcome to Pakistan Health Programs Advisor! I can help you find information about all government health programs.\n\nYou can ask me:\n• 'List all programs' to see all 20 available programs\n• About specific programs (e.g., 'Tell me about Sehat Card')\n• 'Which program am I eligible for?' with your details\n• 'What documents are needed?'",
+      text: getWelcomeMessage(),
       isUser: false,
-      timestamp: "10:00 AM"
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -33,22 +47,29 @@ export default function ProgramsChat() {
 
   const formatProgramsResponse = (userQuery: string) => {
     const query = userQuery.toLowerCase();
+    const chatLang = getChatLanguage();
     
-    if (query.includes("all programs") || query.includes("list all") || query.includes("show all")) {
-      let response = "Here are all available Pakistan health programs:\n\n";
+    if (query.includes("all programs") || query.includes("list all") || query.includes("show all") || 
+        query.includes("sab programs") || query.includes("tamam programs")) {
+      let response = chatLang === "urdu" ? "Pakistan ke tamam sehat programs:\n\n" : "Here are all available Pakistan health programs:\n\n";
       healthPrograms.forEach((program, index) => {
         response += `${index + 1}. ${program.name}\n`;
       });
-      response += "\n\nAsk about any specific program to learn more, or ask 'Which program am I eligible for?' with your details.";
+      response += chatLang === "urdu" ? "\n\nKisi khaas program ke barey mein poochain ya 'Mein kis program ke liye qualify hoon?' likhen." 
+                                        : "\n\nAsk about any specific program to learn more, or ask 'Which program am I eligible for?' with your details.";
       return response;
     }
     
-    if (query.includes("eligible") || query.includes("qualify")) {
-      return "To check which programs you're eligible for, please tell me:\n• Your province\n• Your age\n• Your income level (low/middle/high)\n• Any specific health condition (pregnancy, TB, kidney, etc.)\n• Whether you're registered in BISP\n\nI'll then recommend the best programs for you.";
+    if (query.includes("eligible") || query.includes("qualify") || query.includes("qualify") || query.includes("muasir")) {
+      return chatLang === "urdu" 
+        ? "Apni eligibility check karnay ke liye mujhe batain:\n• Apka shehr/province\n• Apni umar\n• Income level (kam/درمیانی/zyada)\n• Koi health condition (pregnancy, TB, kidney, etc.)\n• Kya aap BISP mein registered hain\n\nPhir main aapko best programs bataunga."
+        : "To check which programs you're eligible for, please tell me:\n• Your province\n• Your age\n• Your income level (low/middle/high)\n• Any specific health condition (pregnancy, TB, kidney, etc.)\n• Whether you're registered in BISP\n\nI'll then recommend the best programs for you.";
     }
     
-    if (query.includes("documents") || query.includes("what do i need")) {
-      return "**Common Documents Needed:**\n\n• CNIC (Computerized National Identity Card)\n• B-Form (for children)\n• Hospital slip/medical records\n• Doctor prescription (if applicable)\n• Proof of income (for Bait-ul-Mal and means-tested programs)\n\nSpecific programs may need additional documents. Ask about a specific program for exact requirements.";
+    if (query.includes("documents") || query.includes("what do i need") || query.includes("kaun documents") || query.includes("kaunse kagzat")) {
+      return chatLang === "urdu"
+        ? "**Zaruri Documents:**\n\n• CNIC (Computerized National Identity Card)\n• B-Form (bachchon ke liye)\n• Hospital slip/medical records\n• Doctor prescription (agar zaruri ho)\n• Income proof (Bait-ul-Mal aur dusre programs ke liye)\n\nKuch programs ko aur documents chahiye hon sakte hain."
+        : "**Common Documents Needed:**\n\n• CNIC (Computerized National Identity Card)\n• B-Form (for children)\n• Hospital slip/medical records\n• Doctor prescription (if applicable)\n• Proof of income (for Bait-ul-Mal and means-tested programs)\n\nSpecific programs may need additional documents. Ask about a specific program for exact requirements.";
     }
     
     const matchedProgram = healthPrograms.find(p => 
@@ -67,11 +88,9 @@ export default function ProgramsChat() {
         `*Note: ${matchedProgram.notes}*`;
     }
     
-    return "I can help you with information about Pakistan health programs. You can:\n\n" +
-      "• Ask 'list all programs' to see all available programs\n" +
-      "• Ask about specific programs (e.g., 'Tell me about Sehat Card')\n" +
-      "• Ask 'Which program am I eligible for?' with your details\n" +
-      "• Ask 'What documents are needed?'";
+    return chatLang === "urdu"
+      ? "Main Pakistan sehat programs ke barey mein jaankari frah ne mein madad kar sakta hoon. Aap pooch sakte hain:\n\n• 'Sab programs' dekhnay ke liye\n• Kisi program ke barey mein\n• 'Mein kis program ke liye qualify hoon?' apni details ke saath\n• 'Kaun se documents chahiye?'"
+      : "I can help you with information about Pakistan health programs. You can:\n\n• Ask 'list all programs' to see all available programs\n• Ask about specific programs (e.g., 'Tell me about Sehat Card')\n• Ask 'Which program am I eligible for?' with your details\n• Ask 'What documents are needed?'";
   };
 
   const handleSend = () => {
@@ -123,10 +142,12 @@ export default function ProgramsChat() {
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-white text-lg">Health Programs</h1>
+              <h1 className="font-bold text-white text-lg">
+                {getChatLanguage() === "urdu" ? "Sehat Programs" : "Health Programs"}
+              </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Pakistan government programs
+                {getChatLanguage() === "urdu" ? "Pakistan sarkaari programs" : "Pakistan government programs"}
               </p>
             </div>
           </div>
@@ -166,9 +187,10 @@ export default function ProgramsChat() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask about health programs..."
+            placeholder={getChatLanguage() === "urdu" ? "Sehat programs ke barey mein pochain..." : "Ask about health programs..."}
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             data-testid="input-message"
+            dir={getChatLanguage() === "urdu" ? "rtl" : "ltr"}
           />
           <Button 
             variant="ghost" 
