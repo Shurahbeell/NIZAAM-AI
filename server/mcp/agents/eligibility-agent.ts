@@ -106,18 +106,18 @@ export class EligibilityAgent implements Agent {
   async handleMessage(
     sessionId: string,
     message: string,
-    language: string = "english"
+    language: string = "en"
   ): Promise<string> {
     try {
-      console.log(`[EligibilityAgent] Processing message in ${language}`);
+      console.log(`[EligibilityAgent] Processing message in language: ${language}`);
       
-      // Detect and translate Urdu input to English for GPT-5
-      const detectedLanguage = await translationService.detectLanguage(message);
-      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      // Map language codes: en -> en, ur/ru -> ur for processing
+      const isUrdu = language === "ur" || language === "ru";
       
+      // Translate to English for processing if needed
       let processedMessage = message;
-      if (userLanguage === "urdu") {
-        processedMessage = await translationService.translate(message, "english", "Program eligibility");
+      if (isUrdu) {
+        processedMessage = await translationService.translate(message, "en", "Program eligibility");
       }
       
       const history = await storage.getSessionMessages(sessionId);
@@ -126,37 +126,39 @@ export class EligibilityAgent implements Agent {
       const context = this.extractContext(history);
       
       // Get eligibility assessment
-      const assessment = await this.assessEligibility(processedMessage, context, "english");
+      const assessment = await this.assessEligibility(processedMessage, context, "en");
       
       // Generate response in English first
-      const response = await this.generateResponse(assessment, "english");
+      const response = await this.generateResponse(assessment, "en");
       
-      // Translate response to Urdu if needed
-      const localizedResponse = userLanguage === "urdu"
-        ? await translationService.translate(response.text, "urdu", "Program eligibility response")
-        : response.text;
+      // Translate response back to user's language
+      let responseContent = response.text;
+      if (isUrdu) {
+        // Translate to Urdu script
+        responseContent = await translationService.translate(response.text, "ur", "Program eligibility response");
+      }
       
       // Store message in user's language
       await storage.createAgentMessage({
         sessionId,
         senderType: "agent",
-        content: localizedResponse,
+        content: responseContent,
         metadata: {
           eligiblePrograms: assessment.eligiblePrograms,
           recommendedQuestions: assessment.recommendedQuestions,
           confidence: assessment.confidence,
           reasoning: assessment.reasoning
         },
-        language: userLanguage
+        language: isUrdu ? "ur" : "en"
       });
       
-      return localizedResponse;
+      return responseContent;
       
     } catch (error) {
       console.error("[EligibilityAgent] Error:", error);
       const fallback = "I can help you find health programs you're eligible for. Please tell me about your situation.";
-      return language === "urdu" 
-        ? await translationService.translate(fallback, "urdu")
+      return language !== "en" 
+        ? await translationService.translate(fallback, "ur")
         : fallback;
     }
   }
@@ -196,7 +198,7 @@ export class EligibilityAgent implements Agent {
   private async assessEligibility(
     userMessage: string,
     context: EligibilityContext,
-    language: "english" | "urdu"
+    language: "en" | "ur"
   ): Promise<EligibilityResult> {
     
     const programsInfo = PAKISTAN_HEALTH_PROGRAMS.map(p => 
@@ -242,22 +244,19 @@ Respond in JSON format:
 }`;
 
     try {
-      const result = await openai.chat.completions.create({
+      const result = await gemini.models.generateContent({
         model: MCP_CONFIG.model,
-        messages: [
-          {
-            role: "system",
-            content: "You are a health program eligibility expert for Pakistan. Respond only with valid JSON."
-          },
+        contents: [
           {
             role: "user",
-            content: prompt
+            parts: [{
+              text: "You are a health program eligibility expert for Pakistan. Respond only with valid JSON.\n\n" + prompt
+            }]
           }
-        ],
-        max_completion_tokens: 2000
+        ]
       });
 
-      const parsed = JSON.parse(result.choices[0].message.content || "{}");
+      const parsed = JSON.parse(result.text || "{}");
       return parsed as EligibilityResult;
     } catch (error) {
       console.error("[EligibilityAgent] Assessment error:", error);
@@ -274,12 +273,12 @@ Respond in JSON format:
 
   private async generateResponse(
     assessment: EligibilityResult,
-    language: "english" | "urdu"
+    language: "en" | "ur"
   ): Promise<{ text: string }> {
     
     let responseText = "";
 
-    // Type-safe guards for GPT-5 response fields (protect against schema drift)
+    // Type-safe guards for Gemini response fields
     const eligiblePrograms = Array.isArray(assessment.eligiblePrograms) ? assessment.eligiblePrograms : [];
     const recommendedQuestions = Array.isArray(assessment.recommendedQuestions) ? assessment.recommendedQuestions : [];
 
@@ -317,8 +316,8 @@ Respond in JSON format:
     }
 
     // Translate to Urdu if needed
-    if (language === "urdu") {
-      responseText = await translationService.translate(responseText, "urdu");
+    if (language === "ur") {
+      responseText = await translationService.translate(responseText, "ur");
     }
 
     return { text: responseText };
