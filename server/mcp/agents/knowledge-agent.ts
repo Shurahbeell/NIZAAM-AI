@@ -41,8 +41,9 @@ interface KnowledgeAnalysis {
 
 export class KnowledgeAgent implements Agent {
   name = "Knowledge Agent";
-  description = "Pattern detection and outbreak monitoring";
+  description = "Health programs advisor and outbreak monitoring";
   capabilities = [
+    "program_information",
     "pattern_detection",
     "outbreak_monitoring",
     "data_aggregation",
@@ -67,37 +68,44 @@ export class KnowledgeAgent implements Agent {
         processedMessage = await translationService.translate(message, "en", "Health programs");
       }
       
-      // Anonymize all data before processing
-      const anonymizedResult = piiProtection.minimizePII(processedMessage);
-      const anonymizedMessage = anonymizedResult.minimized;
+      // Check if this is a health program query vs outbreak monitoring
+      const isProgramQuery = this.isProgramQuery(processedMessage);
       
-      // Analyze patterns and detect potential outbreaks
-      const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "en");
+      let responseContent: string;
       
-      // Generate response in English first
-      const response = await this.generateResponse(analysis, "en");
-      
-      // Translate response back to user's language
-      let responseContent = response.text;
-      if (isUrdu) {
-        // Translate to Urdu script
-        responseContent = await translationService.translate(response.text, "ur", "Health programs response");
-      }
-      
-      // Process escalations if needed
-      if (analysis.alerts.some(a => a.shouldEscalate)) {
-        await this.escalateAlerts(analysis.alerts.filter(a => a.shouldEscalate));
+      if (isProgramQuery) {
+        // Handle health program question directly with Gemini
+        responseContent = await this.answerProgramQuestion(processedMessage, isUrdu ? "ur" : "en");
+      } else {
+        // Original outbreak monitoring flow
+        // Anonymize all data before processing
+        const anonymizedResult = piiProtection.minimizePII(processedMessage);
+        const anonymizedMessage = anonymizedResult.minimized;
+        
+        // Analyze patterns and detect potential outbreaks
+        const analysis = await this.analyzeHealthPatterns(anonymizedMessage, "en");
+        
+        // Generate response in English first
+        const response = await this.generateResponse(analysis, "en");
+        
+        // Translate response back to user's language
+        responseContent = response.text;
+        if (isUrdu) {
+          // Translate to Urdu script
+          responseContent = await translationService.translate(response.text, "ur", "Health programs response");
+        }
+        
+        // Process escalations if needed
+        if (analysis.alerts.some(a => a.shouldEscalate)) {
+          await this.escalateAlerts(analysis.alerts.filter(a => a.shouldEscalate));
+        }
       }
       
       await storage.createAgentMessage({
         sessionId,
         senderType: "agent",
         content: responseContent,
-        metadata: {
-          patterns: analysis.patterns,
-          alerts: analysis.alerts,
-          trends: analysis.trends
-        },
+        metadata: {},
         language: isUrdu ? "ur" : "en"
       });
       
@@ -107,6 +115,63 @@ export class KnowledgeAgent implements Agent {
       console.error("[KnowledgeAgent] Error:", error);
       const fallback = "I can help you find information about health programs. Please tell me what you'd like to know.";
       return language !== "en"
+        ? await translationService.translate(fallback, "ur")
+        : fallback;
+    }
+  }
+
+  private isProgramQuery(message: string): boolean {
+    const programKeywords = [
+      "program", "sehat", "sahulat", "vaccination", "immunization", "epi",
+      "tb", "tuberculosis", "hepatitis", "maternal", "neonatal", "family planning",
+      "diabetes", "mental health", "aids", "hiv", "eligib", "eligible", 
+      "apply", "registration", "enrollment", "benefit", "coverage", "insurance",
+      "free", "treatment", "healthcare", "services", "facilities", "how to",
+      "tell me about", "information", "details", "requirements", "documents"
+    ];
+    const lowerMessage = message.toLowerCase();
+    return programKeywords.some(keyword => lowerMessage.includes(keyword));
+  }
+
+  private async answerProgramQuestion(message: string, language: "en" | "ur"): Promise<string> {
+    const programsInfo = healthPrograms.map(p => 
+      `**${p.name}**\nDescription: ${p.description}\nPurpose: ${p.purpose}\nEligibility: ${p.eligibility}\nBenefits: ${p.benefits}\nRequired Documents: ${p.required_documents.join(", ")}\nCost: ${p.cost}\nHow to Apply: ${p.how_to_apply}\nNotes: ${p.notes}`
+    ).join("\n\n---\n\n");
+
+    const prompt = `You are a Pakistan health programs expert. Answer the user's question about health programs.
+
+Available Programs Database:
+${programsInfo}
+
+User Question: ${message}
+
+Provide a clear, helpful, and accurate answer based on the programs information above. If the user is asking about eligibility, list the programs they might qualify for. If asking about how to apply, explain the process. Be specific and reference program names when relevant.`;
+
+    try {
+      const result = await gemini.models.generateContent({
+        model: MCP_CONFIG.model,
+        contents: [
+          {
+            role: "user",
+            parts: [{
+              text: prompt
+            }]
+          }
+        ]
+      });
+
+      let answer = result.text || "I couldn't find information about that program.";
+      
+      // Translate to Urdu if needed
+      if (language === "ur") {
+        answer = await translationService.translate(answer, "ur", "Health program answer");
+      }
+      
+      return answer;
+    } catch (error) {
+      console.error("[KnowledgeAgent] Program query error:", error);
+      const fallback = "I can help with information about Pakistan health programs. Please ask about specific programs.";
+      return language === "ur"
         ? await translationService.translate(fallback, "ur")
         : fallback;
     }
@@ -191,7 +256,7 @@ Respond in JSON format:
 
       const parsed = JSON.parse(result.text || "{}");
       
-      // Type-safe guards for GPT-5 response fields (protect against schema drift)
+      // Type-safe guards for Gemini response fields (protect against schema drift)
       if (!Array.isArray(parsed.patterns)) {
         parsed.patterns = [];
       }
@@ -225,141 +290,93 @@ Respond in JSON format:
         alerts: [],
         trends: ["Normal seasonal patterns observed"],
         publicHealthInsights: ["Continue routine surveillance"],
-        reasoning: "Insufficient data for pattern detection. Continue monitoring.",
-        confidence: 0.5
+        reasoning: "Unable to analyze patterns due to error",
+        confidence: 0.0
       };
     }
   }
 
-  private simulateAggregatedData(): string {
-    // In production, this would query anonymized data from agent_messages
-    // For demo purposes, we return sample aggregated data
-    
-    return `
-Sample Anonymized Health Data (Last 30 Days):
-
-Symptom Patterns:
-- Respiratory symptoms (cough, fever): 127 cases
-  - Lahore: 45 cases
-  - Karachi: 38 cases
-  - Islamabad: 25 cases
-  - Other: 19 cases
-  
-- Gastrointestinal symptoms: 34 cases
-  - Distributed evenly across regions
-  
-- Fever + rash: 8 cases
-  - Concentrated in Lahore (6 cases)
-  - Last 7 days: 5 cases
-  
-Age Distribution:
-- 0-5 years: 32%
-- 6-18 years: 18%
-- 19-45 years: 35%
-- 46+ years: 15%
-
-Temporal Trends:
-- Week 1: 45 total cases
-- Week 2: 52 total cases (+15%)
-- Week 3: 68 total cases (+30%)
-- Week 4: 71 total cases (+4%)
-
-Note: All data anonymized and aggregated per privacy protocols.
-`;
-  }
-
-  private async escalateAlerts(alerts: OutbreakAlert[]): Promise<void> {
-    // In production, this would:
-    // 1. Store alerts in knowledge_alerts table
-    // 2. Notify health authorities via configured channels
-    // 3. Trigger automated responses (e.g., increased surveillance)
-    
-    console.log("[KnowledgeAgent] ESCALATION TRIGGERED:");
-    alerts.forEach(alert => {
-      console.log(`- ${alert.patternType} (${alert.riskLevel}) → ${alert.escalationTarget}`);
-      console.log(`  Evidence: ${alert.evidencePoints.join(", ")}`);
-    });
-    
-    // TODO: Implement actual escalation logic
-    // - Email/SMS to health department
-    // - Create knowledge_alerts record
-    // - Trigger event for other agents to adjust behavior
-  }
-
   private async generateResponse(
-    analysis: KnowledgeAnalysis,
-    language: string
+    assessment: KnowledgeAnalysis,
+    language: "en" | "ur"
   ): Promise<{ text: string }> {
     
     let responseText = "";
 
-    // Alerts section (most important)
-    if (analysis.alerts.length > 0) {
-      responseText += "🚨 **Outbreak Alerts Detected:**\n\n";
+    // Type-safe guards for Gemini response fields (protect against schema drift)
+    const patterns = Array.isArray(assessment.patterns) ? assessment.patterns : [];
+    const alerts = Array.isArray(assessment.alerts) ? assessment.alerts : [];
+    const trends = Array.isArray(assessment.trends) ? assessment.trends : [];
+    const insights = Array.isArray(assessment.publicHealthInsights) ? assessment.publicHealthInsights : [];
+
+    if (alerts.length > 0) {
+      responseText = "**HEALTH ALERTS**\n\n";
       
-      analysis.alerts.forEach((alert, i) => {
-        const riskEmoji = alert.riskLevel === "critical" ? "🔴" 
-          : alert.riskLevel === "high" ? "🟠"
-          : alert.riskLevel === "moderate" ? "🟡" : "🟢";
-        
-        responseText += `${i + 1}. ${riskEmoji} **${alert.patternType}** - ${alert.riskLevel.toUpperCase()} RISK\n`;
-        responseText += `   ${alert.description}\n`;
-        responseText += `   Affected areas: ${alert.affectedAreas.join(", ")}\n`;
-        responseText += `   Evidence: ${alert.evidencePoints.join(", ")}\n`;
-        
-        if (alert.recommendations.length > 0) {
-          responseText += `   Recommendations:\n${alert.recommendations.map(r => `   - ${r}`).join("\n")}\n`;
-        }
-        
-        if (alert.shouldEscalate) {
-          responseText += `   ⚠️ ESCALATED to ${alert.escalationTarget}\n`;
-        }
-        responseText += "\n";
+      alerts.forEach((alert) => {
+        responseText += `🚨 ${alert.patternType.toUpperCase()}\n`;
+        responseText += `Risk Level: ${alert.riskLevel}\n`;
+        responseText += `Description: ${alert.description}\n`;
+        responseText += `Affected Areas: ${alert.affectedAreas.join(", ")}\n`;
+        responseText += `Recommendations:\n${alert.recommendations.map(r => `- ${r}`).join("\n")}\n\n`;
       });
     }
 
-    // Patterns section
-    if (analysis.patterns.length > 0) {
-      responseText += "📊 **Health Patterns Detected:**\n\n";
+    if (patterns.length > 0) {
+      responseText += "**HEALTH PATTERNS**\n\n";
       
-      analysis.patterns.slice(0, 3).forEach((pattern, i) => {
-        responseText += `${i + 1}. ${pattern.symptomCluster.join(", ")}\n`;
-        responseText += `   Frequency: ${pattern.frequency} cases\n`;
-        responseText += `   Locations: ${pattern.locations.join(", ")}\n`;
-        responseText += `   Severity: ${pattern.severity}\n\n`;
+      patterns.forEach((pattern) => {
+        responseText += `Pattern: ${pattern.symptomCluster.join(", ")}\n`;
+        responseText += `Locations: ${pattern.locations.join(", ")}\n`;
+        responseText += `Frequency: ${pattern.frequency} cases\n`;
+        responseText += `Severity: ${pattern.severity}\n\n`;
       });
     }
 
-    // Trends section
-    if (analysis.trends.length > 0) {
-      responseText += "📈 **Health Trends:**\n";
-      analysis.trends.forEach((trend, i) => {
-        responseText += `${i + 1}. ${trend}\n`;
-      });
+    if (trends.length > 0) {
+      responseText += "**TRENDS**\n";
+      trends.forEach(t => responseText += `- ${t}\n`);
       responseText += "\n";
     }
 
-    // Public health insights
-    if (analysis.publicHealthInsights.length > 0) {
-      responseText += "💡 **Public Health Insights:**\n";
-      analysis.publicHealthInsights.forEach((insight, i) => {
-        responseText += `${i + 1}. ${insight}\n`;
-      });
-      responseText += "\n";
+    if (insights.length > 0) {
+      responseText += "**INSIGHTS**\n";
+      insights.forEach(i => responseText += `- ${i}\n`);
     }
 
-    if (responseText === "") {
-      responseText = "No significant health patterns or alerts detected at this time. Routine monitoring continues.";
-    }
-
-    responseText += `\n🔒 **Privacy**: All data analyzed is fully anonymized and aggregated per health privacy protocols.`;
-
-    // Translate to Urdu if needed
-    if (language === "urdu") {
-      responseText = await translationService.translate(responseText, "urdu");
+    if (!responseText.trim()) {
+      responseText = "No significant patterns or alerts detected. Health systems operating normally.";
     }
 
     return { text: responseText };
+  }
+
+  private simulateAggregatedData(): string {
+    return `
+Date Range: Last 30 days
+Total Cases Analyzed: 1,200
+Geographic Coverage: National
+
+Sample Data:
+- Respiratory infections: 45 cases (trending stable)
+- Gastrointestinal issues: 32 cases (trending down)
+- Waterborne illness: 8 cases (localized to Sindh)
+- Malaria: 15 cases (seasonal pattern observed)
+- Dengue: 12 cases (concentrated in urban areas)
+
+No current outbreak alerts. All indicators within normal range.
+    `;
+  }
+
+  private async escalateAlerts(alerts: OutbreakAlert[]): Promise<void> {
+    // Log alerts that need escalation
+    console.log("[KnowledgeAgent] Escalating alerts:", alerts.map(a => ({
+      id: a.id,
+      type: a.patternType,
+      riskLevel: a.riskLevel,
+      target: a.escalationTarget
+    })));
+    
+    // In production, this would notify health authorities
   }
 }
 
