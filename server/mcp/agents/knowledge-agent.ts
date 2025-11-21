@@ -1,4 +1,4 @@
-import { openai, MCP_CONFIG } from "../index";
+import { gemini, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { piiProtection } from "../services/pii-protection";
 import { storage } from "../../storage";
@@ -174,22 +174,19 @@ Respond in JSON format:
 }`;
 
     try {
-      const result = await openai.chat.completions.create({
+      const result = await gemini.models.generateContent({
         model: MCP_CONFIG.model,
-        messages: [
-          {
-            role: "system",
-            content: "You are a public health surveillance expert analyzing anonymized data. Respond only with valid JSON."
-          },
+        contents: [
           {
             role: "user",
-            content: prompt
+            parts: [{
+              text: "You are a public health surveillance expert analyzing anonymized data. Respond only with valid JSON.\n\n" + prompt
+            }]
           }
-        ],
-        max_completion_tokens: 2500
+        ]
       });
 
-      const parsed = JSON.parse(result.choices[0].message.content || "{}");
+      const parsed = JSON.parse(result.text || "{}");
       
       // Type-safe guards for GPT-5 response fields (protect against schema drift)
       if (!Array.isArray(parsed.patterns)) {

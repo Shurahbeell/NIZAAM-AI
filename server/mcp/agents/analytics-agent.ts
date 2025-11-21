@@ -1,4 +1,4 @@
-import { openai, MCP_CONFIG } from "../index";
+import { gemini, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
@@ -109,17 +109,15 @@ Provide answer with evidence in JSON:
   "disclaimer": "when to see doctor"
 }`;
 
-      // Query GPT-5 for evidence-based answer
-      const result = await openai.chat.completions.create({
+      // Query Gemini for evidence-based answer
+      const result = await gemini.models.generateContent({
         model: MCP_CONFIG.model,
-        messages: [
-          { role: "system", content: "You are a medical evidence expert. Respond with JSON only." },
-          { role: "user", content: prompt }
-        ],
-        max_completion_tokens: 2000
+        contents: [
+          { role: "user", parts: [{ text: "You are a medical evidence expert. Respond with JSON only.\n\n" + prompt }] }
+        ]
       });
 
-      const parsed = JSON.parse(result.choices[0].message.content || "{}");
+      const parsed = JSON.parse(result.text || "{}");
       
       // Null guards for GPT-5 response fields
       const answer = parsed.answer || "I can provide health guidance based on medical protocols.";

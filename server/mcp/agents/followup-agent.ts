@@ -1,4 +1,4 @@
-import { openai, MCP_CONFIG } from "../index";
+import { gemini, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
@@ -63,16 +63,14 @@ Create adaptive reminders and recommendations in JSON:
   "summary": "brief summary"
 }`;
 
-      const result = await openai.chat.completions.create({
+      const result = await gemini.models.generateContent({
         model: MCP_CONFIG.model,
-        messages: [
-          { role: "system", content: "You are a follow-up care coordinator. Respond with JSON only." },
-          { role: "user", content: prompt }
-        ],
-        max_completion_tokens: 1500
+        contents: [
+          { role: "user", parts: [{ text: "You are a follow-up care coordinator. Respond with JSON only.\n\n" + prompt }] }
+        ]
       });
 
-      const parsed = JSON.parse(result.choices[0].message.content || "{}");
+      const parsed = JSON.parse(result.text || "{}");
       
       let responseText = "I've created a personalized follow-up plan:\n\n";
 

@@ -1,4 +1,4 @@
-import { openai, MCP_CONFIG } from "../index";
+import { gemini, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
