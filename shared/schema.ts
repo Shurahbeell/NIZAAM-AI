@@ -28,6 +28,8 @@ export const hospitals = pgTable("hospitals", {
   email: text("email"),
   type: text("type").notNull(), // "government" or "private"
   facilities: text("facilities").array(), // ["Emergency", "Lab", "Radiology"]
+  latitude: text("latitude").notNull(), // GPS latitude
+  longitude: text("longitude").notNull(), // GPS longitude
   createdAt: timestamp("created_at").defaultNow(),
 });
 

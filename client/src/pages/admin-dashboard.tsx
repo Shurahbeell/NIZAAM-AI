@@ -13,10 +13,10 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [tab, setTab] = useState<"users" | "register-hospital" | "register-frontliner">("users");
   const [hospitalForm, setHospitalForm] = useState({
-    username: "", password: "", hospitalName: "", hospitalAddress: "", hospitalPhone: "", hospitalType: "government" as "government" | "private",
+    username: "", password: "", hospitalName: "", hospitalAddress: "", hospitalPhone: "", hospitalType: "government" as "government" | "private", latitude: "", longitude: "",
   });
   const [frontlinerForm, setFrontlinerForm] = useState({
-    username: "", password: "", fullName: "", phone: "", vehicleType: "Ambulance",
+    username: "", password: "", fullName: "", phone: "", vehicleType: "Ambulance", currentLatitude: "", currentLongitude: "", baseLatitude: "", baseLongitude: "",
   });
 
   // Fetch users
@@ -183,6 +183,20 @@ export default function AdminDashboard() {
                 onChange={(e) => setHospitalForm({ ...hospitalForm, hospitalPhone: e.target.value })}
                 data-testid="input-hospital-phone"
               />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Latitude"
+                  value={hospitalForm.latitude || ""}
+                  onChange={(e) => setHospitalForm({ ...hospitalForm, latitude: e.target.value })}
+                  data-testid="input-hospital-latitude"
+                />
+                <Input
+                  placeholder="Longitude"
+                  value={hospitalForm.longitude || ""}
+                  onChange={(e) => setHospitalForm({ ...hospitalForm, longitude: e.target.value })}
+                  data-testid="input-hospital-longitude"
+                />
+              </div>
               <select
                 value={hospitalForm.hospitalType}
                 onChange={(e) => setHospitalForm({ ...hospitalForm, hospitalType: e.target.value as any })}
@@ -194,7 +208,7 @@ export default function AdminDashboard() {
               </select>
               <Button
                 onClick={() => registerHospitalMutation.mutate()}
-                disabled={registerHospitalMutation.isPending}
+                disabled={registerHospitalMutation.isPending || !hospitalForm.latitude || !hospitalForm.longitude}
                 className="w-full"
                 data-testid="button-register-hospital"
               >
@@ -209,7 +223,7 @@ export default function AdminDashboard() {
         {tab === "register-frontliner" && (
           <Card className="p-6 max-w-md">
             <h2 className="text-xl font-bold mb-4">Register New Frontliner</h2>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               <Input
                 placeholder="Frontliner Username"
                 value={frontlinerForm.username}
@@ -245,9 +259,39 @@ export default function AdminDashboard() {
                 <option value="Motorcycle">Motorcycle</option>
                 <option value="Car">Car</option>
               </select>
+              <div className="text-sm font-semibold">Current Location</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Current Latitude"
+                  value={frontlinerForm.currentLatitude}
+                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, currentLatitude: e.target.value })}
+                  data-testid="input-current-latitude"
+                />
+                <Input
+                  placeholder="Current Longitude"
+                  value={frontlinerForm.currentLongitude}
+                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, currentLongitude: e.target.value })}
+                  data-testid="input-current-longitude"
+                />
+              </div>
+              <div className="text-sm font-semibold">Base Station Location</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Base Latitude"
+                  value={frontlinerForm.baseLatitude}
+                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, baseLatitude: e.target.value })}
+                  data-testid="input-base-latitude"
+                />
+                <Input
+                  placeholder="Base Longitude"
+                  value={frontlinerForm.baseLongitude}
+                  onChange={(e) => setFrontlinerForm({ ...frontlinerForm, baseLongitude: e.target.value })}
+                  data-testid="input-base-longitude"
+                />
+              </div>
               <Button
                 onClick={() => registerFrontlinerMutation.mutate()}
-                disabled={registerFrontlinerMutation.isPending}
+                disabled={registerFrontlinerMutation.isPending || !frontlinerForm.currentLatitude || !frontlinerForm.currentLongitude || !frontlinerForm.baseLatitude || !frontlinerForm.baseLongitude}
                 className="w-full"
                 data-testid="button-register-frontliner"
               >

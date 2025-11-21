@@ -131,6 +131,8 @@ const registerHospitalSchema = z.object({
   hospitalAddress: z.string().min(5),
   hospitalPhone: z.string().min(10),
   hospitalType: z.enum(["government", "private"]),
+  latitude: z.string().min(1, "Hospital latitude is required"),
+  longitude: z.string().min(1, "Hospital longitude is required"),
   facilities: z.array(z.string()).optional(),
 });
 
@@ -150,6 +152,8 @@ router.post("/register/hospital", requireAuth, requireAdmin, async (req: Request
       address: data.hospitalAddress,
       phone: data.hospitalPhone,
       type: data.hospitalType,
+      latitude: data.latitude,
+      longitude: data.longitude,
       facilities: data.facilities || [],
     });
 
@@ -190,6 +194,10 @@ const registerFrontlinerSchema = z.object({
   fullName: z.string().min(3),
   phone: z.string().min(10),
   vehicleType: z.string().optional(),
+  currentLatitude: z.string().min(1, "Current latitude is required"),
+  currentLongitude: z.string().min(1, "Current longitude is required"),
+  baseLatitude: z.string().min(1, "Base station latitude is required"),
+  baseLongitude: z.string().min(1, "Base station longitude is required"),
 });
 
 router.post("/register/frontliner", requireAuth, requireAdmin, async (req: Request, res: Response) => {
@@ -210,11 +218,17 @@ router.post("/register/frontliner", requireAuth, requireAdmin, async (req: Reque
       phone: data.phone,
     });
 
-    // Auto-create frontliner profile
-    const frontliner = await storage.ensureFrontlinerProfile(user.id);
-    if (data.vehicleType) {
-      // Update vehicle type if provided - would need storage method
-    }
+    // Create frontliner profile with location
+    const frontliner = await storage.createFrontliner({
+      userId: user.id,
+      organization: "Rescue 1122",
+      vehicleType: data.vehicleType || "Ambulance",
+      currentLat: data.currentLatitude,
+      currentLng: data.currentLongitude,
+      baseLatitude: data.baseLatitude,
+      baseLongitude: data.baseLongitude,
+      isAvailable: true,
+    });
 
     const token = generateToken({
       userId: user.id,
