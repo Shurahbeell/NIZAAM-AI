@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3 } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -125,6 +125,12 @@ export default function Dashboard() {
       description: "Nearby hospitals",
       icon: MapPin,
       path: "/map"
+    },
+    {
+      title: "User Manual",
+      description: "How to use the app",
+      icon: HelpCircle,
+      path: "/user-manual"
     }
   ];
 
