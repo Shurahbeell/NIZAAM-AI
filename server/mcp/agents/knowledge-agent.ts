@@ -3,6 +3,7 @@ import { translationService } from "../services/translation";
 import { piiProtection } from "../services/pii-protection";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
+import { healthPrograms } from "@shared/health-programs";
 
 interface HealthPattern {
   symptomCluster: string[];
