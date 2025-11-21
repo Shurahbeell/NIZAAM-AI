@@ -92,8 +92,8 @@ export default function SymptomChat() {
     const newLanguage = language === "english" ? "urdu" : "english";
     setLanguage(newLanguage);
     toast({
-      title: language === "english" ? "زبان تبدیل ہوگئی" : "Language Changed",
-      description: language === "english" ? "اردو میں منتقل کیا گیا" : "Switched to English"
+      title: language === "english" ? "Zuban tabdeel hogai" : "Language Changed",
+      description: language === "english" ? "Urdu mein muntaqal kiya gaya" : "Switched to English"
     });
   };
 
@@ -109,9 +109,9 @@ export default function SymptomChat() {
   const getUrgencyLabel = (urgency: string) => {
     if (language === "urdu") {
       switch (urgency) {
-        case "emergency": return "ایمرجنسی";
-        case "bhu-visit": return "ڈاکٹر سے ملیں";
-        case "self-care": return "گھر پر علاج";
+        case "emergency": return "Emergency";
+        case "bhu-visit": return "Doctor se milen";
+        case "self-care": return "Ghar par ilaj";
         default: return urgency;
       }
     }
@@ -143,11 +143,11 @@ export default function SymptomChat() {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">
-                {language === "urdu" ? "علامات کا جائزہ" : "Symptom Triage"}
+                {language === "urdu" ? "Alamaat ka jaiza" : "Symptom Triage"}
               </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {language === "urdu" ? "AI سے طاقتور صحت کا جائزہ" : "AI-powered health assessment"}
+                {language === "urdu" ? "AI se taaqatwar sehat ka jaiza" : "AI-powered health assessment"}
               </p>
             </div>
           </div>
@@ -175,13 +175,13 @@ export default function SymptomChat() {
               <div className="flex-1">
                 <h3 className="font-bold text-lg mb-2">
                   {language === "urdu" 
-                    ? "خوش آمدید!" 
+                    ? "Khush aamdeed!" 
                     : "Welcome!"}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   {language === "urdu"
-                    ? "میں آپ کا AI ٹرائیج اسسٹنٹ ہوں۔ میں آپ کی علامات کو سمجھنے اور مناسب نگہداشت کی رہنمائی میں مدد کر سکتا ہوں۔"
-                    : "I'm your AI Triage Assistant powered by GPT-5. I can help you understand your symptoms and guide you to appropriate care."}
+                    ? "Main aapka AI triage assistant hoon. Main aapki alamaat ko samjhne aur munasib nigah dasht ki rahnumayee mein madad kar sakta hoon."
+                    : "I'm your AI Triage Assistant powered by Gemini. I can help you understand your symptoms and guide you to appropriate care."}
                 </p>
                 <div className="p-4 bg-destructive/10 rounded-xl border-2 border-destructive/20">
                   <div className="flex gap-3 items-start">
@@ -190,11 +190,11 @@ export default function SymptomChat() {
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-semibold text-destructive mb-1">
-                        {language === "urdu" ? "اہم نوٹ" : "Important Note"}
+                        {language === "urdu" ? "Ahem Note" : "Important Note"}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {language === "urdu"
-                          ? "میں ڈاکٹر نہیں ہوں۔ یہ طبی مشورہ نہیں ہے — براہ کرم صحیح تشخیص کے لیے ڈاکٹر سے رجوع کریں۔"
+                          ? "Main doctor nahin hoon. Ye tibbi masla nahin hai — behad karam sahi takhnis ke liye doctor se rujoo karen."
                           : "I am NOT a doctor. This is not medical advice — please consult a doctor for proper diagnosis."}
                       </p>
                     </div>
@@ -249,7 +249,7 @@ export default function SymptomChat() {
                         data-testid="badge-confidence"
                         className="shadow-sm px-3 py-1"
                       >
-                        {language === "urdu" ? "اعتماد" : "Confidence"}: {Math.round(confidence * 100)}%
+                        {language === "urdu" ? "Aitemaad" : "Confidence"}: {Math.round(confidence * 100)}%
                       </Badge>
                     )}
                   </div>
@@ -281,7 +281,7 @@ export default function SymptomChat() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !sendMessageMutation.isPending && handleSend()}
-            placeholder={language === "urdu" ? "اپنی علامات بیان کریں..." : "Describe your symptoms..."}
+            placeholder={language === "urdu" ? "Apni alamaat bayan karen..." : "Describe your symptoms..."}
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             disabled={!sessionId || sendMessageMutation.isPending}
             data-testid="input-message"
@@ -309,8 +309,8 @@ export default function SymptomChat() {
         <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1.5">
           <Sparkles className="w-3 h-3" />
           {language === "urdu" 
-            ? "GPT-5 سے طاقتور • ثانوی علامات کا اندازہ نہیں" 
-            : "Powered by GPT-5 • Not a substitute for professional medical advice"}
+            ? "Gemini se taaqatwar • Thanvi alamaat ka andaza nahin" 
+            : "Powered by Gemini • Not a substitute for professional medical advice"}
         </p>
       </div>
     </div>
