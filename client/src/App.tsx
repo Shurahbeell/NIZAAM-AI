@@ -135,7 +135,6 @@ function AppContent() {
   return (
     <LanguageContext.Provider value={languageContext}>
       <div dir={languageContext.dir} className={languageContext.language === 'ur' ? 'text-right' : 'text-left'}>
-        <LanguageSelector />
         <Router />
       </div>
     </LanguageContext.Provider>
