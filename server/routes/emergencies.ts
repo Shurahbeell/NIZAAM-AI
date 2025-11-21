@@ -6,11 +6,42 @@ import { insertEmergencySchema } from "@shared/schema";
 
 const router = Router();
 
-// Create emergency (patient only)
+// Helper: Find nearest 1122 frontliner and route emergency
+async function routeToNearestFrontliner(lat?: string, lng?: string, emergency: any = {}) {
+  if (!lat || !lng) return null;
+
+  try {
+    const lat_num = parseFloat(lat);
+    const lng_num = parseFloat(lng);
+    
+    // Find nearest frontliners
+    const frontliners = await storage.findNearestFrontliners(lat, lng, 5);
+    
+    if (frontliners.length === 0) {
+      console.log("[Emergency Routing] No frontliners available, will route to hospital");
+      return null;
+    }
+
+    // Get the nearest available frontliner
+    const nearest = frontliners.find(f => f.isAvailable);
+    if (!nearest) {
+      console.log("[Emergency Routing] No available frontliners");
+      return null;
+    }
+
+    console.log(`[Emergency Routing] Routing to Rescue 1122 frontliner at distance ${nearest.distance}m`);
+    return { type: "frontliner", id: nearest.id, name: nearest.organization };
+  } catch (error) {
+    console.error("[Emergency Routing] Error finding frontliners:", error);
+    return null;
+  }
+}
+
+// Create emergency (patient only) - routes to nearest 1122 frontliner
 router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: Response) => {
   try {
     // Only allow specific fields from request body - derive patientId from token
-    const { patientName, patientPhone, location, emergencyType, priority, symptoms, notes } = req.body;
+    const { patientName, patientPhone, location, emergencyType, priority, symptoms, notes, lat, lng } = req.body;
 
     const data = insertEmergencySchema.parse({
       patientName,
@@ -26,6 +57,17 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
 
     const emergency = await storage.createEmergency(data);
 
+    // Try to route to nearest Rescue 1122 frontliner
+    const assignment = await routeToNearestFrontliner(lat, lng, emergency);
+    
+    if (assignment) {
+      // Update emergency with assignment
+      await storage.updateEmergencyCaseStatus(emergency.id, "assigned", { 
+        assignedToType: assignment.type, 
+        assignedToId: assignment.id 
+      });
+    }
+
     // Trigger emergency event for MCP system
     await storage.createAgentEvent({
       type: "EmergencyCreated",
@@ -34,12 +76,13 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
         priority: emergency.priority,
         emergencyType: emergency.emergencyType,
         location: emergency.location,
+        assignedTo: assignment,
       },
       triggeredByAgent: "system",
       status: "pending",
     });
 
-    res.json(emergency);
+    res.json({ ...emergency, assignedTo: assignment });
   } catch (error: any) {
     console.error("[Emergencies] Create error:", error);
     if (error instanceof z.ZodError) {

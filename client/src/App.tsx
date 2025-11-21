@@ -33,6 +33,8 @@ import History from "@/pages/history";
 import Profile from "@/pages/profile";
 import FrontlinerDashboard from "@/pages/frontliner-dashboard";
 import DispatchMonitor from "@/pages/dispatch-monitor";
+import AdminLogin from "@/pages/admin-login";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   return (
@@ -113,6 +115,12 @@ function Router() {
         <MultiRoleGuard allowedRoles={["hospital", "frontliner"]}>
           <DispatchMonitor />
         </MultiRoleGuard>
+      </Route>
+      <Route path="/admin-login" component={AdminLogin} />
+      <Route path="/admin-dashboard">
+        <RoleGuard requiredRole="admin">
+          <AdminDashboard />
+        </RoleGuard>
       </Route>
       <Route component={NotFound} />
     </Switch>

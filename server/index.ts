@@ -11,6 +11,7 @@ import emergenciesRoutes from "./routes/emergencies";
 import agentsRoutes from "./routes/agents";
 import frontlinersRoutes from "./routes/frontliners";
 import dispatchRoutes from "./routes/dispatch";
+import adminRoutes from "./routes/admin";
 
 const app = express();
 
@@ -74,6 +75,7 @@ app.use((req, res, next) => {
   app.use("/api/facilities", photosRoutes);
   app.use("/api/frontliners", frontlinersRoutes);
   app.use("/api/dispatch", dispatchRoutes);
+  app.use("/api/admin", adminRoutes);
   
   const server = await registerRoutes(app);
 

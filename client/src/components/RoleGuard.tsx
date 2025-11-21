@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/lib/auth";
 
 interface RoleGuardProps {
-  requiredRole: "patient" | "hospital" | "frontliner";
+  requiredRole: "patient" | "hospital" | "frontliner" | "admin";
   children: React.ReactNode;
 }
 
@@ -13,7 +13,7 @@ export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      setLocation("/login");
+      setLocation(requiredRole === "admin" ? "/admin-login" : "/login");
       return;
     }
 
@@ -23,6 +23,8 @@ export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
         setLocation("/hospital-dashboard");
       } else if (user.role === "frontliner") {
         setLocation("/frontliner-dashboard");
+      } else if (user.role === "admin") {
+        setLocation("/admin-dashboard");
       } else {
         setLocation("/dashboard");
       }

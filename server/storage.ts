@@ -189,8 +189,6 @@ export class DrizzleStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
-    
-    return result[0];
   }
 
   // ==================== HOSPITAL METHODS ====================
