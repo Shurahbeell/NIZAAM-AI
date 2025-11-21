@@ -32,19 +32,19 @@ export class TriageAgent implements Agent {
   async handleMessage(
     sessionId: string,
     message: string,
-    language: string = "english"
+    language: string = "en"
   ): Promise<string> {
     try {
-      console.log(`[TriageAgent] Processing message in ${language}`);
+      console.log(`[TriageAgent] Processing message in language: ${language}`);
       
-      // Detect language if not specified
-      const detectedLanguage = await translationService.detectLanguage(message);
-      const userLanguage = language === "urdu" || detectedLanguage === "urdu" ? "urdu" : "english";
+      // Map language codes: en -> english, ur/ru -> urdu for processing
+      const isUrdu = language === "ur" || language === "ru";
+      const isRomanUrdu = language === "ru";
       
       // Translate to English for processing if needed
       let processedMessage = message;
-      if (userLanguage === "urdu") {
-        processedMessage = await translationService.translate(message, "english", "Medical triage");
+      if (isUrdu) {
+        processedMessage = await translationService.translate(message, "en", "Medical triage");
       }
       
       // Get conversation history
@@ -55,11 +55,16 @@ export class TriageAgent implements Agent {
       
       // Apply PII protection before storage
       const userMessageProcessed = piiProtection.processForStorage(message);
-      const agentResponseProcessed = piiProtection.processForStorage(
-        userLanguage === "urdu" 
-          ? await translationService.translate(triageResult.content, "urdu", "Medical triage response")
-          : triageResult.content
-      );
+      
+      // Translate response back to user's language
+      let responseContent = triageResult.content;
+      if (isUrdu) {
+        // Translate to Urdu script first
+        responseContent = await translationService.translate(triageResult.content, "ur", "Medical triage response");
+        // If Roman Urdu is needed, we'll rely on frontend handling
+      }
+      
+      const agentResponseProcessed = piiProtection.processForStorage(responseContent);
       
       // Store user message (with PII minimization)
       await storage.createAgentMessage({
@@ -80,8 +85,9 @@ export class TriageAgent implements Agent {
         reasoningTrace: {
           reasoning: triageResult.reasoning,
           confidence: triageResult.confidence,
-          originalLanguage: "english",
-          responseLanguage: userLanguage
+          originalLanguage: "en",
+          responseLanguage: isUrdu ? "ur" : "en",
+          isRomanUrdu: isRomanUrdu
         },
         metadata: {
           ...triageResult.metadata,
