@@ -6,12 +6,6 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { useAuthStore } from "@/lib/auth";
 
 export default function Dashboard() {
@@ -220,59 +214,25 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* MAIN MODULES Section */}
+        {/* ALL SERVICES Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Grid3x3 className="w-5 h-5 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Main Services</h3>
+            <h3 className="text-sm font-semibold text-foreground">All Services</h3>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {mainModules.map((module) => (
+            {[...mainModules, ...microModules].map((module) => (
               <DashboardCard
                 key={module.title}
                 icon={module.icon}
                 title={module.title}
                 description={module.description}
                 onClick={() => setLocation(module.path)}
+                data-testid={`card-${module.title.toLowerCase().replace(/\s+/g, '-')}`}
               />
             ))}
           </div>
         </div>
-
-        {/* MICRO MODULES - Collapsed into Dropdown */}
-        <Card className="overflow-hidden shadow-lg border-none bg-gradient-to-br from-white to-accent/20">
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="more-services" className="border-0">
-              <AccordionTrigger 
-                className="px-6 py-5 hover:no-underline hover:bg-accent/30 transition-colors duration-300" 
-                data-testid="accordion-more-services"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:from-primary/30 group-hover:to-secondary/30 transition-colors duration-300">
-                    <Grid3x3 className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex flex-col items-start gap-0.5">
-                    <span className="text-sm font-semibold text-foreground">More Services</span>
-                    <span className="text-xs text-muted-foreground">{microModules.length} additional features</span>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-6 pb-6">
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  {microModules.map((module) => (
-                    <DashboardCard
-                      key={module.title}
-                      icon={module.icon}
-                      title={module.title}
-                      description={module.description}
-                      onClick={() => setLocation(module.path)}
-                    />
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </Card>
       </div>
     </div>
   );
