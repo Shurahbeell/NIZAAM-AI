@@ -80,8 +80,8 @@ export default function Login() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-white drop-shadow-lg">HealthCare Pakistan</h1>
-            <p className="text-white/90 text-lg">Your health, our priority</p>
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">NIZAAM-AI</h1>
+            <p className="text-white/90 text-lg">National Integrated Zonal Assessment, Assistance & Management</p>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 # Overview
 
-This is a comprehensive healthcare mobile application for Pakistan, built as a full-stack Progressive Web App (PWA). The application serves two primary user groups: patients and healthcare facilities (hospitals). It provides AI-powered symptom triage, health program eligibility assistance, appointment booking, emergency services, medical record management, and extensive health education resources.
+**NIZAAM-AI** - National Integrated Zonal Assessment, Assistance & Management System is a comprehensive healthcare mobile application for Pakistan, built as a full-stack Progressive Web App (PWA). The application serves two primary user groups: patients and healthcare facilities (hospitals). It provides AI-powered symptom triage, health program eligibility assistance, appointment booking, emergency services, medical record management, and extensive health education resources.
 
 The system implements a multi-agent architecture using the Model Context Protocol (MCP) where specialized AI agents handle different healthcare domains (triage, eligibility checking, facility recommendations, follow-ups, analytics, and knowledge aggregation).
 

@@ -142,7 +142,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
               <Heart className="w-5 h-5 animate-pulse" />
-              HealthCare
+              NIZAAM-AI
             </h1>
           </div>
           <div className="flex items-center gap-3">

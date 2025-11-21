@@ -28,7 +28,7 @@ const manualSections: ManualSection[] = [
     titleEn: "Overview of the App",
     titleUr: "ایپ کا مختصر تعارف",
     contentEn: [
-      "This health app helps you take care of your health with AI-powered support from anywhere in Pakistan.",
+      "NIZAAM-AI (National Integrated Zonal Assessment, Assistance & Management System) is an AI-powered health app that helps you take care of your health with intelligent support from anywhere in Pakistan.",
       "Key features include:",
       "• Symptom checking with AI guidance (Triage)",
       "• Check eligibility for government health programs",
@@ -40,7 +40,7 @@ const manualSections: ManualSection[] = [
       "• Works offline with cached medical information"
     ],
     contentUr: [
-      "یہ ہیلتھ ایپ آپ کو پاکستان میں کسی بھی جگہ سے AI کی مدد سے اپنی صحت کی دیکھ بھال کرنے میں مدد دیتی ہے۔",
+      "NIZAAM-AI (نیظام AI - قومی مربوط علاقائی تشخیص، امداد اور انتظام کا نظام) ایک AI سے چلنے والی صحت کی ایپ ہے جو آپ کو پاکستان میں کسی بھی جگہ سے اپنی صحت کی دیکھ بھال کرنے میں ذہین مدد دیتی ہے۔",
       "اہم خصوصیات:",
       "• علامات کی جانچ AI کی رہنمائی کے ساتھ (Triage)",
       "• سرکاری صحت کے پروگراموں کے لیے اہلیت کی جانچ",
