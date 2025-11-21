@@ -35,9 +35,9 @@ export class FollowUpAgent implements Agent {
       const fullText = processedMessage + " " + history.map(m => m.content).join(" ");
     
     // Extract context
-    const hasMedication = /\b(medication|medicine|pills|insulin|دوا)\b/i.test(fullText);
-    const hasVaccination = /\b(vaccine|vaccination|immunization|ٹیکہ)\b/i.test(fullText);
-    const forgotMeds = /\b(forgot|missed|skip|نہیں لیا)\b/i.test(fullText);
+    const hasMedication = /\b(medication|medicine|pills|insulin|dawa|dawa)\b/i.test(fullText);
+    const hasVaccination = /\b(vaccine|vaccination|immunization|teeka|vaccination)\b/i.test(fullText);
+    const forgotMeds = /\b(forgot|missed|skip|nahin liya|missed)\b/i.test(fullText);
     
     const adherence = forgotMeds ? 0.5 : 0.8;
 

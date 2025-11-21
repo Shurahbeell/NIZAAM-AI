@@ -57,16 +57,17 @@ export class TranslationService {
     const contextNote = context ? `\n\nContext: ${context}` : "";
     
     if (targetLanguage === "urdu") {
-      return `You are a professional translator specializing in medical and healthcare terminology. Translate the following English text to Urdu (اردو).
+      return `You are a professional translator specializing in medical and healthcare terminology. Translate the following English text to Urdu (Roman Urdu - Latin script).
 
 Rules:
 1. Maintain medical terminology accuracy
 2. Use formal, respectful language appropriate for healthcare
 3. Keep medical terms in English if they are commonly used in Pakistan (e.g., "emergency", "hospital")
 4. Translate naturally - do not transliterate word-by-word
-5. Return ONLY the Urdu translation, nothing else${contextNote}`;
+5. Use Roman Urdu (Latin script) - NOT Arabic script
+6. Return ONLY the Roman Urdu translation, nothing else${contextNote}`;
     } else {
-      return `You are a professional translator specializing in medical and healthcare terminology. Translate the following Urdu (اردو) text to English.
+      return `You are a professional translator specializing in medical and healthcare terminology. Translate the following Roman Urdu (Latin script) text to English.
 
 Rules:
 1. Maintain medical terminology accuracy

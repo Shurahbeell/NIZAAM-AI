@@ -175,18 +175,18 @@ export class EligibilityAgent implements Agent {
     const fullText = history.map(m => m.content).join(" ");
     
     // Age extraction
-    const ageMatch = fullText.match(/(\d+)\s*(years?|سال)/i);
+    const ageMatch = fullText.match(/(\d+)\s*(years?|saal|sal)/i);
     if (ageMatch) context.userProfile.age = parseInt(ageMatch[1]);
     
     // Gender extraction
-    if (/\b(female|woman|lady|عورت|خاتون)\b/i.test(fullText)) {
+    if (/\b(female|woman|lady|aurat|khatoon)\b/i.test(fullText)) {
       context.userProfile.gender = "female";
-    } else if (/\b(male|man|مرد)\b/i.test(fullText)) {
+    } else if (/\b(male|man|mard)\b/i.test(fullText)) {
       context.userProfile.gender = "male";
     }
     
     // Income extraction
-    if (/\b(poor|low.income|کم آمدنی)\b/i.test(fullText)) {
+    if (/\b(poor|low.income|kam amdani|kam income)\b/i.test(fullText)) {
       context.userProfile.income = "low";
     }
 

@@ -118,7 +118,7 @@ export class TriageAgent implements Agent {
       
       const errorMsg = "I apologize, but I encountered an error. Please try again or contact emergency services if this is urgent.";
       return language === "urdu" 
-        ? "معذرت، مجھے ایک خرابی کا سامنا ہے۔ براہ کرم دوبارہ کوشش کریں یا اگر یہ فوری ہے تو ایمرجنسی سروسز سے رابطہ کریں۔"
+        ? "Maafi chahta hoon, mujhay ek kharabi ka samna hai. Behad karam dobara koshish karen ya agar ye fori hai to Emergency services se rabta karen."
         : errorMsg;
     }
   }
