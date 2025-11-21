@@ -37,6 +37,12 @@ const symptomsMap: Record<string, string> = {
   "other": "Emergency medical attention required"
 };
 
+interface AssignmentInfo {
+  type: "frontliner" | "hospital";
+  name: string;
+  id: string;
+}
+
 export default function Emergency() {
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
@@ -44,6 +50,7 @@ export default function Emergency() {
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [assignment, setAssignment] = useState<AssignmentInfo | null>(null);
 
   const handleSendHelp = async () => {
     setIsSending(true);
@@ -82,7 +89,7 @@ export default function Emergency() {
       }
 
       // Send emergency to backend with GPS coordinates
-      await apiRequest("POST", "/api/emergencies", {
+      const response = await apiRequest("POST", "/api/emergencies", {
         patientId: user?.id || null,
         patientName: user?.fullName || user?.username || "Unknown",
         patientPhone: user?.phone || "Phone not provided",
@@ -96,6 +103,14 @@ export default function Emergency() {
         assignedHospitalId: null,
         notes: null
       });
+
+      const data = await response.json();
+      
+      // Store assignment info if available
+      if (data.assignedTo) {
+        setAssignment(data.assignedTo);
+        console.log(`[Emergency] Routed to ${data.assignedTo.type}: ${data.assignedTo.name}`);
+      }
 
       // If we reach here, the request was successful
       setTimeout(() => {
@@ -133,10 +148,14 @@ export default function Emergency() {
           <Card className="p-5 bg-gradient-to-br from-accent to-accent/50 border-none rounded-2xl text-left space-y-3">
             <div className="flex items-center gap-2 text-primary">
               <Building2 className="w-5 h-5" />
-              <p className="font-semibold">Nearest Hospital</p>
+              <p className="font-semibold">
+                {assignment?.type === "frontliner" ? "Rescue 1122 Frontliner" : "Nearest Hospital"}
+              </p>
             </div>
             <div className="space-y-2">
-              <p className="font-bold text-foreground text-lg">City General Hospital</p>
+              <p className="font-bold text-foreground text-lg">
+                {assignment?.name || "Locating nearest service..."}
+              </p>
               <div className="flex items-center gap-2">
                 <Heart className="w-4 h-4 text-destructive animate-pulse" />
                 <p className="text-sm text-muted-foreground">ETA: 8-10 minutes</p>
