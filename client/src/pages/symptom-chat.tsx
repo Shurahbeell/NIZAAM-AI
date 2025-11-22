@@ -106,7 +106,7 @@ export default function SymptomChat() {
   };
 
   const getUrgencyLabel = (urgency: string) => {
-    if (language === "urdu") {
+    if (globalLanguage !== "en") {
       switch (urgency) {
         case "emergency": return "Emergency";
         case "bhu-visit": return "Doctor se milen";
