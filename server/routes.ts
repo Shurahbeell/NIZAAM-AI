@@ -642,20 +642,20 @@ router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
     const west = longitude - radius;
     const east = longitude + radius;
     
-    // Query OpenStreetMap via Overpass API for hospitals and healthcare facilities
-    // Excludes veterinary clinics, pharmacies, dentists, and other non-hospital facilities
+    // Query OpenStreetMap via Overpass API for hospitals and healthcare facilities ONLY
+    // Strict whitelist: only hospitals, emergency, and urgent care centers
+    // Excludes veterinary, pharmacies, dentists, and pet clinics
     const overpassQuery = `[bbox:${south},${west},${north},${east}];
 (
   node["amenity"="hospital"];
-  node["amenity"="clinic"]
-  node["amenity"="doctors"];
+  node["amenity"="emergency"];
   node["healthcare"="hospital"];
-  node["healthcare"="clinic"];
+  node["healthcare"="emergency"];
   node["healthcare"="urgent_care"];
   way["amenity"="hospital"];
-  way["amenity"="clinic"];
+  way["amenity"="emergency"];
   way["healthcare"="hospital"];
-  way["healthcare"="clinic"];
+  way["healthcare"="emergency"];
   way["healthcare"="urgent_care"];
   relation["amenity"="hospital"];
   relation["healthcare"="hospital"];
@@ -681,19 +681,38 @@ out center;`;
     // Transform Overpass API response to our format
     const hospitals = data.elements
       ?.filter((element: any) => {
-        // Exclude vets, pharmacies, and other non-hospital facilities
+        // Strict filtering - only accept actual hospitals
         const amenity = element.tags?.amenity || "";
         const healthcare = element.tags?.healthcare || "";
         const name = element.tags?.name || "";
+        const nameLC = name.toLowerCase();
         
-        // Exclude list
-        const excludedKeywords = ["veterinary", "vet", "pharmacy", "chemist", "dentist", "dental", "pet"];
-        const hasExcludedKeyword = excludedKeywords.some(keyword => 
-          name.toLowerCase().includes(keyword) || 
-          amenity.toLowerCase().includes(keyword)
-        );
+        // AGGRESSIVE EXCLUDE LIST - remove anything suspicious
+        const blockedKeywords = [
+          "pet", "vet", "veterinary", "animal", "pharmacy", "chemist", 
+          "drug store", "dentist", "dental", "salon", "beauty", "barber",
+          "clinic privé", "acupuncture", "massage", "spa", "wellness",
+          "physiotherapy", "podiatry", "optician", "vision"
+        ];
         
-        return !hasExcludedKeyword;
+        // If name contains ANY blocked keyword, reject it
+        if (blockedKeywords.some(keyword => nameLC.includes(keyword))) {
+          return false;
+        }
+        
+        // WHITELIST APPROACH - only accept if it's clearly a hospital
+        const isHospital = 
+          amenity === "hospital" || 
+          healthcare === "hospital" || 
+          healthcare === "emergency" ||
+          amenity === "emergency" ||
+          nameLC.includes("hospital") ||
+          nameLC.includes("infirmary") ||
+          nameLC.includes("medical center") ||
+          nameLC.includes("healthcare") ||
+          (healthcare === "urgent_care" && !nameLC.includes("walk-in"));
+        
+        return isHospital;
       })
       ?.map((element: any, index: number) => {
         // Get lat/long from center or node
