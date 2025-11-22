@@ -32,10 +32,13 @@ export default function HospitalEmergencies() {
   const hospitalId = "4cd3d7c3-5e08-4086-89ec-a9610267a2f1"; // TODO: Get from user context
 
   // Fetch incoming emergencies for this hospital with polling
-  const { data: emergencies = [], isLoading } = useQuery<IncomingEmergency[]>({
+  const { data = [], isLoading } = useQuery<IncomingEmergency[]>({
     queryKey: ["/api/hospital", hospitalId, "incoming-emergencies"],
     refetchInterval: 3000 // Poll every 3 seconds
   });
+  
+  // Ensure data is always an array
+  const emergencies = Array.isArray(data) ? data : [];
 
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
