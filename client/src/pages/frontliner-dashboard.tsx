@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/auth";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
-import { Ambulance, MapPin, Clock, AlertCircle, User } from "lucide-react";
+import { Ambulance, MapPin, Clock, AlertCircle, User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmergencyCaseWithPatient {
@@ -94,6 +95,7 @@ function DirectionsMap({ originLat, originLng, frontlinerLat, frontlinerLng }: D
 export default function FrontlinerDashboard() {
   const { user } = useAuthStore();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [frontlinerId, setFrontlinerId] = useState<string | null>(null);
   const [expandedCase, setExpandedCase] = useState<string | null>(null);
 
@@ -219,16 +221,47 @@ export default function FrontlinerDashboard() {
   const frontliner = frontlinerData.frontliner;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="text-page-title">
-          <Ambulance className="h-8 w-8" />
-          Frontliner Dashboard
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Manage emergency cases assigned to you
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/10 to-background pb-24">
+      {/* Header with logout button */}
+      <header className="sticky top-0 bg-gradient-to-r from-primary to-secondary shadow-lg z-20 backdrop-blur-sm">
+        <div className="p-4 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shadow-md">
+                <Ambulance className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">Frontliner Dashboard</h1>
+                <p className="text-xs text-white/80">Rescue 1122</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem("userRole");
+                setLocation("/login");
+              }}
+              data-testid="button-logout"
+              className="text-white hover:bg-white/20 gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
+            <Ambulance className="h-8 w-8" />
+            Active Cases
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            Manage emergency cases assigned to you
+          </p>
+        </div>
 
       {/* Frontliner Info */}
       <Card className="p-4 mb-6">
@@ -352,6 +385,7 @@ export default function FrontlinerDashboard() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
