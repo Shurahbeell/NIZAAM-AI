@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { EventBus } from "./orchestrator/event-bus";
 import { AgentRegistry } from "./orchestrator/agent-registry";
 import { triageAgent } from "./agents/triage-agent";
-import { eligibilityAgent } from "./agents/eligibility-agent";
+import { healthProgramsAgent } from "./agents/eligibility-agent";
 import { facilityFinderAgent } from "./agents/facility-finder-agent";
 import { followUpAgent } from "./agents/followup-agent";
 import { healthAnalyticsAgent } from "./agents/analytics-agent";
@@ -41,7 +41,7 @@ export async function initializeMCP() {
   
   // Register all agents
   agentRegistry.register("triage", triageAgent);
-  agentRegistry.register("eligibility", eligibilityAgent);
+  agentRegistry.register("eligibility", healthProgramsAgent);
   agentRegistry.register("facility", facilityFinderAgent);
   agentRegistry.register("followup", followUpAgent);
   agentRegistry.register("analytics", healthAnalyticsAgent);

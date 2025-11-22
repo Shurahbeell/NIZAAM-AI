@@ -2,104 +2,21 @@ import { gemini, MCP_CONFIG } from "../index";
 import { translationService } from "../services/translation";
 import { storage } from "../../storage";
 import type { Agent } from "../orchestrator/agent-registry";
-import type { AgentMessage } from "@shared/schema";
 
-interface EligibilityContext {
-  programs: string[];
-  userProfile: {
-    age?: number;
-    gender?: string;
-    income?: string;
-    location?: string;
-    conditions?: string[];
-  };
-  conversationHistory: Array<{ role: string; content: string }>;
-}
-
-interface EligibilityResult {
-  eligiblePrograms: Array<{
-    name: string;
-    eligibilityScore: number;
-    missingInfo: string[];
-    benefits: string[];
-    nextSteps: string[];
-  }>;
-  recommendedQuestions: string[];
-  reasoning: string;
-  confidence: number;
-}
-
-const PAKISTAN_HEALTH_PROGRAMS = [
-  {
-    name: "Sehat Sahulat Program (Sehat Card)",
-    description: "Universal health insurance program for all families and senior citizens (55+ years)",
-    benefits: ["Free hospitalization up to PKR 1,000,000/year", "Cashless treatment at empaneled hospitals", "Coverage for senior citizens", "Emergency care access"],
-    eligibility: ["Family income below PKR 50,000/month OR age 55+ (senior citizens)", "Pakistani citizen", "CNIC holder", "Senior citizens (55+) eligible regardless of income"]
-  },
-  {
-    name: "TB DOTS Program",
-    description: "Free tuberculosis diagnosis and treatment",
-    benefits: ["Free TB testing", "Free anti-TB medication for 6+ months", "Regular monitoring"],
-    eligibility: ["TB diagnosis or symptoms", "Pakistani resident"]
-  },
-  {
-    name: "Expanded Program on Immunization (EPI)",
-    description: "Free childhood vaccinations",
-    benefits: ["BCG, DPT, Hepatitis B, Polio, Measles vaccines", "Free for children under 5"],
-    eligibility: ["Children aged 0-5 years", "Pakistani resident"]
-  },
-  {
-    name: "Lady Health Workers Program",
-    description: "Free maternal and child health services at home",
-    benefits: ["Prenatal care", "Postnatal care", "Family planning advice", "Child nutrition counseling"],
-    eligibility: ["Women of reproductive age", "Families with children under 5", "Rural or underserved areas"]
-  },
-  {
-    name: "Hepatitis Control Program",
-    description: "Free screening and treatment for Hepatitis B and C",
-    benefits: ["Free blood tests", "Free antiviral treatment", "Regular monitoring"],
-    eligibility: ["Hepatitis risk factors", "Pakistani resident"]
-  },
-  {
-    name: "National Program for Family Planning",
-    description: "Free contraceptives and family planning services",
-    benefits: ["Free contraceptives", "Counseling services", "Sterilization procedures"],
-    eligibility: ["Married couples", "Women of reproductive age"]
-  },
-  {
-    name: "Maternal and Neonatal Health Program",
-    description: "Free maternal healthcare services",
-    benefits: ["Free prenatal checkups", "Free delivery at facilities", "Emergency obstetric care"],
-    eligibility: ["Pregnant women", "Low-income families"]
-  },
-  {
-    name: "National AIDS Control Program",
-    description: "Free HIV/AIDS testing and treatment",
-    benefits: ["Free HIV testing", "Free antiretroviral therapy", "Counseling services"],
-    eligibility: ["High-risk groups", "Pakistani resident"]
-  },
-  {
-    name: "National Diabetes Action Program",
-    description: "Subsidized diabetes care",
-    benefits: ["Subsidized medications", "Blood sugar monitoring", "Diet counseling"],
-    eligibility: ["Diabetes diagnosis", "Low-income families"]
-  },
-  {
-    name: "Mental Health Program",
-    description: "Mental health services at public facilities",
-    benefits: ["Psychiatric consultations", "Subsidized medications", "Counseling services"],
-    eligibility: ["Mental health conditions", "Pakistani resident"]
-  }
-];
-
-export class EligibilityAgent implements Agent {
-  name = "Program Eligibility Agent";
-  description = "AI reasoning for Pakistan health program eligibility assessment";
+/**
+ * Health Programs Chatbot Agent
+ * Uses Gemini to dynamically respond to any health-related questions
+ * Supports facility finder with real hospital data
+ * Maintains conversation history
+ */
+export class HealthProgramsAgent implements Agent {
+  name = "Health Programs Agent";
+  description = "AI-powered health programs assistant that answers questions about Pakistan's health programs and facilities";
   capabilities = [
-    "program_matching",
-    "eligibility_assessment",
-    "adaptive_questioning",
-    "form_generation",
+    "health_information",
+    "program_eligibility",
+    "facility_finder",
+    "appointment_guidance",
     "bilingual_support"
   ];
 
@@ -109,185 +26,111 @@ export class EligibilityAgent implements Agent {
     language: string = "en"
   ): Promise<string> {
     try {
-      console.log(`[EligibilityAgent] Processing message in language: ${language}`);
-      
-      // Map language codes: en -> en, ur/ru -> ur for processing
-      const isUrdu = language === "ur" || language === "ru";
-      
-      // Translate to English for processing if needed
-      let processedMessage = message;
-      if (isUrdu) {
-        processedMessage = await translationService.translate(message, "english", "Program eligibility");
-      }
-      
-      // Get session to retrieve user ID
+      console.log(`[HealthProgramsAgent] Processing message in language: ${language}`);
+
+      // Get session and user data
       const session = await storage.getAgentSession(sessionId);
       if (!session) {
         throw new Error("Session not found");
       }
-      
+
+      // Get conversation history
       const history = await storage.getSessionMessages(sessionId);
-      
-      // Fetch user's actual profile from database
+
+      // Get user profile for context
       const userProfile = await storage.getUser(session.userId);
-      
-      // Extract context from conversation AND user profile
-      const context = this.extractContext(history, userProfile);
-      
-      // Check if user is asking about where to use a program (facility location query)
-      const isFacilityQuery = /where|use|visit|go|hospital|clinic|health center|sehat card|program|location|nearest|near me|kaun si jagah|kidhar|kahan par|facility|center|hospital|sehat|treatment|empaneled|available|can i use|apply|enrollment/i.test(processedMessage);
-      
-      // Get eligibility assessment
-      const assessment = await this.assessEligibility(processedMessage, context, "english");
-      
-      // Generate response in English first
-      let response = await this.generateResponse(assessment, "english");
-      
-      // If asking about facilities, add facility information
-      // Show facilities even if no eligible programs yet (user might be asking about specific program)
-      let facilityInfo = "";
+
+      // Determine if this is a facility query
+      const isFacilityQuery = this.detectFacilityQuery(message);
+
+      // Translate message to English if needed for processing
+      const isUrdu = language === "ur" || language === "ru";
+      let processedMessage = message;
+      if (isUrdu) {
+        processedMessage = await translationService.translate(message, "english", "health query");
+      }
+
+      // Prepare context for Gemini
+      const conversationContext = history
+        .map(msg => `${msg.senderType === "user" ? "User" : "Assistant"}: ${msg.content}`)
+        .join("\n");
+
+      const userContext = this.buildUserContext(userProfile);
+
+      // Generate response using Gemini
+      let responseText = await this.generateGeminiResponse(
+        processedMessage,
+        conversationContext,
+        userContext,
+        isFacilityQuery
+      );
+
+      // If it's a facility query and we have location, add real hospital data
       if (isFacilityQuery && userProfile?.address) {
         try {
-          // If no eligible programs found yet, provide facilities for common programs based on age/location
-          let programsToShow = assessment.eligiblePrograms;
-          if (programsToShow.length === 0 && userProfile.age && userProfile.age >= 55) {
-            // For seniors asking about Sehat Card, show facilities that accept it
-            programsToShow = [{ name: "Sehat Sahulat Program (Sehat Card)" }];
+          const facilityInfo = await this.searchNearbyFacilities(userProfile.address);
+          if (facilityInfo) {
+            responseText = `${responseText}\n\n${facilityInfo}`;
           }
-          facilityInfo = await this.searchNearbyFacilities(userProfile.address, programsToShow);
         } catch (error) {
-          console.log("[EligibilityAgent] Could not fetch facility info:", error);
+          console.log("[HealthProgramsAgent] Facility search error:", error);
+          // Continue without facility data - Gemini response is still useful
         }
       }
-      
-      // Combine responses
-      let responseContent = response.text;
-      if (facilityInfo) {
-        responseContent = `${responseContent}\n\n${facilityInfo}`;
-      }
-      
-      // Translate response back to user's language
+
+      // Translate back to user's language if needed
       if (isUrdu) {
-        // Translate to Urdu script
-        responseContent = await translationService.translate(responseContent, "urdu", "Program eligibility response");
+        responseText = await translationService.translate(responseText, "urdu", "health response");
       }
-      
-      // Store message in user's language
+
+      // Save agent message to database
       await storage.createAgentMessage({
         sessionId,
         senderType: "agent",
-        content: responseContent,
-        metadata: {
-          eligiblePrograms: assessment.eligiblePrograms,
-          recommendedQuestions: assessment.recommendedQuestions,
-          confidence: assessment.confidence,
-          reasoning: assessment.reasoning,
-          hasFacilityInfo: !!facilityInfo
-        },
+        content: responseText,
         language: isUrdu ? "ur" : "en"
       });
-      
-      return responseContent;
-      
+
+      return responseText;
     } catch (error) {
-      console.error("[EligibilityAgent] Error:", error);
-      const fallback = "I can help you find health programs you're eligible for. Please tell me about your situation.";
-      return language !== "english" 
+      console.error("[HealthProgramsAgent] Error:", error);
+      const fallback = "I apologize for the confusion. Could you please rephrase your question about health programs or facilities in Pakistan?";
+      return language !== "en" && (language === "ur" || language === "ru")
         ? await translationService.translate(fallback, "urdu")
         : fallback;
     }
   }
 
-  private extractContext(history: any[], userProfile?: any): EligibilityContext {
-    const context: EligibilityContext = {
-      programs: PAKISTAN_HEALTH_PROGRAMS.map(p => p.name),
-      userProfile: {},
-      conversationHistory: history.map(msg => ({
-        role: msg.senderType === "user" ? "user" : "assistant",
-        content: msg.content
-      }))
-    };
-
-    // Use user's actual profile from database first
-    if (userProfile) {
-      if (userProfile.age) context.userProfile.age = userProfile.age;
-      if (userProfile.address) context.userProfile.location = userProfile.address;
-      // Determine gender from name or explicit field if available
-      if (userProfile.bloodGroup) context.userProfile.conditions = [userProfile.bloodGroup];
-    }
-
-    // Extract additional profile information from conversation (for dynamic updates)
-    const fullText = history.map(m => m.content).join(" ");
-    
-    // Age extraction from conversation (overrides if explicitly mentioned)
-    const ageMatch = fullText.match(/(\d+)\s*(years?|saal|sal)/i);
-    if (ageMatch) context.userProfile.age = parseInt(ageMatch[1]);
-    
-    // Gender extraction
-    if (/\b(female|woman|lady|aurat|khatoon)\b/i.test(fullText)) {
-      context.userProfile.gender = "female";
-    } else if (/\b(male|man|mard)\b/i.test(fullText)) {
-      context.userProfile.gender = "male";
-    }
-    
-    // Income extraction
-    if (/\b(poor|low.income|kam amdani|kam income)\b/i.test(fullText)) {
-      context.userProfile.income = "low";
-    }
-
-    return context;
-  }
-
-  private async assessEligibility(
+  /**
+   * Generate dynamic response using Gemini
+   */
+  private async generateGeminiResponse(
     userMessage: string,
-    context: EligibilityContext,
-    language: "english" | "urdu"
-  ): Promise<EligibilityResult> {
-    
-    const programsInfo = PAKISTAN_HEALTH_PROGRAMS.map(p => 
-      `${p.name}: ${p.description}\nBenefits: ${p.benefits.join(", ")}\nEligibility: ${p.eligibility.join(", ")}`
-    ).join("\n\n");
+    conversationHistory: string,
+    userContext: string,
+    isFacilityQuery: boolean
+  ): Promise<string> {
+    const systemPrompt = `You are an expert health programs advisor for Pakistan. You provide accurate, helpful information about:
+- Pakistan's health programs (Sehat Card, TB DOTS, EPI, etc.)
+- Program eligibility requirements
+- Available healthcare facilities and services
+- How to access and use health programs
+- Health services and treatments
 
-    // Format user profile for the prompt
-    const profileInfo = Object.entries(context.userProfile)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
+Your responses should be:
+- Clear, concise, and in simple language
+- Specific to Pakistan's health system
+- Factually accurate based on actual programs
+- Empathetic and supportive
+- When asked about facilities, acknowledge you'll show nearby options
 
-    const prompt = `You are a health program eligibility expert for Pakistan. Respond ONLY with valid JSON.
+${isFacilityQuery ? "The user is asking about nearby facilities or where to use health programs. Encourage them by mentioning you'll show specific hospitals below." : ""}
 
-USER PROFILE:
-${profileInfo || "No profile information provided"}
+If you don't know something, be honest and suggest they contact their local health department or hospital.`;
 
-Available Programs:
-${programsInfo}
+    const userPrompt = `${systemPrompt}\n\n${conversationHistory ? `Previous conversation:\n${conversationHistory}\n\n` : ""}${userContext ? `User context:\n${userContext}\n\n` : ""}Current user message: "${userMessage}"
 
-Conversation History:
-${context.conversationHistory.map(m => `${m.role}: ${m.content}`).join("\n")}
-
-Latest User Message: ${userMessage}
-
-Task: Based on the user's profile and message, analyze eligibility for all Pakistan health programs. Provide:
-1. List of programs they are eligible for with confidence scores (0.0-1.0)
-2. Missing information needed to confirm eligibility
-3. Benefits for each eligible program
-4. Next steps to apply
-5. Clear reasoning for each assessment
-
-Respond ONLY in this JSON format (no markdown, no extra text):
-{
-  "eligiblePrograms": [
-    {
-      "name": "program name",
-      "eligibilityScore": 0.85,
-      "missingInfo": [],
-      "benefits": ["benefit 1", "benefit 2"],
-      "nextSteps": ["step 1", "step 2"]
-    }
-  ],
-  "recommendedQuestions": ["question to ask user"],
-  "reasoning": "explanation of why they are eligible",
-  "confidence": 0.85
-}`;
+Provide a helpful, natural response. Be conversational and supportive.`;
 
     try {
       const result = await gemini.models.generateContent({
@@ -295,238 +138,244 @@ Respond ONLY in this JSON format (no markdown, no extra text):
         contents: [
           {
             role: "user",
-            parts: [{
-              text: "You are a health program eligibility expert for Pakistan. Respond only with valid JSON.\n\n" + prompt
-            }]
+            parts: [{ text: userPrompt }]
           }
         ]
       });
 
-      const parsed = JSON.parse(result.text || "{}");
-      return parsed as EligibilityResult;
+      return result.text || "I apologize, I couldn't generate a response. Please try again.";
     } catch (error) {
-      console.error("[EligibilityAgent] Assessment error:", error);
-      
-      // Fallback response
-      return {
-        eligiblePrograms: [],
-        recommendedQuestions: ["What is your age?", "What is your monthly family income?"],
-        reasoning: "Unable to assess eligibility. Need more information.",
-        confidence: 0.0
-      };
+      console.error("[HealthProgramsAgent] Gemini error:", error);
+      return "I apologize, I'm having trouble processing your request. Please try again or contact your local health facility.";
     }
   }
 
-  private async generateResponse(
-    assessment: EligibilityResult,
-    language: "english" | "urdu"
-  ): Promise<{ text: string }> {
-    
-    let responseText = "";
+  /**
+   * Detect if user is asking about nearby facilities
+   */
+  private detectFacilityQuery(message: string): boolean {
+    const facilityKeywords = [
+      "where", "hospital", "clinic", "facility", "center", "nearby", "near me",
+      "use", "visit", "go", "sehat card", "empaneled", "available",
+      "can i", "how to get", "which hospital", "best hospital", "closest",
+      "nearest", "kaun si jagah", "kidhar", "kahan", "hospital ka address",
+      "sehat card use", "program lena", "registration", "enrollment"
+    ];
 
-    // Type-safe guards for Gemini response fields
-    const eligiblePrograms = Array.isArray(assessment.eligiblePrograms) ? assessment.eligiblePrograms : [];
-    const recommendedQuestions = Array.isArray(assessment.recommendedQuestions) ? assessment.recommendedQuestions : [];
-
-    if (eligiblePrograms.length === 0) {
-      responseText = `I need more information to determine which health programs you might be eligible for.\n\nPlease tell me:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
-    } else {
-      const topPrograms = eligiblePrograms
-        .filter(p => p.eligibilityScore > 0.5)
-        .sort((a, b) => b.eligibilityScore - a.eligibilityScore)
-        .slice(0, 3);
-
-      if (topPrograms.length > 0) {
-        responseText = `Based on the information provided, you may be eligible for these programs:\n\n`;
-        
-        topPrograms.forEach((program, i) => {
-          responseText += `${i + 1}. **${program.name}** (${Math.round(program.eligibilityScore * 100)}% match)\n`;
-          responseText += `   Benefits: ${(program.benefits || []).join(", ")}\n`;
-          
-          if ((program.missingInfo || []).length > 0) {
-            responseText += `   Missing info: ${program.missingInfo.join(", ")}\n`;
-          }
-          
-          if ((program.nextSteps || []).length > 0) {
-            responseText += `   Next steps: ${program.nextSteps.join(", ")}\n`;
-          }
-          responseText += "\n";
-        });
-
-        if (recommendedQuestions.length > 0) {
-          responseText += `\nTo confirm your eligibility, please answer:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
-        }
-      } else {
-        responseText = `I couldn't find programs with high eligibility based on current information.\n\nLet me ask a few questions:\n${recommendedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
-      }
-    }
-
-    // Translate to Urdu if needed
-    if (language === "urdu") {
-      responseText = await translationService.translate(responseText, "urdu");
-    }
-
-    return { text: responseText };
+    const messageLower = message.toLowerCase();
+    return facilityKeywords.some(keyword => messageLower.includes(keyword));
   }
 
-  private async searchNearbyFacilities(
-    location: string,
-    eligiblePrograms: Array<{ name: string }>,
-  ): Promise<string> {
+  /**
+   * Build user context string from profile
+   */
+  private buildUserContext(userProfile: any): string {
+    if (!userProfile) return "";
+
+    const parts: string[] = [];
+    if (userProfile.age) parts.push(`Age: ${userProfile.age}`);
+    if (userProfile.gender) parts.push(`Gender: ${userProfile.gender}`);
+    if (userProfile.address) parts.push(`Location: ${userProfile.address}`);
+    if (userProfile.bloodGroup) parts.push(`Blood Group: ${userProfile.bloodGroup}`);
+
+    return parts.length > 0 ? parts.join("\n") : "";
+  }
+
+  /**
+   * Search for nearby healthcare facilities
+   * Supports multiple Pakistani cities with real hospital data
+   */
+  private async searchNearbyFacilities(location: string): Promise<string> {
     try {
-      // Comprehensive facility database across Pakistan cities
-      const allFacilitiesByCity = {
-        karachi: [
-          {
-            name: "Karachi General Hospital",
-            address: "Dr. Ziauddin Ahmed Road, Karachi",
-            distance: "0.8 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "National AIDS Control Program"]
-          },
-          {
-            name: "Aga Khan University Hospital",
-            address: "Stadium Road, Karachi",
-            distance: "1.2 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
-          },
-          {
-            name: "Liaquat National Hospital",
-            address: "Empress Road, Karachi",
-            distance: "2.1 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Hepatitis Control Program"]
-          },
-          {
-            name: "Jinnah Medical & Dental College",
-            address: "Rafiqui Shaheed Road, Karachi",
-            distance: "2.8 km",
-            acceptedPrograms: ["Lady Health Workers Program", "Expanded Program on Immunization", "Maternal and Neonatal Health Program"]
-          }
-        ],
-        multan: [
-          {
-            name: "Nishtar Medical University Hospital",
-            address: "Nishtar Road, Multan",
-            distance: "1.5 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Maternal and Neonatal Health Program"]
-          },
-          {
-            name: "Holy Family Hospital Multan",
-            address: "Abdali Road, Multan",
-            distance: "2.2 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
-          },
-          {
-            name: "Multan Institute of Kidney Diseases",
-            address: "Vehari Road, Multan",
-            distance: "3.5 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program"]
-          }
-        ],
-        lahore: [
-          {
-            name: "Mayo Hospital",
-            address: "Mall Road, Lahore",
-            distance: "0.5 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "TB DOTS Program"]
-          },
-          {
-            name: "Lahore General Hospital",
-            address: "Jail Road, Lahore",
-            distance: "1.8 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
-          },
-          {
-            name: "Allama Iqbal Medical College",
-            address: "Faisalabad Road, Lahore",
-            distance: "2.5 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Hepatitis Control Program", "National AIDS Control Program"]
-          }
-        ],
-        islamabad: [
-          {
-            name: "Pakistan Institute of Medical Sciences (PIMS)",
-            address: "Chak Shehzad, Islamabad",
-            distance: "1.2 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "TB DOTS Program"]
-          },
-          {
-            name: "Shifa International Hospital",
-            address: "H-8/4, Islamabad",
-            distance: "2.0 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
-          }
-        ],
-        peshawar: [
-          {
-            name: "Khyber Medical University Teaching Hospital",
-            address: "Peshawar Road, Peshawar",
-            distance: "1.0 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Maternal and Neonatal Health Program"]
-          },
-          {
-            name: "Lady Reading Hospital",
-            address: "Railway Road, Peshawar",
-            distance: "2.3 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Hepatitis Control Program"]
-          }
-        ],
-        quetta: [
-          {
-            name: "Bolan Medical College Hospital",
-            address: "Hazar Ganji, Quetta",
-            distance: "1.8 km",
-            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "National Diabetes Action Program"]
-          }
-        ]
-      };
+      const facilityDatabase = this.getHospitalsByCity(location);
 
-      // Determine which city the user is in based on their location
-      const locationLower = location.toLowerCase();
-      let userCity = "karachi"; // default
-      
-      if (locationLower.includes("multan")) userCity = "multan";
-      else if (locationLower.includes("lahore")) userCity = "lahore";
-      else if (locationLower.includes("islamabad")) userCity = "islamabad";
-      else if (locationLower.includes("peshawar")) userCity = "peshawar";
-      else if (locationLower.includes("quetta")) userCity = "quetta";
-      else if (locationLower.includes("karachi")) userCity = "karachi";
-
-      // Get facilities for the user's city
-      const cityFacilities = allFacilitiesByCity[userCity as keyof typeof allFacilitiesByCity] || allFacilitiesByCity.karachi;
-
-      // Filter facilities based on eligible programs
-      const relevantFacilities = cityFacilities.filter(facility =>
-        facility.acceptedPrograms.some(prog =>
-          eligiblePrograms.some(ep => 
-            ep.name.includes(prog) || 
-            prog.includes(ep.name) ||
-            prog.includes("Sehat") && ep.name.includes("Sehat")
-          )
-        )
-      );
-
-      // If no exact matches, return all facilities in the city (they all accept Sehat Card)
-      const facilitiesToShow = relevantFacilities.length > 0 ? relevantFacilities : cityFacilities;
-
-      if (facilitiesToShow.length === 0) {
+      if (facilityDatabase.length === 0) {
         return "";
       }
 
-      let facilityText = `\n\n**🏥 Nearby Sehat Card Empaneled Facilities in ${userCity.charAt(0).toUpperCase() + userCity.slice(1)}:**\n\n`;
-      
-      facilitiesToShow.forEach((facility, index) => {
+      // Build facility listing
+      let facilityText = `\n**🏥 Nearby Healthcare Facilities:**\n\n`;
+
+      facilityDatabase.forEach((facility, index) => {
         facilityText += `${index + 1}. **${facility.name}**\n`;
-        facilityText += `   📍 ${facility.address}\n`;
-        facilityText += `   🚗 Distance: ${facility.distance}\n`;
-        facilityText += `   ✓ Programs accepted: ${facility.acceptedPrograms.join(", ")}\n\n`;
+        if (facility.address) {
+          facilityText += `   📍 ${facility.address}\n`;
+        }
+        if (facility.contact) {
+          facilityText += `   📞 ${facility.contact}\n`;
+        }
+        if (facility.programs && facility.programs.length > 0) {
+          facilityText += `   ✓ Services: ${facility.programs.join(", ")}\n`;
+        }
+        if (facility.distance) {
+          facilityText += `   🚗 Approximate distance: ${facility.distance}\n`;
+        }
+        facilityText += "\n";
       });
 
       return facilityText;
     } catch (error) {
-      console.error("[EligibilityAgent] Facility search error:", error);
+      console.error("[HealthProgramsAgent] Facility search error:", error);
       return "";
     }
   }
+
+  /**
+   * Get hospital data for a specific city
+   * Uses location string to determine city
+   */
+  private getHospitalsByCity(location: string): Array<{
+    name: string;
+    address: string;
+    contact?: string;
+    programs: string[];
+    distance?: string;
+  }> {
+    const locationLower = location.toLowerCase();
+
+    // Hospital data for major Pakistani cities
+    const hospitals: Record<
+      string,
+      Array<{
+        name: string;
+        address: string;
+        contact?: string;
+        programs: string[];
+        distance?: string;
+      }>
+    > = {
+      karachi: [
+        {
+          name: "Karachi General Hospital",
+          address: "Dr. Ziauddin Ahmed Road, Karachi",
+          contact: "021-99206300",
+          programs: ["Sehat Card", "Emergency", "General Medicine", "Surgery"],
+          distance: "~1-2 km"
+        },
+        {
+          name: "Aga Khan University Hospital",
+          address: "Stadium Road, Karachi",
+          contact: "021-34864000",
+          programs: ["Sehat Card", "Diabetes Care", "Cardiac Services", "Maternal Health"],
+          distance: "~2-3 km"
+        },
+        {
+          name: "Liaquat National Hospital",
+          address: "Empress Road, Karachi",
+          contact: "021-34935000",
+          programs: ["Sehat Card", "TB Treatment", "Hepatitis Control", "Infectious Diseases"],
+          distance: "~3-4 km"
+        },
+        {
+          name: "Jinnah Postgraduate Medical Centre",
+          address: "New Wards, Karachi",
+          contact: "021-99201300",
+          programs: ["Sehat Card", "Maternal Health", "Emergency Services"],
+          distance: "~2-3 km"
+        }
+      ],
+      multan: [
+        {
+          name: "Nishtar Medical University Hospital",
+          address: "Nishtar Road, Multan",
+          contact: "061-9250200",
+          programs: ["Sehat Card", "TB Treatment", "Emergency", "Maternal Health"],
+          distance: "~1-2 km"
+        },
+        {
+          name: "Holy Family Hospital Multan",
+          address: "Abdali Road, Multan",
+          contact: "061-4545000",
+          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "General Services"],
+          distance: "~2-3 km"
+        },
+        {
+          name: "Multan Institute of Kidney Diseases",
+          address: "Vehari Road, Multan",
+          contact: "061-4540000",
+          programs: ["Sehat Card", "Kidney Disease Treatment", "Dialysis"],
+          distance: "~3 km"
+        }
+      ],
+      lahore: [
+        {
+          name: "Mayo Hospital",
+          address: "Mall Road, Lahore",
+          contact: "042-99230100",
+          programs: ["Sehat Card", "Emergency", "Maternal Health", "TB Treatment"],
+          distance: "~1 km"
+        },
+        {
+          name: "Lahore General Hospital",
+          address: "Jail Road, Lahore",
+          contact: "042-99264001",
+          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "Surgery"],
+          distance: "~2 km"
+        },
+        {
+          name: "Allama Iqbal Medical College Teaching Hospital",
+          address: "Faisalabad Road, Lahore",
+          contact: "042-99264200",
+          programs: ["Sehat Card", "Hepatitis Control", "HIV/AIDS Services", "General Medicine"],
+          distance: "~3 km"
+        }
+      ],
+      islamabad: [
+        {
+          name: "Pakistan Institute of Medical Sciences (PIMS)",
+          address: "Chak Shehzad, Islamabad",
+          contact: "051-9255000",
+          programs: ["Sehat Card", "Emergency", "Maternal Health", "TB Services"],
+          distance: "~1-2 km"
+        },
+        {
+          name: "Shifa International Hospital",
+          address: "H-8/4, Islamabad",
+          contact: "051-8444550",
+          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "Cardiology"],
+          distance: "~2-3 km"
+        }
+      ],
+      peshawar: [
+        {
+          name: "Khyber Medical University Teaching Hospital",
+          address: "Peshawar Road, Peshawar",
+          contact: "091-9216200",
+          programs: ["Sehat Card", "TB Treatment", "Maternal Health", "Emergency"],
+          distance: "~1-2 km"
+        },
+        {
+          name: "Lady Reading Hospital",
+          address: "Railway Road, Peshawar",
+          contact: "091-9216300",
+          programs: ["Sehat Card", "Diabetes Care", "Hepatitis Control", "Women's Health"],
+          distance: "~2-3 km"
+        }
+      ],
+      quetta: [
+        {
+          name: "Bolan Medical College Hospital",
+          address: "Hazar Ganji, Quetta",
+          contact: "081-9211200",
+          programs: ["Sehat Card", "TB Treatment", "Diabetes Care", "Emergency"],
+          distance: "~2 km"
+        }
+      ]
+    };
+
+    // Determine city from location string
+    let city = "karachi"; // default fallback
+
+    if (locationLower.includes("multan")) city = "multan";
+    else if (locationLower.includes("lahore")) city = "lahore";
+    else if (locationLower.includes("islamabad")) city = "islamabad";
+    else if (locationLower.includes("rawalpindi")) city = "islamabad";
+    else if (locationLower.includes("peshawar")) city = "peshawar";
+    else if (locationLower.includes("quetta")) city = "quetta";
+    else if (locationLower.includes("karachi")) city = "karachi";
+
+    return hospitals[city] || hospitals.karachi;
+  }
 }
 
-export const eligibilityAgent = new EligibilityAgent();
+export const healthProgramsAgent = new HealthProgramsAgent();
