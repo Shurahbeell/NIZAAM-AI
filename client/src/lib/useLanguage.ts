@@ -54,7 +54,7 @@ export function useLanguageProvider() {
     return getNestedValue(translationObj, key);
   };
 
-  const dir = language === 'ur' ? 'rtl' : 'ltr';
+  const dir: 'ltr' | 'rtl' = language === 'ur' ? 'rtl' : 'ltr';
 
   return {
     language,

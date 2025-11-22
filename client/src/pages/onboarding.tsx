@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import OnboardingSlide from "@/components/OnboardingSlide";
 import { Bot, AlertTriangle, Calendar, ClipboardList } from "lucide-react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/lib/useLanguage";
 
 const slides = [
   {
@@ -28,6 +29,7 @@ const slides = [
 ];
 
 export default function Onboarding() {
+  const { t } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [, setLocation] = useLocation();
 
@@ -47,7 +49,7 @@ export default function Onboarding() {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex justify-end p-4">
         <Button variant="ghost" onClick={handleSkip} data-testid="button-skip">
-          Skip
+          {t('onboarding.skip')}
         </Button>
       </div>
       
@@ -73,7 +75,7 @@ export default function Onboarding() {
           onClick={handleNext}
           data-testid="button-next"
         >
-          {currentSlide < slides.length - 1 ? "Next" : "Get Started"}
+          {currentSlide < slides.length - 1 ? t('common.next') : t('onboarding.getStarted')}
         </Button>
       </div>
     </div>

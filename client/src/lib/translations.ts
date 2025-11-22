@@ -202,6 +202,48 @@ export const translations = {
       setReminder: 'Set Reminder',
       reminderSet: 'Reminder set successfully!',
     },
+    // Disease Library
+    diseaseLibrary: {
+      title: 'Disease Library',
+      subtitle: 'Comprehensive health information',
+      searchPlaceholder: 'Search diseases...',
+      noResults: 'No diseases found',
+    },
+    // History
+    medicalHistory: {
+      title: 'Medical History',
+      all: 'All',
+      appointments: 'Appointments',
+      emergencies: 'Emergencies',
+      cardiology: 'Cardiology Checkup',
+      emergency: 'Emergency Visit',
+      generalCheckup: 'General Checkup',
+    },
+    // Medicine Library
+    medicineLibrary: {
+      title: 'Medicine Library',
+      searchPlaceholder: 'Search medicines...',
+      noResults: 'No medicines found',
+    },
+    // Hospital Reports
+    hospitalReports: {
+      title: 'Reports',
+      pending: 'Pending Reports',
+      completed: 'Completed Reports',
+      noReports: 'No reports available',
+    },
+    // 404 Error
+    notFound: {
+      title: '404 Page Not Found',
+      message: 'Did you forget to add the page to the router?',
+    },
+    // Onboarding
+    onboarding: {
+      title: 'Welcome to NIZAAM-AI',
+      subtitle: 'National Integrated Zonal Assessment, Assistance & Management System',
+      getStarted: 'Get Started',
+      skip: 'Skip',
+    },
   },
   ur: {
     // Common
@@ -395,6 +437,48 @@ export const translations = {
       setReminder: 'یادگاری سیٹ کریں',
       reminderSet: 'یادگاری کامیابی سے سیٹ ہو گئی!',
     },
+    // Disease Library
+    diseaseLibrary: {
+      title: 'بیماری کی لائبریری',
+      subtitle: 'جامع صحت کی معلومات',
+      searchPlaceholder: 'بیماریوں کو تلاش کریں...',
+      noResults: 'کوئی بیماری نہیں ملی',
+    },
+    // History
+    medicalHistory: {
+      title: 'طبی تاریخ',
+      all: 'تمام',
+      appointments: 'ملاقاتیں',
+      emergencies: 'ایمرجنسیاں',
+      cardiology: 'کارڈیولوجی چیک اپ',
+      emergency: 'ایمرجنسی ملاقات',
+      generalCheckup: 'عام چیک اپ',
+    },
+    // Medicine Library
+    medicineLibrary: {
+      title: 'ادویات کی لائبریری',
+      searchPlaceholder: 'ادویات کو تلاش کریں...',
+      noResults: 'کوئی دوائی نہیں ملی',
+    },
+    // Hospital Reports
+    hospitalReports: {
+      title: 'رپورٹیں',
+      pending: 'زیر التوا رپورٹیں',
+      completed: 'مکمل رپورٹیں',
+      noReports: 'کوئی رپورٹ دستیاب نہیں',
+    },
+    // 404 Error
+    notFound: {
+      title: '404 صفحہ نہیں ملا',
+      message: 'کیا آپ نے صفحہ روٹر میں شامل کرنا بھول گئے؟',
+    },
+    // Onboarding
+    onboarding: {
+      title: 'NIZAAM-AI میں خوش آمدید',
+      subtitle: 'نیشنل انٹیگریٹڈ زونل اسسمنٹ، اسسٹنس اور مینجمنٹ سسٹم',
+      getStarted: 'شروع کریں',
+      skip: 'چھوڑ دیں',
+    },
   },
   ru: {
     // Common
@@ -587,6 +671,48 @@ export const translations = {
       screeningPrograms: 'Screening programs',
       setReminder: 'Yadgari set karen',
       reminderSet: 'Yadgari kamyabi se set ho gayi!',
+    },
+    // Disease Library
+    diseaseLibrary: {
+      title: 'Disease Library',
+      subtitle: 'Comprehensive health information',
+      searchPlaceholder: 'Search diseases...',
+      noResults: 'No diseases found',
+    },
+    // History
+    medicalHistory: {
+      title: 'Medical History',
+      all: 'All',
+      appointments: 'Appointments',
+      emergencies: 'Emergencies',
+      cardiology: 'Cardiology Checkup',
+      emergency: 'Emergency Visit',
+      generalCheckup: 'General Checkup',
+    },
+    // Medicine Library
+    medicineLibrary: {
+      title: 'Medicine Library',
+      searchPlaceholder: 'Search medicines...',
+      noResults: 'No medicines found',
+    },
+    // Hospital Reports
+    hospitalReports: {
+      title: 'Reports',
+      pending: 'Pending Reports',
+      completed: 'Completed Reports',
+      noReports: 'No reports available',
+    },
+    // 404 Error
+    notFound: {
+      title: '404 Page Not Found',
+      message: 'Did you forget to add the page to the router?',
+    },
+    // Onboarding
+    onboarding: {
+      title: 'Welcome to NIZAAM-AI',
+      subtitle: 'National Integrated Zonal Assessment, Assistance & Management System',
+      getStarted: 'Get Started',
+      skip: 'Skip',
     },
   },
 } as const;

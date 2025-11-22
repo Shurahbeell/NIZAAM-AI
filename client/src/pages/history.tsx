@@ -3,8 +3,10 @@ import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MedicalHistoryCard from "@/components/MedicalHistoryCard";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function History() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
 
   return (
@@ -18,14 +20,14 @@ export default function History() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-xl font-semibold text-foreground">Medical History</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t('medicalHistory.title')}</h1>
       </header>
 
       <Tabs defaultValue="all" className="p-4">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" data-testid="tab-all">All</TabsTrigger>
-          <TabsTrigger value="appointments" data-testid="tab-appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="emergencies" data-testid="tab-emergencies">Emergencies</TabsTrigger>
+          <TabsTrigger value="all" data-testid="tab-all">{t('medicalHistory.all')}</TabsTrigger>
+          <TabsTrigger value="appointments" data-testid="tab-appointments">{t('medicalHistory.appointments')}</TabsTrigger>
+          <TabsTrigger value="emergencies" data-testid="tab-emergencies">{t('medicalHistory.emergencies')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4 mt-6">

@@ -6,8 +6,10 @@ import { ArrowLeft, Pill, Search, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { medicineLibrary } from "@shared/medicine-library";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function MedicineLibrary() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMedicine, setSelectedMedicine] = useState<typeof medicineLibrary[0] | null>(null);
@@ -31,7 +33,7 @@ export default function MedicineLibrary() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-semibold text-foreground">Medicine Library</h1>
+            <h1 className="text-xl font-semibold text-foreground">{t('medicineLibrary.title')}</h1>
             <p className="text-xs text-muted-foreground">Complete drug information</p>
           </div>
         </div>
@@ -43,7 +45,7 @@ export default function MedicineLibrary() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search medicines..."
+                placeholder={t('medicineLibrary.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"

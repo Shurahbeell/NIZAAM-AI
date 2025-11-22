@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, TrendingUp, Users, FileText, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function HospitalReports() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
 
   const dailyStats = {
@@ -47,7 +49,7 @@ export default function HospitalReports() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-semibold text-foreground">Reports & Analytics</h1>
+            <h1 className="text-xl font-semibold text-foreground">{t('hospitalReports.title')}</h1>
             <p className="text-xs text-muted-foreground">Performance insights</p>
           </div>
         </div>
