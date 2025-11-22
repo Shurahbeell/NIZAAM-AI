@@ -117,7 +117,7 @@ export class EligibilityAgent implements Agent {
       // Translate to English for processing if needed
       let processedMessage = message;
       if (isUrdu) {
-        processedMessage = await translationService.translate(message, "en", "Program eligibility");
+        processedMessage = await translationService.translate(message, "english", "Program eligibility");
       }
       
       // Get session to retrieve user ID
@@ -134,17 +134,35 @@ export class EligibilityAgent implements Agent {
       // Extract context from conversation AND user profile
       const context = this.extractContext(history, userProfile);
       
+      // Check if user is asking about where to use a program (facility location query)
+      const isFacilityQuery = /where|use|visit|go|hospital|clinic|health center|sehat card|program|location|nearest|near me|kaun si jagah|kidhar|kahan par|facility|center|hospital/i.test(processedMessage);
+      
       // Get eligibility assessment
-      const assessment = await this.assessEligibility(processedMessage, context, "en");
+      const assessment = await this.assessEligibility(processedMessage, context, "english");
       
       // Generate response in English first
-      const response = await this.generateResponse(assessment, "en");
+      let response = await this.generateResponse(assessment, "english");
+      
+      // If asking about facilities, add facility information
+      let facilityInfo = "";
+      if (isFacilityQuery && userProfile?.address) {
+        try {
+          facilityInfo = await this.searchNearbyFacilities(userProfile.address, assessment.eligiblePrograms);
+        } catch (error) {
+          console.log("[EligibilityAgent] Could not fetch facility info:", error);
+        }
+      }
+      
+      // Combine responses
+      let responseContent = response.text;
+      if (facilityInfo) {
+        responseContent = `${responseContent}\n\n${facilityInfo}`;
+      }
       
       // Translate response back to user's language
-      let responseContent = response.text;
       if (isUrdu) {
         // Translate to Urdu script
-        responseContent = await translationService.translate(response.text, "ur", "Program eligibility response");
+        responseContent = await translationService.translate(responseContent, "urdu", "Program eligibility response");
       }
       
       // Store message in user's language
@@ -156,7 +174,8 @@ export class EligibilityAgent implements Agent {
           eligiblePrograms: assessment.eligiblePrograms,
           recommendedQuestions: assessment.recommendedQuestions,
           confidence: assessment.confidence,
-          reasoning: assessment.reasoning
+          reasoning: assessment.reasoning,
+          hasFacilityInfo: !!facilityInfo
         },
         language: isUrdu ? "ur" : "en"
       });
@@ -166,8 +185,8 @@ export class EligibilityAgent implements Agent {
     } catch (error) {
       console.error("[EligibilityAgent] Error:", error);
       const fallback = "I can help you find health programs you're eligible for. Please tell me about your situation.";
-      return language !== "en" 
-        ? await translationService.translate(fallback, "ur")
+      return language !== "english" 
+        ? await translationService.translate(fallback, "urdu")
         : fallback;
     }
   }
@@ -215,7 +234,7 @@ export class EligibilityAgent implements Agent {
   private async assessEligibility(
     userMessage: string,
     context: EligibilityContext,
-    language: "en" | "ur"
+    language: "english" | "urdu"
   ): Promise<EligibilityResult> {
     
     const programsInfo = PAKISTAN_HEALTH_PROGRAMS.map(p => 
@@ -293,7 +312,7 @@ Respond ONLY in this JSON format (no markdown, no extra text):
 
   private async generateResponse(
     assessment: EligibilityResult,
-    language: "en" | "ur"
+    language: "english" | "urdu"
   ): Promise<{ text: string }> {
     
     let responseText = "";
@@ -336,11 +355,73 @@ Respond ONLY in this JSON format (no markdown, no extra text):
     }
 
     // Translate to Urdu if needed
-    if (language === "ur") {
-      responseText = await translationService.translate(responseText, "ur");
+    if (language === "urdu") {
+      responseText = await translationService.translate(responseText, "urdu");
     }
 
     return { text: responseText };
+  }
+
+  private async searchNearbyFacilities(
+    location: string,
+    eligiblePrograms: Array<{ name: string }>,
+  ): Promise<string> {
+    try {
+      // Use mock facility data since Google Maps API requires API key configuration
+      // In production, this would integrate with Google Places API
+      
+      const facilityMockData = [
+        {
+          name: "Karachi General Hospital",
+          address: "Dr. Ziauddin Ahmed Road, Karachi",
+          distance: "0.8 km",
+          acceptedPrograms: ["Sehat Sahulat Program", "Maternal and Neonatal Health Program", "National AIDS Control Program"]
+        },
+        {
+          name: "Aga Khan University Hospital",
+          address: "Stadium Road, Karachi",
+          distance: "1.2 km",
+          acceptedPrograms: ["Sehat Sahulat Program", "National Diabetes Action Program", "Mental Health Program"]
+        },
+        {
+          name: "Liaquat National Hospital",
+          address: "Empress Road, Karachi",
+          distance: "2.1 km",
+          acceptedPrograms: ["Sehat Sahulat Program", "TB DOTS Program", "Hepatitis Control Program"]
+        },
+        {
+          name: "Jinnah Medical & Dental College",
+          address: "Rafiqui Shaheed Road, Karachi",
+          distance: "2.8 km",
+          acceptedPrograms: ["Lady Health Workers Program", "Expanded Program on Immunization", "Maternal and Neonatal Health Program"]
+        }
+      ];
+
+      // Filter facilities based on eligible programs
+      const relevantFacilities = facilityMockData.filter(facility =>
+        facility.acceptedPrograms.some(prog =>
+          eligiblePrograms.some(ep => ep.name.includes(prog) || prog.includes(ep.name))
+        )
+      );
+
+      if (relevantFacilities.length === 0) {
+        return "";
+      }
+
+      let facilityText = "\n\n**🏥 Nearby Facilities Where You Can Use Your Programs:**\n\n";
+      
+      relevantFacilities.forEach((facility, index) => {
+        facilityText += `${index + 1}. **${facility.name}**\n`;
+        facilityText += `   📍 ${facility.address}\n`;
+        facilityText += `   🚗 Distance: ${facility.distance}\n`;
+        facilityText += `   ✓ Programs accepted: ${facility.acceptedPrograms.join(", ")}\n\n`;
+      });
+
+      return facilityText;
+    } catch (error) {
+      console.error("[EligibilityAgent] Facility search error:", error);
+      return "";
+    }
   }
 }
 

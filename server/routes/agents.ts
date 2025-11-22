@@ -95,6 +95,14 @@ router.post("/chat", requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid agent name" });
     }
 
+    // Save user message to database
+    await storage.createAgentMessage({
+      sessionId,
+      senderType: "user",
+      content: message,
+      language
+    });
+
     // Import agentRegistry dynamically to avoid circular dependency
     const { agentRegistry } = await import("../mcp/index");
 
