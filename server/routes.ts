@@ -315,8 +315,18 @@ router.get("/api/appointments", async (_req: Request, res: Response) => {
 router.post("/api/appointments", async (req: Request, res: Response) => {
   try {
     const { insertAppointmentSchema } = await import("@shared/schema");
-    const data = insertAppointmentSchema.parse(req.body);
-    const appointment = await storage.createAppointment(data);
+    
+    // Convert appointmentDate string to Date if needed
+    let data = req.body;
+    if (typeof data.appointmentDate === "string") {
+      data = {
+        ...data,
+        appointmentDate: new Date(data.appointmentDate)
+      };
+    }
+    
+    const validated = insertAppointmentSchema.parse(data);
+    const appointment = await storage.createAppointment(validated);
     res.json(appointment);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
