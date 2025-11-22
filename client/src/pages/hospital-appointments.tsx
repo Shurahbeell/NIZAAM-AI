@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Calendar, User, Clock, Check, X, Edit } from "lucide-react";
+import { ArrowLeft, Calendar, User, Check, X, Edit } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,77 +10,75 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuthStore } from "@/lib/auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Appointment as DbAppointment } from "@shared/schema";
 
 interface Appointment {
   id: string;
   patientName: string;
   patientPhone: string;
-  doctorName: string;
+  doctorName?: string;
   date: string;
-  time: string;
-  symptoms: string;
+  time?: string;
+  symptoms?: string;
   status: "pending" | "approved" | "completed" | "cancelled";
   notes?: string;
+  appointmentDate: Date | string;
 }
 
 export default function HospitalAppointments() {
   const [, setLocation] = useLocation();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const { user } = useAuthStore();
+  const { toast } = useToast();
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
-    const stored = localStorage.getItem("hospitalAppointments");
-    if (stored) {
-      setAppointments(JSON.parse(stored));
-    } else {
-      // Demo data
-      const demoData: Appointment[] = [
-        {
-          id: "1",
-          patientName: "Ahmed Ali",
-          patientPhone: "+92 300 1234567",
-          doctorName: "Dr. Sarah Khan",
-          date: "2024-01-20",
-          time: "10:00 AM",
-          symptoms: "Chest pain, shortness of breath",
-          status: "pending"
-        },
-        {
-          id: "2",
-          patientName: "Fatima Hassan",
-          patientPhone: "+92 301 7654321",
-          doctorName: "Dr. Ali Raza",
-          date: "2024-01-20",
-          time: "11:30 AM",
-          symptoms: "Fever in child, cough",
-          status: "approved"
-        },
-        {
-          id: "3",
-          patientName: "Muhammad Bilal",
-          patientPhone: "+92 333 9876543",
-          doctorName: "Dr. Sarah Khan",
-          date: "2024-01-19",
-          time: "2:00 PM",
-          symptoms: "Regular checkup",
-          status: "completed"
-        }
-      ];
-      setAppointments(demoData);
-      localStorage.setItem("hospitalAppointments", JSON.stringify(demoData));
+  // Fetch real appointments for this hospital
+  const { data: dbAppointments = [], isLoading } = useQuery<DbAppointment[]>({
+    queryKey: ["/api/hospital", user?.hospitalId, "appointments"],
+    enabled: !!user?.hospitalId
+  });
+
+  // Map database appointments to display format
+  const appointments = dbAppointments.map(apt => ({
+    id: apt.id,
+    patientName: apt.patientName,
+    patientPhone: apt.patientPhone,
+    doctorName: "Doctor",
+    date: new Date(apt.appointmentDate).toLocaleDateString("en-US"),
+    time: new Date(apt.appointmentDate).toLocaleTimeString("en-US", { 
+      hour: "2-digit", 
+      minute: "2-digit", 
+      hour12: true 
+    }),
+    symptoms: apt.symptoms || "No symptoms recorded",
+    status: (apt.status as any) || "pending",
+    notes: apt.notes,
+    appointmentDate: apt.appointmentDate,
+  }));
+
+  // Update appointment status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async (data: { id: string; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/appointments/${data.id}`, { status: data.status });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hospital", user?.hospitalId, "appointments"] });
+      toast({ title: "Success", description: "Appointment updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" });
     }
-  }, []);
+  });
 
   const updateStatus = (id: string, status: Appointment["status"]) => {
-    const updated = appointments.map(a => 
-      a.id === id ? { ...a, status } : a
-    );
-    setAppointments(updated);
-    localStorage.setItem("hospitalAppointments", JSON.stringify(updated));
+    updateStatusMutation.mutate({ id, status });
   };
 
   const reschedule = () => {
@@ -140,15 +139,24 @@ export default function HospitalAppointments() {
       </header>
 
       <div className="p-4">
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all" data-testid="tab-all">All</TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              Pending ({filterAppointments("pending").length})
-            </TabsTrigger>
-            <TabsTrigger value="approved" data-testid="tab-approved">Approved</TabsTrigger>
-            <TabsTrigger value="completed" data-testid="tab-completed">Completed</TabsTrigger>
-          </TabsList>
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-6 animate-pulse">
+                <div className="h-24 bg-muted rounded-lg" />
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Tabs defaultValue="all" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="all" data-testid="tab-all">All ({appointments.length})</TabsTrigger>
+              <TabsTrigger value="pending" data-testid="tab-pending">
+                Pending ({filterAppointments("pending").length})
+              </TabsTrigger>
+              <TabsTrigger value="approved" data-testid="tab-approved">Approved ({filterAppointments("approved").length})</TabsTrigger>
+              <TabsTrigger value="completed" data-testid="tab-completed">Completed ({filterAppointments("completed").length})</TabsTrigger>
+            </TabsList>
 
           {(["all", "pending", "approved", "completed"] as const).map((tab) => (
             <TabsContent key={tab} value={tab} className="space-y-3">
@@ -239,7 +247,8 @@ export default function HospitalAppointments() {
               )}
             </TabsContent>
           ))}
-        </Tabs>
+          </Tabs>
+        )}
       </div>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

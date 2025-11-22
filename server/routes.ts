@@ -333,6 +333,18 @@ router.patch("/api/appointments/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Get appointments for a hospital (hospital staff only)
+router.get("/api/hospital/:hospitalId/appointments", async (req: Request, res: Response) => {
+  try {
+    const appointments = await storage.getAllAppointments();
+    // Filter appointments for this hospital
+    const hospitalAppointments = appointments.filter(a => a.hospitalId === req.params.hospitalId);
+    res.json(hospitalAppointments);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== EMERGENCY ROUTES ====================
 
 // Get all emergencies
