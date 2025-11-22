@@ -47,6 +47,7 @@ export default function HospitalAppointments() {
   // Map database appointments to display format
   const appointments = dbAppointments.map(apt => ({
     id: apt.id,
+    patientId: apt.patientId,
     patientName: apt.patientName,
     patientPhone: apt.patientPhone,
     doctorName: "Doctor",
@@ -64,12 +65,16 @@ export default function HospitalAppointments() {
 
   // Update appointment status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async (data: { id: string; status: string }) => {
+    mutationFn: async (data: { id: string; status: string; patientId: string }) => {
       const res = await apiRequest("PATCH", `/api/appointments/${data.id}`, { status: data.status });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate both hospital and patient appointment caches
       queryClient.invalidateQueries({ queryKey: ["/api/hospital", user?.hospitalId, "appointments"] });
+      // Invalidate patient's appointment caches
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/user", data.patientId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/next", data.patientId] });
       toast({ title: "Success", description: "Appointment updated" });
     },
     onError: () => {
@@ -77,8 +82,8 @@ export default function HospitalAppointments() {
     }
   });
 
-  const updateStatus = (id: string, status: Appointment["status"]) => {
-    updateStatusMutation.mutate({ id, status });
+  const updateStatus = (id: string, status: Appointment["status"], patientId: string) => {
+    updateStatusMutation.mutate({ id, status, patientId });
   };
 
   const reschedule = () => {
@@ -194,7 +199,7 @@ export default function HospitalAppointments() {
                           <div className="flex gap-2 mt-3">
                             <Button
                               size="sm"
-                              onClick={() => updateStatus(apt.id, "approved")}
+                              onClick={() => updateStatus(apt.id, "approved", apt.patientId)}
                               data-testid={`button-approve-${apt.id}`}
                             >
                               <Check className="w-4 h-4 mr-1" />
@@ -212,7 +217,7 @@ export default function HospitalAppointments() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => updateStatus(apt.id, "cancelled")}
+                              onClick={() => updateStatus(apt.id, "cancelled", apt.patientId)}
                               data-testid={`button-cancel-${apt.id}`}
                             >
                               <X className="w-4 h-4 mr-1" />
@@ -225,7 +230,7 @@ export default function HospitalAppointments() {
                           <Button
                             size="sm"
                             className="mt-3"
-                            onClick={() => updateStatus(apt.id, "completed")}
+                            onClick={() => updateStatus(apt.id, "completed", apt.patientId)}
                             data-testid={`button-complete-${apt.id}`}
                           >
                             Mark as Completed

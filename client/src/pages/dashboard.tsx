@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
@@ -21,10 +21,31 @@ export default function Dashboard() {
   });
 
   // Fetch upcoming appointment for this user
-  const { data: nextAppointment, isLoading: appointmentLoading } = useQuery<Appointment | null>({
+  const { data: nextAppointment, isLoading: appointmentLoading, refetch: refetchNextAppointment } = useQuery<Appointment | null>({
     queryKey: ["/api/appointments/next", user?.id],
     enabled: !!user?.id
   });
+
+  // Refetch next appointment when page comes into focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refetchNextAppointment();
+      }
+    };
+
+    const handleFocus = () => {
+      refetchNextAppointment();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refetchNextAppointment]);
 
   // Main Modules - 7 core AI agent features
   const mainModules = [

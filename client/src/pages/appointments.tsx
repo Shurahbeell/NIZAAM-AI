@@ -104,6 +104,22 @@ export default function Appointments() {
     },
   });
 
+  // Fetch patient's appointments from backend
+  const { data: dbAppointments = [], refetch: refetchAppointments } = useQuery({
+    queryKey: ["/api/appointments/user", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      try {
+        const res = await apiRequest("GET", `/api/appointments/user/${user.id}`);
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch appointments:", error);
+        return [];
+      }
+    },
+    enabled: !!user?.id,
+  });
+
   // Mutation to book appointment in database
   const bookAppointmentMutation = useMutation({
     mutationFn: async (appointmentData: any) => {
@@ -145,9 +161,52 @@ export default function Appointments() {
     return defaultAppointments;
   });
 
+  // Update appointments from database and sync to localStorage
   useEffect(() => {
-    localStorage.setItem("healthAppointments", JSON.stringify(appointments));
-  }, [appointments]);
+    if (dbAppointments && dbAppointments.length > 0) {
+      const mappedAppointments = dbAppointments.map((apt: any) => ({
+        id: apt.id,
+        hospitalId: apt.hospitalId,
+        hospitalName: apt.hospitalName || "Hospital",
+        doctorName: apt.doctorName || "Doctor",
+        department: "General",
+        date: new Date(apt.appointmentDate).toLocaleDateString("en-US", { 
+          year: "numeric", 
+          month: "short", 
+          day: "numeric" 
+        }),
+        time: new Date(apt.appointmentDate).toLocaleTimeString("en-US", { 
+          hour: "2-digit", 
+          minute: "2-digit", 
+          hour12: true 
+        }),
+        status: apt.status === "approved" ? "confirmed" : apt.status
+      }));
+      setAppointments(mappedAppointments);
+      localStorage.setItem("healthAppointments", JSON.stringify(mappedAppointments));
+    }
+  }, [dbAppointments]);
+
+  // Refetch appointments when page comes into focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refetchAppointments();
+      }
+    };
+
+    const handleFocus = () => {
+      refetchAppointments();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refetchAppointments]);
 
   const handleBook = () => {
     if (!hospital || !department || !doctor || !date || !time || !user?.id) {
