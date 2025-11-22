@@ -27,7 +27,7 @@ export default function ProgramsChat() {
       try {
         const response = await apiRequest("POST", "/api/agent/sessions", {
           userId: "demo-user",
-          agent: "knowledge",
+          agent: "eligibility",
           language: globalLanguage
         });
         const session: AgentSession = await response.json();
@@ -54,7 +54,7 @@ export default function ProgramsChat() {
     mutationFn: async (userMessage: string) => {
       const response = await apiRequest("POST", "/api/agent/chat", {
         sessionId,
-        agentName: "knowledge",
+        agentName: "eligibility",
         message: userMessage,
         language: globalLanguage
       });
