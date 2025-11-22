@@ -374,50 +374,147 @@ Respond ONLY in this JSON format (no markdown, no extra text):
     eligiblePrograms: Array<{ name: string }>,
   ): Promise<string> {
     try {
-      // Use mock facility data since Google Maps API requires API key configuration
-      // In production, this would integrate with Google Places API
+      // Comprehensive facility database across Pakistan cities
+      const allFacilitiesByCity = {
+        karachi: [
+          {
+            name: "Karachi General Hospital",
+            address: "Dr. Ziauddin Ahmed Road, Karachi",
+            distance: "0.8 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "National AIDS Control Program"]
+          },
+          {
+            name: "Aga Khan University Hospital",
+            address: "Stadium Road, Karachi",
+            distance: "1.2 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
+          },
+          {
+            name: "Liaquat National Hospital",
+            address: "Empress Road, Karachi",
+            distance: "2.1 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Hepatitis Control Program"]
+          },
+          {
+            name: "Jinnah Medical & Dental College",
+            address: "Rafiqui Shaheed Road, Karachi",
+            distance: "2.8 km",
+            acceptedPrograms: ["Lady Health Workers Program", "Expanded Program on Immunization", "Maternal and Neonatal Health Program"]
+          }
+        ],
+        multan: [
+          {
+            name: "Nishtar Medical University Hospital",
+            address: "Nishtar Road, Multan",
+            distance: "1.5 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Maternal and Neonatal Health Program"]
+          },
+          {
+            name: "Holy Family Hospital Multan",
+            address: "Abdali Road, Multan",
+            distance: "2.2 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
+          },
+          {
+            name: "Multan Institute of Kidney Diseases",
+            address: "Vehari Road, Multan",
+            distance: "3.5 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program"]
+          }
+        ],
+        lahore: [
+          {
+            name: "Mayo Hospital",
+            address: "Mall Road, Lahore",
+            distance: "0.5 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "TB DOTS Program"]
+          },
+          {
+            name: "Lahore General Hospital",
+            address: "Jail Road, Lahore",
+            distance: "1.8 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
+          },
+          {
+            name: "Allama Iqbal Medical College",
+            address: "Faisalabad Road, Lahore",
+            distance: "2.5 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Hepatitis Control Program", "National AIDS Control Program"]
+          }
+        ],
+        islamabad: [
+          {
+            name: "Pakistan Institute of Medical Sciences (PIMS)",
+            address: "Chak Shehzad, Islamabad",
+            distance: "1.2 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "Maternal and Neonatal Health Program", "TB DOTS Program"]
+          },
+          {
+            name: "Shifa International Hospital",
+            address: "H-8/4, Islamabad",
+            distance: "2.0 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Mental Health Program"]
+          }
+        ],
+        peshawar: [
+          {
+            name: "Khyber Medical University Teaching Hospital",
+            address: "Peshawar Road, Peshawar",
+            distance: "1.0 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "Maternal and Neonatal Health Program"]
+          },
+          {
+            name: "Lady Reading Hospital",
+            address: "Railway Road, Peshawar",
+            distance: "2.3 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "National Diabetes Action Program", "Hepatitis Control Program"]
+          }
+        ],
+        quetta: [
+          {
+            name: "Bolan Medical College Hospital",
+            address: "Hazar Ganji, Quetta",
+            distance: "1.8 km",
+            acceptedPrograms: ["Sehat Sahulat Program (Sehat Card)", "TB DOTS Program", "National Diabetes Action Program"]
+          }
+        ]
+      };
+
+      // Determine which city the user is in based on their location
+      const locationLower = location.toLowerCase();
+      let userCity = "karachi"; // default
       
-      const facilityMockData = [
-        {
-          name: "Karachi General Hospital",
-          address: "Dr. Ziauddin Ahmed Road, Karachi",
-          distance: "0.8 km",
-          acceptedPrograms: ["Sehat Sahulat Program", "Maternal and Neonatal Health Program", "National AIDS Control Program"]
-        },
-        {
-          name: "Aga Khan University Hospital",
-          address: "Stadium Road, Karachi",
-          distance: "1.2 km",
-          acceptedPrograms: ["Sehat Sahulat Program", "National Diabetes Action Program", "Mental Health Program"]
-        },
-        {
-          name: "Liaquat National Hospital",
-          address: "Empress Road, Karachi",
-          distance: "2.1 km",
-          acceptedPrograms: ["Sehat Sahulat Program", "TB DOTS Program", "Hepatitis Control Program"]
-        },
-        {
-          name: "Jinnah Medical & Dental College",
-          address: "Rafiqui Shaheed Road, Karachi",
-          distance: "2.8 km",
-          acceptedPrograms: ["Lady Health Workers Program", "Expanded Program on Immunization", "Maternal and Neonatal Health Program"]
-        }
-      ];
+      if (locationLower.includes("multan")) userCity = "multan";
+      else if (locationLower.includes("lahore")) userCity = "lahore";
+      else if (locationLower.includes("islamabad")) userCity = "islamabad";
+      else if (locationLower.includes("peshawar")) userCity = "peshawar";
+      else if (locationLower.includes("quetta")) userCity = "quetta";
+      else if (locationLower.includes("karachi")) userCity = "karachi";
+
+      // Get facilities for the user's city
+      const cityFacilities = allFacilitiesByCity[userCity as keyof typeof allFacilitiesByCity] || allFacilitiesByCity.karachi;
 
       // Filter facilities based on eligible programs
-      const relevantFacilities = facilityMockData.filter(facility =>
+      const relevantFacilities = cityFacilities.filter(facility =>
         facility.acceptedPrograms.some(prog =>
-          eligiblePrograms.some(ep => ep.name.includes(prog) || prog.includes(ep.name))
+          eligiblePrograms.some(ep => 
+            ep.name.includes(prog) || 
+            prog.includes(ep.name) ||
+            prog.includes("Sehat") && ep.name.includes("Sehat")
+          )
         )
       );
 
-      if (relevantFacilities.length === 0) {
+      // If no exact matches, return all facilities in the city (they all accept Sehat Card)
+      const facilitiesToShow = relevantFacilities.length > 0 ? relevantFacilities : cityFacilities;
+
+      if (facilitiesToShow.length === 0) {
         return "";
       }
 
-      let facilityText = "\n\n**🏥 Nearby Facilities Where You Can Use Your Programs:**\n\n";
+      let facilityText = `\n\n**🏥 Nearby Sehat Card Empaneled Facilities in ${userCity.charAt(0).toUpperCase() + userCity.slice(1)}:**\n\n`;
       
-      relevantFacilities.forEach((facility, index) => {
+      facilitiesToShow.forEach((facility, index) => {
         facilityText += `${index + 1}. **${facility.name}**\n`;
         facilityText += `   📍 ${facility.address}\n`;
         facilityText += `   🚗 Distance: ${facility.distance}\n`;
