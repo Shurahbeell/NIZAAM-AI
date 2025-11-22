@@ -265,6 +265,32 @@ export const insertProtocolSourceSchema = createInsertSchema(protocolSources).om
   lastSyncedAt: true,
 });
 
+// Medical History Table
+export const medicalHistory = pgTable("medical_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  condition: text("condition").notNull(), // "diabetes", "hypertension", "asthma", etc.
+  diagnosisDate: timestamp("diagnosis_date"),
+  status: text("status").notNull().default("active"), // "active", "inactive", "resolved"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Medicines Table
+export const medicines = pgTable("medicines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  dosage: text("dosage").notNull(), // "500mg", "2 tablets", etc.
+  frequency: text("frequency").notNull(), // "twice daily", "once daily", etc.
+  reason: text("reason").notNull(), // "Diabetes management", "Blood pressure control", etc.
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  sideEffects: text("side_effects"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Frontliners Table (Rescue 1122)
 export const frontliners = pgTable("frontliners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -306,6 +332,16 @@ export const insertEmergencyCaseSchema = createInsertSchema(emergencyCases).omit
   updatedAt: true,
 });
 
+export const insertMedicalHistorySchema = createInsertSchema(medicalHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMedicinesSchema = createInsertSchema(medicines).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertHospital = z.infer<typeof insertHospitalSchema>;
@@ -341,3 +377,7 @@ export type InsertFrontliner = z.infer<typeof insertFrontlinerSchema>;
 export type Frontliner = typeof frontliners.$inferSelect;
 export type InsertEmergencyCase = z.infer<typeof insertEmergencyCaseSchema>;
 export type EmergencyCase = typeof emergencyCases.$inferSelect;
+export type InsertMedicalHistory = z.infer<typeof insertMedicalHistorySchema>;
+export type MedicalHistory = typeof medicalHistory.$inferSelect;
+export type InsertMedicines = z.infer<typeof insertMedicinesSchema>;
+export type Medicines = typeof medicines.$inferSelect;

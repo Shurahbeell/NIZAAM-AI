@@ -17,6 +17,8 @@ import {
   protocolSources,
   frontliners,
   emergencyCases,
+  medicalHistory,
+  medicines,
   type User,
   type InsertUser,
   type Hospital,
@@ -47,6 +49,10 @@ import {
   type InsertFrontliner,
   type EmergencyCase,
   type InsertEmergencyCase,
+  type MedicalHistory,
+  type InsertMedicalHistory,
+  type Medicines,
+  type InsertMedicines,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -143,6 +149,16 @@ export interface IStorage {
   updateEmergencyCaseStatus(id: string, status: string, log?: any): Promise<EmergencyCase | undefined>;
   getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]>;
   getAllEmergencyCases(): Promise<EmergencyCase[]>;
+
+  // Medical History methods
+  createMedicalHistory(history: InsertMedicalHistory): Promise<MedicalHistory>;
+  getUserMedicalHistory(userId: string): Promise<MedicalHistory[]>;
+  getMedicalHistoryById(id: string): Promise<MedicalHistory | undefined>;
+
+  // Medicines methods
+  createMedicine(medicine: InsertMedicines): Promise<Medicines>;
+  getUserMedicines(userId: string): Promise<Medicines[]>;
+  getMedicineById(id: string): Promise<Medicines | undefined>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -741,6 +757,36 @@ export class DrizzleStorage implements IStorage {
 
   async getAllEmergencyCases(): Promise<EmergencyCase[]> {
     return await db.select().from(emergencyCases).orderBy(desc(emergencyCases.createdAt));
+  }
+
+  // ==================== MEDICAL HISTORY METHODS ====================
+  async createMedicalHistory(history: InsertMedicalHistory): Promise<MedicalHistory> {
+    const result = await db.insert(medicalHistory).values(history).returning();
+    return result[0];
+  }
+
+  async getUserMedicalHistory(userId: string): Promise<MedicalHistory[]> {
+    return await db.select().from(medicalHistory).where(eq(medicalHistory.userId, userId)).orderBy(desc(medicalHistory.createdAt));
+  }
+
+  async getMedicalHistoryById(id: string): Promise<MedicalHistory | undefined> {
+    const result = await db.select().from(medicalHistory).where(eq(medicalHistory.id, id));
+    return result[0];
+  }
+
+  // ==================== MEDICINES METHODS ====================
+  async createMedicine(medicine: InsertMedicines): Promise<Medicines> {
+    const result = await db.insert(medicines).values(medicine).returning();
+    return result[0];
+  }
+
+  async getUserMedicines(userId: string): Promise<Medicines[]> {
+    return await db.select().from(medicines).where(eq(medicines.userId, userId)).orderBy(desc(medicines.createdAt));
+  }
+
+  async getMedicineById(id: string): Promise<Medicines | undefined> {
+    const result = await db.select().from(medicines).where(eq(medicines.id, id));
+    return result[0];
   }
 }
 

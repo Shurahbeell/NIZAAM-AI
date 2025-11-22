@@ -451,3 +451,135 @@ export async function registerRoutes(app: any) {
   app.use(router);
   return createServer(app);
 }
+
+// ==================== MEDICAL HISTORY ====================
+router.get("/api/medical-history/:userId", async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const history = await storage.getUserMedicalHistory(userId);
+    res.json(history);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/api/medical-history", async (req: Request, res: Response) => {
+  try {
+    const { insertMedicalHistorySchema } = await import("@shared/schema");
+    const validated = insertMedicalHistorySchema.parse(req.body);
+    const history = await storage.createMedicalHistory(validated);
+    res.json(history);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ==================== MEDICINES ====================
+router.get("/api/medicines/:userId", async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const medicines = await storage.getUserMedicines(userId);
+    res.json(medicines);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/api/medicines", async (req: Request, res: Response) => {
+  try {
+    const { insertMedicinesSchema } = await import("@shared/schema");
+    const validated = insertMedicinesSchema.parse(req.body);
+    const medicine = await storage.createMedicine(validated);
+    res.json(medicine);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ==================== EMERGENCY CASES (EMERGENCY CALLS) ====================
+router.post("/api/emergency-cases", async (req: Request, res: Response) => {
+  try {
+    const { insertEmergencyCaseSchema } = await import("@shared/schema");
+    const data = req.body;
+    
+    // Convert coordinates if needed
+    const validated = insertEmergencyCaseSchema.parse(data);
+    const emergencyCase = await storage.createEmergencyCase(validated);
+    
+    // Broadcast to frontliners and hospitals that a new emergency case was created
+    // (WebSocket or notification system would be implemented here)
+    console.log("[Emergency] New case created:", emergencyCase.id);
+    
+    
+    res.json(emergencyCase);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.get("/api/emergency-cases", async (req: Request, res: Response) => {
+  try {
+    const cases = await storage.getAllEmergencyCases();
+    res.json(cases);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/api/emergency-cases/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const emergencyCase = await storage.getEmergencyCaseById(id);
+    res.json(emergencyCase || {});
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch("/api/emergency-cases/:id/assign", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { assignedToType, assignedToId } = req.body;
+    
+    const updated = await storage.assignEmergencyCase(id, assignedToType, assignedToId);
+    
+    
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch("/api/emergency-cases/:id/status", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, log } = req.body;
+    
+    const updated = await storage.updateEmergencyCaseStatus(id, status, log);
+    
+    // Invalidate all related caches when frontliner accepts/updates emergency
+    queryClient.invalidateQueries({ queryKey: ["/api/emergency-cases"] });
+    
+    // If status changed to 'ack' (frontliner accepted), also invalidate hospital dashboard
+    if (status === 'ack') {
+      const emergencyCase = await storage.getEmergencyCaseById(id);
+      if (emergencyCase?.assignedToType === 'hospital') {
+        queryClient.invalidateQueries({ queryKey: ["/api/hospital", emergencyCase.assignedToId] });
+      }
+    }
+    
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/api/frontliner/:frontlinerId/open-cases", async (req: Request, res: Response) => {
+  try {
+    const { frontlinerId } = req.params;
+    const cases = await storage.getOpenCasesForFrontliner(frontlinerId);
+    res.json(cases);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
