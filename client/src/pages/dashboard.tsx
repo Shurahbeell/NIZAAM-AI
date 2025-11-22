@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/auth";
+import type { Appointment } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -16,6 +18,12 @@ export default function Dashboard() {
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
+  });
+
+  // Fetch upcoming appointment for this user
+  const { data: nextAppointment, isLoading: appointmentLoading } = useQuery<Appointment | null>({
+    queryKey: ["/api/appointments/next", user?.id],
+    enabled: !!user?.id
   });
 
   // Main Modules - 7 core AI agent features
@@ -190,13 +198,37 @@ export default function Dashboard() {
             <Calendar className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-semibold text-foreground">Next Appointment</h3>
           </div>
-          <AppointmentCard
-            doctorName="Dr. Sarah Johnson"
-            department="Cardiology"
-            date="Nov 15, 2025"
-            time="2:00 PM"
-            status="confirmed"
-          />
+          {appointmentLoading ? (
+            <Card className="p-6 animate-pulse">
+              <div className="h-24 bg-muted rounded-lg" />
+            </Card>
+          ) : nextAppointment ? (
+            <AppointmentCard
+              doctorName={`Dr. ${nextAppointment.patientName || "N/A"}`}
+              department="General Consultation"
+              date={new Date(nextAppointment.appointmentDate).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric"
+              })}
+              time={new Date(nextAppointment.appointmentDate).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+              })}
+              status={nextAppointment.status as any}
+            />
+          ) : (
+            <Card className="p-6 border-dashed">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <CalendarX className="w-5 h-5" />
+                <div>
+                  <p className="font-semibold">No upcoming appointments</p>
+                  <p className="text-sm">Schedule one to get started</p>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Emergency Module - Top Right */}

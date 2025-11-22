@@ -1,9 +1,10 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { db } from "./db";
 import { haversineDistanceMeters, parseCoordinate } from "./utils/geo";
 import {
   users,
   hospitals,
+  appointments,
   emergencies,
   womensHealthAwareness,
   screeningReminders,
@@ -20,6 +21,8 @@ import {
   type InsertUser,
   type Hospital,
   type InsertHospital,
+  type Appointment,
+  type InsertAppointment,
   type Emergency,
   type InsertEmergency,
   type WomensHealthAwareness,
@@ -60,6 +63,14 @@ export interface IStorage {
   getAllHospitals(): Promise<Hospital[]>;
   getHospitalById(id: string): Promise<Hospital | undefined>;
   createHospital(hospital: InsertHospital): Promise<Hospital>;
+
+  // Appointment methods
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  getAppointmentById(id: string): Promise<Appointment | undefined>;
+  getUserAppointments(patientId: string): Promise<Appointment[]>;
+  getUpcomingAppointments(patientId: string): Promise<Appointment[]>;
+  getAllAppointments(): Promise<Appointment[]>;
+  updateAppointmentStatus(id: string, status: string): Promise<Appointment | undefined>;
 
   // Emergency methods
   createEmergency(emergency: InsertEmergency): Promise<Emergency>;
@@ -204,6 +215,53 @@ export class DrizzleStorage implements IStorage {
 
   async createHospital(hospital: InsertHospital): Promise<Hospital> {
     const result = await db.insert(hospitals).values(hospital).returning();
+    return result[0];
+  }
+
+  // ==================== APPOINTMENT METHODS ====================
+  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+    const result = await db.insert(appointments).values(appointment).returning();
+    return result[0];
+  }
+
+  async getAppointmentById(id: string): Promise<Appointment | undefined> {
+    const result = await db.select().from(appointments).where(eq(appointments.id, id));
+    return result[0];
+  }
+
+  async getUserAppointments(patientId: string): Promise<Appointment[]> {
+    return await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.patientId, patientId))
+      .orderBy(desc(appointments.appointmentDate));
+  }
+
+  async getUpcomingAppointments(patientId: string): Promise<Appointment[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.patientId, patientId),
+          gt(appointments.appointmentDate, now)
+        )
+      )
+      .orderBy(appointments.appointmentDate)
+      .limit(1);
+  }
+
+  async getAllAppointments(): Promise<Appointment[]> {
+    return await db.select().from(appointments).orderBy(desc(appointments.appointmentDate));
+  }
+
+  async updateAppointmentStatus(id: string, status: string): Promise<Appointment | undefined> {
+    const result = await db
+      .update(appointments)
+      .set({ status })
+      .where(eq(appointments.id, id))
+      .returning();
     return result[0];
   }
 

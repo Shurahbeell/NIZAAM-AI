@@ -265,6 +265,74 @@ router.post("/api/mcp/facility/search", async (req: Request, res: Response) => {
   }
 });
 
+// ==================== APPOINTMENT ROUTES ====================
+
+// Get next upcoming appointment for a user
+router.get("/api/appointments/next/:patientId", async (req: Request, res: Response) => {
+  try {
+    const appointments = await storage.getUpcomingAppointments(req.params.patientId);
+    const nextAppointment = appointments[0] || null;
+    res.json(nextAppointment);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all appointments for a user
+router.get("/api/appointments/user/:patientId", async (req: Request, res: Response) => {
+  try {
+    const appointments = await storage.getUserAppointments(req.params.patientId);
+    res.json(appointments);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get appointment by ID
+router.get("/api/appointments/:id", async (req: Request, res: Response) => {
+  try {
+    const appointment = await storage.getAppointmentById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+    res.json(appointment);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all appointments (admin only)
+router.get("/api/appointments", async (_req: Request, res: Response) => {
+  try {
+    const appointments = await storage.getAllAppointments();
+    res.json(appointments);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create appointment
+router.post("/api/appointments", async (req: Request, res: Response) => {
+  try {
+    const { insertAppointmentSchema } = await import("@shared/schema");
+    const data = insertAppointmentSchema.parse(req.body);
+    const appointment = await storage.createAppointment(data);
+    res.json(appointment);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update appointment status
+router.patch("/api/appointments/:id", async (req: Request, res: Response) => {
+  try {
+    const appointment = await storage.updateAppointmentStatus(req.params.id, req.body.status);
+    res.json(appointment);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ==================== EMERGENCY ROUTES ====================
 
 // Get all emergencies
