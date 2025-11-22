@@ -198,199 +198,46 @@ Provide a helpful, natural response. Be conversational and supportive.`;
   }
 
   /**
-   * Search for nearby healthcare facilities
-   * Supports multiple Pakistani cities with real hospital data
+   * Search for nearby healthcare facilities using Gemini
+   * Dynamically generates facility recommendations based on user's location
    */
   private async searchNearbyFacilities(location: string): Promise<string> {
     try {
-      const facilityDatabase = this.getHospitalsByCity(location);
+      const prompt = `The user is located in: ${location}
 
-      if (facilityDatabase.length === 0) {
-        return "";
-      }
+Generate a helpful list of 3-5 real healthcare facilities in this location that:
+- Accept Sehat Card (Pakistan's health insurance program)
+- Provide quality healthcare services
+- Are reasonably accessible
 
-      // Build facility listing
-      let facilityText = `\n**🏥 Nearby Healthcare Facilities:**\n\n`;
+Format your response as:
+**🏥 Healthcare Facilities in ${location.split(',')[0]}:**
 
-      facilityDatabase.forEach((facility, index) => {
-        facilityText += `${index + 1}. **${facility.name}**\n`;
-        if (facility.address) {
-          facilityText += `   📍 ${facility.address}\n`;
-        }
-        if (facility.contact) {
-          facilityText += `   📞 ${facility.contact}\n`;
-        }
-        if (facility.programs && facility.programs.length > 0) {
-          facilityText += `   ✓ Services: ${facility.programs.join(", ")}\n`;
-        }
-        if (facility.distance) {
-          facilityText += `   🚗 Approximate distance: ${facility.distance}\n`;
-        }
-        facilityText += "\n";
+1. **[Hospital Name]**
+   📍 [Address]
+   📞 [Contact/Phone]
+   ✓ Services: [Main services offered]
+   🚗 Approximate distance: [Distance estimate]
+
+Continue for other hospitals...
+
+Be specific with real hospitals if you know them, otherwise suggest typical reliable facilities found in that area.`;
+
+      const result = await gemini.models.generateContent({
+        model: MCP_CONFIG.model,
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ]
       });
 
-      return facilityText;
+      return result.text ? `\n${result.text}` : "";
     } catch (error) {
       console.error("[HealthProgramsAgent] Facility search error:", error);
       return "";
     }
-  }
-
-  /**
-   * Get hospital data for a specific city
-   * Uses location string to determine city
-   */
-  private getHospitalsByCity(location: string): Array<{
-    name: string;
-    address: string;
-    contact?: string;
-    programs: string[];
-    distance?: string;
-  }> {
-    const locationLower = location.toLowerCase();
-
-    // Hospital data for major Pakistani cities
-    const hospitals: Record<
-      string,
-      Array<{
-        name: string;
-        address: string;
-        contact?: string;
-        programs: string[];
-        distance?: string;
-      }>
-    > = {
-      karachi: [
-        {
-          name: "Karachi General Hospital",
-          address: "Dr. Ziauddin Ahmed Road, Karachi",
-          contact: "021-99206300",
-          programs: ["Sehat Card", "Emergency", "General Medicine", "Surgery"],
-          distance: "~1-2 km"
-        },
-        {
-          name: "Aga Khan University Hospital",
-          address: "Stadium Road, Karachi",
-          contact: "021-34864000",
-          programs: ["Sehat Card", "Diabetes Care", "Cardiac Services", "Maternal Health"],
-          distance: "~2-3 km"
-        },
-        {
-          name: "Liaquat National Hospital",
-          address: "Empress Road, Karachi",
-          contact: "021-34935000",
-          programs: ["Sehat Card", "TB Treatment", "Hepatitis Control", "Infectious Diseases"],
-          distance: "~3-4 km"
-        },
-        {
-          name: "Jinnah Postgraduate Medical Centre",
-          address: "New Wards, Karachi",
-          contact: "021-99201300",
-          programs: ["Sehat Card", "Maternal Health", "Emergency Services"],
-          distance: "~2-3 km"
-        }
-      ],
-      multan: [
-        {
-          name: "Nishtar Medical University Hospital",
-          address: "Nishtar Road, Multan",
-          contact: "061-9250200",
-          programs: ["Sehat Card", "TB Treatment", "Emergency", "Maternal Health"],
-          distance: "~1-2 km"
-        },
-        {
-          name: "Holy Family Hospital Multan",
-          address: "Abdali Road, Multan",
-          contact: "061-4545000",
-          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "General Services"],
-          distance: "~2-3 km"
-        },
-        {
-          name: "Multan Institute of Kidney Diseases",
-          address: "Vehari Road, Multan",
-          contact: "061-4540000",
-          programs: ["Sehat Card", "Kidney Disease Treatment", "Dialysis"],
-          distance: "~3 km"
-        }
-      ],
-      lahore: [
-        {
-          name: "Mayo Hospital",
-          address: "Mall Road, Lahore",
-          contact: "042-99230100",
-          programs: ["Sehat Card", "Emergency", "Maternal Health", "TB Treatment"],
-          distance: "~1 km"
-        },
-        {
-          name: "Lahore General Hospital",
-          address: "Jail Road, Lahore",
-          contact: "042-99264001",
-          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "Surgery"],
-          distance: "~2 km"
-        },
-        {
-          name: "Allama Iqbal Medical College Teaching Hospital",
-          address: "Faisalabad Road, Lahore",
-          contact: "042-99264200",
-          programs: ["Sehat Card", "Hepatitis Control", "HIV/AIDS Services", "General Medicine"],
-          distance: "~3 km"
-        }
-      ],
-      islamabad: [
-        {
-          name: "Pakistan Institute of Medical Sciences (PIMS)",
-          address: "Chak Shehzad, Islamabad",
-          contact: "051-9255000",
-          programs: ["Sehat Card", "Emergency", "Maternal Health", "TB Services"],
-          distance: "~1-2 km"
-        },
-        {
-          name: "Shifa International Hospital",
-          address: "H-8/4, Islamabad",
-          contact: "051-8444550",
-          programs: ["Sehat Card", "Diabetes Care", "Mental Health", "Cardiology"],
-          distance: "~2-3 km"
-        }
-      ],
-      peshawar: [
-        {
-          name: "Khyber Medical University Teaching Hospital",
-          address: "Peshawar Road, Peshawar",
-          contact: "091-9216200",
-          programs: ["Sehat Card", "TB Treatment", "Maternal Health", "Emergency"],
-          distance: "~1-2 km"
-        },
-        {
-          name: "Lady Reading Hospital",
-          address: "Railway Road, Peshawar",
-          contact: "091-9216300",
-          programs: ["Sehat Card", "Diabetes Care", "Hepatitis Control", "Women's Health"],
-          distance: "~2-3 km"
-        }
-      ],
-      quetta: [
-        {
-          name: "Bolan Medical College Hospital",
-          address: "Hazar Ganji, Quetta",
-          contact: "081-9211200",
-          programs: ["Sehat Card", "TB Treatment", "Diabetes Care", "Emergency"],
-          distance: "~2 km"
-        }
-      ]
-    };
-
-    // Determine city from location string
-    let city = "karachi"; // default fallback
-
-    if (locationLower.includes("multan")) city = "multan";
-    else if (locationLower.includes("lahore")) city = "lahore";
-    else if (locationLower.includes("islamabad")) city = "islamabad";
-    else if (locationLower.includes("rawalpindi")) city = "islamabad";
-    else if (locationLower.includes("peshawar")) city = "peshawar";
-    else if (locationLower.includes("quetta")) city = "quetta";
-    else if (locationLower.includes("karachi")) city = "karachi";
-
-    return hospitals[city] || hospitals.karachi;
   }
 }
 
