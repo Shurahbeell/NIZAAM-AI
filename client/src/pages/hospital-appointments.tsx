@@ -44,13 +44,34 @@ export default function HospitalAppointments() {
     enabled: !!user?.hospitalId
   });
 
+  // Fetch doctor details for all appointments
+  const { data: doctorMap = {} } = useQuery<Record<string, any>>({
+    queryKey: ["/api/hospital", user?.hospitalId, "doctors-map"],
+    queryFn: async () => {
+      if (!user?.hospitalId) return {};
+      try {
+        const res = await apiRequest("GET", `/api/hospital/${user.hospitalId}/doctors`);
+        const doctors = await res.json();
+        const map: Record<string, any> = {};
+        doctors.forEach((doc: any) => {
+          map[doc.id] = doc.name;
+        });
+        return map;
+      } catch (error) {
+        console.error("Failed to fetch doctors:", error);
+        return {};
+      }
+    },
+    enabled: !!user?.hospitalId,
+  });
+
   // Map database appointments to display format
   const appointments = dbAppointments.map(apt => ({
     id: apt.id,
     patientId: apt.patientId,
     patientName: apt.patientName,
     patientPhone: apt.patientPhone,
-    doctorName: "Doctor",
+    doctorName: apt.doctorId && doctorMap[apt.doctorId] ? doctorMap[apt.doctorId] : "Doctor",
     date: new Date(apt.appointmentDate).toLocaleDateString("en-US"),
     time: new Date(apt.appointmentDate).toLocaleTimeString("en-US", { 
       hour: "2-digit", 

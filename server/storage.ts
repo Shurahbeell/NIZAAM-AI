@@ -4,6 +4,7 @@ import { haversineDistanceMeters, parseCoordinate } from "./utils/geo";
 import {
   users,
   hospitals,
+  doctors,
   appointments,
   emergencies,
   womensHealthAwareness,
@@ -23,6 +24,8 @@ import {
   type InsertUser,
   type Hospital,
   type InsertHospital,
+  type Doctor,
+  type InsertDoctor,
   type Appointment,
   type InsertAppointment,
   type Emergency,
@@ -69,6 +72,10 @@ export interface IStorage {
   getAllHospitals(): Promise<Hospital[]>;
   getHospitalById(id: string): Promise<Hospital | undefined>;
   createHospital(hospital: InsertHospital): Promise<Hospital>;
+
+  // Doctor methods
+  getDoctorsByHospital(hospitalId: string): Promise<Doctor[]>;
+  getDoctorById(id: string): Promise<Doctor | undefined>;
 
   // Appointment methods
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
@@ -232,6 +239,16 @@ export class DrizzleStorage implements IStorage {
 
   async createHospital(hospital: InsertHospital): Promise<Hospital> {
     const result = await db.insert(hospitals).values(hospital).returning();
+    return result[0];
+  }
+
+  // ==================== DOCTOR METHODS ====================
+  async getDoctorsByHospital(hospitalId: string): Promise<Doctor[]> {
+    return await db.select().from(doctors).where(eq(doctors.hospitalId, hospitalId));
+  }
+
+  async getDoctorById(id: string): Promise<Doctor | undefined> {
+    const result = await db.select().from(doctors).where(eq(doctors.id, id));
     return result[0];
   }
 

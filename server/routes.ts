@@ -594,3 +594,14 @@ router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get doctors for a hospital
+router.get("/api/hospital/:hospitalId/doctors", async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.params;
+    const doctors = await storage.getDoctorsByHospital(hospitalId);
+    res.json(doctors);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

@@ -14,12 +14,6 @@ import AppointmentCard from "@/components/AppointmentCard";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/lib/auth";
 
-const doctorMap: Record<string, string> = {
-  "dr-johnson": "Dr. Sarah Johnson",
-  "dr-chen": "Dr. Michael Chen",
-  "dr-patel": "Dr. Priya Patel"
-};
-
 const departmentMap: Record<string, string> = {
   "cardiology": "Cardiology",
   "general": "General Medicine",
@@ -39,6 +33,12 @@ const timeMap: Record<string, string> = {
 interface Hospital {
   id: string;
   name: string;
+}
+
+interface Doctor {
+  id: string;
+  name: string;
+  specialization: string;
 }
 
 interface Appointment {
@@ -102,6 +102,22 @@ export default function Appointments() {
         return [];
       }
     },
+  });
+
+  // Fetch doctors for selected hospital
+  const { data: doctors = [] } = useQuery<Doctor[]>({
+    queryKey: ["/api/hospital", hospital, "doctors"],
+    queryFn: async () => {
+      if (!hospital) return [];
+      try {
+        const res = await apiRequest("GET", `/api/hospital/${hospital}/doctors`);
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch doctors:", error);
+        return [];
+      }
+    },
+    enabled: !!hospital,
   });
 
   // Fetch patient's appointments from backend
@@ -226,17 +242,20 @@ export default function Appointments() {
     const selectedHospital = hospitals.find((h: Hospital) => h.id === hospital);
     const hospitalName = selectedHospital?.name || hospital;
 
+    // Find selected doctor
+    const selectedDoctor = doctors.find((d: Doctor) => d.id === doctor);
+
     // POST to backend API
     bookAppointmentMutation.mutate({
       patientId: user.id,
       hospitalId: hospital,
-      doctorId: "demo-doctor", // Placeholder - ideally select from available doctors
+      doctorId: doctor,
       appointmentDate: appointmentDateTime.toISOString(),
       status: "pending",
       patientName: user.fullName || user.username,
       patientPhone: user.phone || "N/A",
       symptoms: `${departmentMap[department] || department} consultation`,
-      notes: `Requested with ${doctorMap[doctor] || doctor}`
+      notes: `Requested with ${selectedDoctor?.name || "Doctor"}`
     });
   };
 
@@ -299,13 +318,17 @@ export default function Appointments() {
               <div className="space-y-2">
                 <Label htmlFor="doctor">Doctor</Label>
                 <Select value={doctor} onValueChange={setDoctor}>
-                  <SelectTrigger id="doctor" data-testid="select-doctor">
-                    <SelectValue placeholder="Select doctor" />
+                  <SelectTrigger id="doctor" data-testid="select-doctor" disabled={doctors.length === 0}>
+                    <SelectValue placeholder={doctors.length === 0 ? "No doctors available" : "Select doctor"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dr-johnson">Dr. Sarah Johnson</SelectItem>
-                    <SelectItem value="dr-chen">Dr. Michael Chen</SelectItem>
-                    <SelectItem value="dr-patel">Dr. Priya Patel</SelectItem>
+                    {doctors.length === 0 ? (
+                      <SelectItem value="no-doctors" disabled>No doctors available for this hospital</SelectItem>
+                    ) : (
+                      doctors.map((d: Doctor) => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
