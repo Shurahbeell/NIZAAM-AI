@@ -151,19 +151,35 @@ Provide a helpful, natural response. Be conversational and supportive.`;
   }
 
   /**
-   * Detect if user is asking about nearby facilities
+   * Detect if user is explicitly asking about nearby facilities
+   * Must include location-related keywords combined with facility keywords
    */
   private detectFacilityQuery(message: string): boolean {
-    const facilityKeywords = [
-      "where", "hospital", "clinic", "facility", "center", "nearby", "near me",
-      "use", "visit", "go", "sehat card", "empaneled", "available",
-      "can i", "how to get", "which hospital", "best hospital", "closest",
-      "nearest", "kaun si jagah", "kidhar", "kahan", "hospital ka address",
-      "sehat card use", "program lena", "registration", "enrollment"
+    const messageLower = message.toLowerCase();
+    
+    // Keywords that indicate location/facility intent
+    const locationKeywords = [
+      "where", "hospital", "clinic", "facility", "center", 
+      "nearby", "near me", "go", "visit", "which hospital", 
+      "best hospital", "closest", "nearest", "address",
+      "kaun si jagah", "kidhar", "kahan", "hospital ka address"
+    ];
+    
+    // Keywords that indicate usage/enrollment intent combined with program names
+    const usageKeywords = [
+      "can i use", "how to use", "use where", "apply for", "get", "register",
+      "enrollment", "how to apply", "kaise use krun", "kaise apply krun"
     ];
 
-    const messageLower = message.toLowerCase();
-    return facilityKeywords.some(keyword => messageLower.includes(keyword));
+    // Check if user is asking about WHERE to use or which HOSPITAL (explicit location query)
+    const isLocationQuery = locationKeywords.some(keyword => messageLower.includes(keyword));
+    
+    // Check if user is asking HOW TO USE a program (combined with program name)
+    const isUsageQuery = usageKeywords.some(keyword => messageLower.includes(keyword)) &&
+      (messageLower.includes("sehat") || messageLower.includes("program") || 
+       messageLower.includes("card") || messageLower.includes("facility"));
+
+    return isLocationQuery || isUsageQuery;
   }
 
   /**
