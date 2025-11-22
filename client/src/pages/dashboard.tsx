@@ -93,14 +93,8 @@ export default function Dashboard() {
     }
   ];
 
-  // Micro Modules - collapsed into dropdown
+  // Micro Modules - Additional services
   const microModules = [
-    {
-      title: "Quick Access",
-      description: "Dashboard home",
-      icon: Activity,
-      path: "/dashboard"
-    },
     {
       title: "My Files",
       description: "Medical documents",
@@ -124,30 +118,6 @@ export default function Dashboard() {
       description: "Track & reminders",
       icon: Pill,
       path: "/medicines"
-    },
-    {
-      title: "Appointments",
-      description: "Schedule visits",
-      icon: Calendar,
-      path: "/appointments"
-    },
-    {
-      title: "Programs",
-      description: "Eligibility check",
-      icon: Building2,
-      path: "/programs-chat"
-    },
-    {
-      title: "Notifications",
-      description: "Alerts & reminders",
-      icon: Bell,
-      path: "/dashboard"
-    },
-    {
-      title: "Facility Browser",
-      description: "Nearby hospitals",
-      icon: MapPin,
-      path: "/map"
     },
     {
       title: "User Manual",

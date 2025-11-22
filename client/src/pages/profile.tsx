@@ -126,9 +126,7 @@ export default function Profile() {
                 <User className="w-12 h-12" />
               </AvatarFallback>
             </Avatar>
-            <Button variant="outline" size="sm" data-testid="button-change-photo">
-              Change Photo
-            </Button>
+            <p className="text-sm text-muted-foreground">{user?.username}</p>
           </div>
         </Card>
 
@@ -293,14 +291,9 @@ export default function Profile() {
           </div>
         </Card>
 
-        <div className="space-y-3">
-          <Button variant="outline" className="w-full" data-testid="button-export">
-            Export My Health Data
-          </Button>
-          <Button variant="destructive" className="w-full" onClick={() => setLocation("/login")} data-testid="button-logout">
-            Logout
-          </Button>
-        </div>
+        <Button variant="destructive" className="w-full" onClick={() => setLocation("/login")} data-testid="button-logout">
+          Logout
+        </Button>
       </div>
     </div>
   );
