@@ -21,19 +21,32 @@ export default function ProgramsChat() {
   const { language: globalLanguage } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Create agent session on mount
+  // Create or restore agent session on mount
   useEffect(() => {
     if (sessionId || !user) return;
     
     const initSession = async () => {
       try {
-        const response = await apiRequest("POST", "/api/agent/sessions", {
-          userId: user.id,
-          agent: "eligibility",
-          language: globalLanguage
-        });
-        const session: AgentSession = await response.json();
-        setSessionId(session.id);
+        // First, check if there's an existing eligibility session for this user
+        const sessionsResponse = await apiRequest("GET", "/api/agent/sessions");
+        const sessions: AgentSession[] = await sessionsResponse.json();
+        
+        // Look for an existing eligibility session
+        const existingSession = sessions.find(s => s.agent === "eligibility" && s.status === "active");
+        
+        if (existingSession) {
+          // Use existing session and its messages will be loaded
+          setSessionId(existingSession.id);
+        } else {
+          // Create new session only if no existing one
+          const newSessionResponse = await apiRequest("POST", "/api/agent/sessions", {
+            userId: user.id,
+            agent: "eligibility",
+            language: globalLanguage
+          });
+          const newSession: AgentSession = await newSessionResponse.json();
+          setSessionId(newSession.id);
+        }
       } catch (error) {
         toast({
           title: "Error",
