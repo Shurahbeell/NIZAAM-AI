@@ -52,44 +52,44 @@ export default function Dashboard() {
   // Main Modules - 7 core AI agent features
   const mainModules = [
     {
-      title: t('dashboard.triage'),
-      description: t('dashboard.triageDesc'),
+      title: t('dashboardModules.triage'),
+      description: t('dashboardModules.triageDesc'),
       icon: Stethoscope,
       path: "/symptom-chat"
     },
     {
-      title: t('dashboard.womensHealthBtn'),
-      description: t('dashboard.womensHealthDesc'),
+      title: t('dashboardModules.womensHealthBtn'),
+      description: t('dashboardModules.womensHealthDesc'),
       icon: Heart,
       path: "/womens-health"
     },
     {
-      title: t('dashboard.programEligibility'),
-      description: t('dashboard.programEligibilityDesc'),
+      title: t('dashboardModules.programEligibility'),
+      description: t('dashboardModules.programEligibilityDesc'),
       icon: Building2,
       path: "/programs-chat"
     },
     {
-      title: t('dashboard.facilityFinder'),
-      description: t('dashboard.facilityFinderDesc'),
+      title: t('dashboardModules.facilityFinder'),
+      description: t('dashboardModules.facilityFinderDesc'),
       icon: MapPin,
       path: "/map"
     },
     {
-      title: t('dashboard.followUp'),
-      description: t('dashboard.followUpDesc'),
+      title: t('dashboardModules.followUp'),
+      description: t('dashboardModules.followUpDesc'),
       icon: Calendar,
       path: "/appointments"
     },
     {
-      title: t('dashboard.healthAnalytics'),
-      description: t('dashboard.healthAnalyticsDesc'),
+      title: t('dashboardModules.healthAnalytics'),
+      description: t('dashboardModules.healthAnalyticsDesc'),
       icon: Activity,
       path: "/lab-tests"
     },
     {
-      title: t('dashboard.knowledge'),
-      description: t('dashboard.knowledgeDesc'),
+      title: t('dashboardModules.knowledge'),
+      description: t('dashboardModules.knowledgeDesc'),
       icon: BookOpen,
       path: "/medicine-library"
     }
@@ -98,32 +98,32 @@ export default function Dashboard() {
   // Micro Modules - Additional services
   const microModules = [
     {
-      title: t('dashboard.myFiles'),
-      description: t('dashboard.myFilesDesc'),
+      title: t('dashboardModules.myFiles'),
+      description: t('dashboardModules.myFilesDesc'),
       icon: Folder,
       path: "/medical-profile"
     },
     {
-      title: t('dashboard.medicalHistory'),
-      description: t('dashboard.medicalHistoryDesc'),
+      title: t('dashboardModules.medicalHistory'),
+      description: t('dashboardModules.medicalHistoryDesc'),
       icon: ClipboardList,
       path: "/history"
     },
     {
-      title: t('dashboard.conditions'),
-      description: t('dashboard.conditionsDesc'),
+      title: t('dashboardModules.conditions'),
+      description: t('dashboardModules.conditionsDesc'),
       icon: AlertCircle,
       path: "/disease-library"
     },
     {
-      title: t('dashboard.medicines'),
-      description: t('dashboard.medicinesDesc'),
+      title: t('dashboardModules.medicines'),
+      description: t('dashboardModules.medicinesDesc'),
       icon: Pill,
       path: "/medicines"
     },
     {
-      title: t('dashboard.userManual'),
-      description: t('dashboard.userManualDesc'),
+      title: t('dashboardModules.userManual'),
+      description: t('dashboardModules.userManualDesc'),
       icon: HelpCircle,
       path: "/user-manual"
     }

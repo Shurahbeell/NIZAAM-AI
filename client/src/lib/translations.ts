@@ -244,6 +244,68 @@ export const translations = {
       getStarted: 'Get Started',
       skip: 'Skip',
     },
+    // Disease Details
+    diseaseDetails: {
+      symptoms: 'Symptoms',
+      riskFactors: 'Risk Factors',
+      complications: 'Complications',
+      treatment: 'Treatment',
+      prevention: 'Prevention',
+      whenToSeeDoctor: 'When to See Doctor',
+      commonSymptoms: 'Common Symptoms:',
+      disclaimer: 'Disclaimer',
+      disclaimerText: 'This information is for educational purposes only. Always consult a qualified healthcare provider for proper diagnosis and treatment.',
+    },
+    // Medicine Details
+    medicineDetails: {
+      dosage: 'Dosage',
+      sideEffects: 'Side Effects',
+      interactions: 'Drug Interactions',
+      warnings: 'Warnings',
+      storage: 'Storage',
+      manufacturer: 'Manufacturer',
+    },
+    // Dashboard Module Cards
+    dashboardModules: {
+      triage: 'Triage',
+      triageDesc: 'AI symptom analysis',
+      womensHealthBtn: 'Women\'s Health',
+      womensHealthDesc: 'Maternal & wellness',
+      programEligibility: 'Program Eligibility',
+      programEligibilityDesc: 'Government programs',
+      facilityFinder: 'Facility Finder',
+      facilityFinderDesc: 'Find hospitals',
+      followUp: 'Follow-Up',
+      followUpDesc: 'Appointments & care',
+      healthAnalytics: 'Health Analytics',
+      healthAnalyticsDesc: 'Lab tests & reports',
+      knowledge: 'Knowledge',
+      knowledgeDesc: 'Health library',
+      myFiles: 'My Files',
+      myFilesDesc: 'Medical documents',
+      medicalHistory: 'Medical History',
+      medicalHistoryDesc: 'Past records',
+      conditions: 'Conditions',
+      conditionsDesc: 'Disease info',
+      medicines: 'Medicines',
+      medicinesDesc: 'Track & reminders',
+      userManual: 'User Manual',
+      userManualDesc: 'How to use the app',
+    },
+    // Login/Register
+    loginRegister: {
+      loginTab: 'Login',
+      registerTab: 'Register',
+      nizaamAi: 'NIZAAM-AI',
+      subtitle: 'National Integrated Zonal Assessment, Assistance & Management',
+      username: 'Username',
+      passwordPlaceholder: 'Enter Password',
+      loginButton: 'Login',
+      registerButton: 'Register',
+      noAccount: 'Don\'t have an account?',
+      haveAccount: 'Already have an account?',
+      selectRole: 'Select your role',
+    },
   },
   ur: {
     // Common
@@ -500,8 +562,8 @@ export const translations = {
       storage: 'ذخیرہ',
       manufacturer: 'نیا ساز',
     },
-    // Dashboard
-    dashboard: {
+    // Dashboard Module Cards
+    dashboardModules: {
       triage: 'ٹریج',
       triageDesc: 'AI علامات کا تجزیہ',
       womensHealthBtn: 'خواتین کی صحت',
