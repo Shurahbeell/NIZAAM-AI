@@ -479,6 +479,27 @@ export const translations = {
       getStarted: 'شروع کریں',
       skip: 'چھوڑ دیں',
     },
+    // Disease Details
+    diseaseDetails: {
+      symptoms: 'علامات',
+      riskFactors: 'خطرے کے عوامل',
+      complications: 'ممکنہ پیچیدگیاں',
+      treatment: 'علاج',
+      prevention: 'روک تھام',
+      whenToSeeDoctor: 'ڈاکٹر سے کب ملیں',
+      commonSymptoms: 'عام علامات:',
+      disclaimer: 'اہم نوٹ',
+      disclaimerText: 'یہ معلومات صرف تعلیمی مقاصد کے لیے ہے۔ ہمیشہ مناسب تشخیص اور علاج کے لیے کسی قابل ہنر ڈاکٹر سے رجوع کریں۔',
+    },
+    // Medicine Details
+    medicineDetails: {
+      dosage: 'خوراک',
+      sideEffects: 'منفی اثرات',
+      interactions: 'ادویات کے تعاملات',
+      warnings: 'انتباہات',
+      storage: 'ذخیرہ',
+      manufacturer: 'نیا ساز',
+    },
   },
   ru: {
     // Common
@@ -713,6 +734,27 @@ export const translations = {
       subtitle: 'National Integrated Zonal Assessment, Assistance & Management System',
       getStarted: 'Get Started',
       skip: 'Skip',
+    },
+    // Disease Details
+    diseaseDetails: {
+      symptoms: 'Symptoms',
+      riskFactors: 'Risk Factors',
+      complications: 'Possible Complications',
+      treatment: 'Treatment',
+      prevention: 'Prevention',
+      whenToSeeDoctor: 'When to See a Doctor',
+      commonSymptoms: 'Common symptoms:',
+      disclaimer: 'Disclaimer',
+      disclaimerText: 'This information is for educational purposes only. Always consult a qualified healthcare provider for proper diagnosis and treatment.',
+    },
+    // Medicine Details
+    medicineDetails: {
+      dosage: 'Dosage',
+      sideEffects: 'Side Effects',
+      interactions: 'Drug Interactions',
+      warnings: 'Warnings',
+      storage: 'Storage',
+      manufacturer: 'Manufacturer',
     },
   },
 } as const;

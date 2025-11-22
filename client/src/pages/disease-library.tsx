@@ -75,7 +75,7 @@ export default function DiseaseLibrary() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Common symptoms: {disease.symptoms.slice(0, 3).join(", ")}
+                    {t('diseaseDetails.commonSymptoms')} {disease.symptoms.slice(0, 3).join(", ")}
                   </p>
                 </CardContent>
               </Card>
@@ -86,7 +86,7 @@ export default function DiseaseLibrary() {
             <Card>
               <CardContent className="p-8 text-center">
                 <Activity className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">No diseases found</p>
+                <p className="text-muted-foreground">{t('diseaseLibrary.noResults')}</p>
               </CardContent>
             </Card>
           )}
@@ -107,7 +107,7 @@ export default function DiseaseLibrary() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Symptoms</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('diseaseDetails.symptoms')}</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedDisease.symptoms.map((symptom, i) => (
                     <Badge key={i} variant="outline">{symptom}</Badge>
@@ -116,7 +116,7 @@ export default function DiseaseLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Risk Factors</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('diseaseDetails.riskFactors')}</h3>
                 <ul className="space-y-1">
                   {selectedDisease.riskFactors.map((factor, i) => (
                     <li key={i} className="text-sm text-muted-foreground">• {factor}</li>
@@ -125,7 +125,7 @@ export default function DiseaseLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Possible Complications</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('diseaseDetails.complications')}</h3>
                 <ul className="space-y-1">
                   {selectedDisease.complications.map((comp, i) => (
                     <li key={i} className="text-sm text-destructive">⚠️ {comp}</li>
@@ -134,7 +134,7 @@ export default function DiseaseLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Treatment</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('diseaseDetails.treatment')}</h3>
                 <ul className="space-y-1">
                   {selectedDisease.treatments.map((treatment, i) => (
                     <li key={i} className="text-sm text-muted-foreground">• {treatment}</li>
@@ -143,7 +143,7 @@ export default function DiseaseLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Prevention</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('diseaseDetails.prevention')}</h3>
                 <ul className="space-y-1">
                   {selectedDisease.prevention.map((prev, i) => (
                     <li key={i} className="text-sm text-accent-foreground">✓ {prev}</li>
@@ -155,7 +155,7 @@ export default function DiseaseLibrary() {
                 <CardContent className="p-4 flex gap-3">
                   <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-foreground mb-1">When to See a Doctor</p>
+                    <p className="font-semibold text-foreground mb-1">{t('diseaseDetails.whenToSeeDoctor')}</p>
                     <p className="text-sm text-muted-foreground">{selectedDisease.whenToSeeDoctor}</p>
                   </div>
                 </CardContent>
@@ -166,7 +166,7 @@ export default function DiseaseLibrary() {
           <Card className="bg-muted/30">
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">
-                ⚕️ <strong>Disclaimer:</strong> This information is for educational purposes only. Always consult a qualified healthcare provider for proper diagnosis and treatment.
+                ⚕️ <strong>{t('diseaseDetails.disclaimer')}:</strong> {t('diseaseDetails.disclaimerText')}
               </p>
             </CardContent>
           </Card>

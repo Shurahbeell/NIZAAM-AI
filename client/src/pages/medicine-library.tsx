@@ -74,7 +74,7 @@ export default function MedicineLibrary() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="text-sm text-muted-foreground">
                   <p className="text-sm text-muted-foreground">{medicine.usage}</p>
                 </CardContent>
               </Card>
@@ -85,7 +85,7 @@ export default function MedicineLibrary() {
             <Card>
               <CardContent className="p-8 text-center">
                 <Pill className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">No medicines found</p>
+                <p className="text-muted-foreground">{t('medicineLibrary.noResults')}</p>
               </CardContent>
             </Card>
           )}
@@ -107,17 +107,17 @@ export default function MedicineLibrary() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Usage</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('medicineDetails.sideEffects')}</h3>
                 <p className="text-sm text-muted-foreground">{selectedMedicine.usage}</p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Dosage</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('medicineDetails.dosage')}</h3>
                 <p className="text-sm text-muted-foreground">{selectedMedicine.dosage}</p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Side Effects</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('medicineDetails.sideEffects')}</h3>
                 <ul className="space-y-1">
                   {selectedMedicine.sideEffects.map((effect, i) => (
                     <li key={i} className="text-sm text-muted-foreground">• {effect}</li>
@@ -126,7 +126,7 @@ export default function MedicineLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Drug Interactions</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('medicineDetails.interactions')}</h3>
                 <ul className="space-y-1">
                   {selectedMedicine.interactions.map((interaction, i) => (
                     <li key={i} className="text-sm text-destructive">⚠️ {interaction}</li>
@@ -135,7 +135,7 @@ export default function MedicineLibrary() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground mb-2">Contraindications</h3>
+                <h3 className="font-semibold text-foreground mb-2">{t('medicineDetails.warnings')}</h3>
                 <ul className="space-y-1">
                   {selectedMedicine.contraindications.map((contra, i) => (
                     <li key={i} className="text-sm text-destructive">⛔ {contra}</li>
@@ -147,7 +147,7 @@ export default function MedicineLibrary() {
                 <CardContent className="p-4 flex gap-3">
                   <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Important Precautions</p>
+                    <p className="font-semibold text-foreground mb-1">{t('medicineDetails.warnings')}</p>
                     <p className="text-sm text-muted-foreground">{selectedMedicine.precautions}</p>
                   </div>
                 </CardContent>
@@ -158,7 +158,7 @@ export default function MedicineLibrary() {
           <Card className="bg-muted/30">
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">
-                ⚕️ <strong>Disclaimer:</strong> This information is for educational purposes only. Always consult a qualified healthcare provider before taking any medication.
+                ⚕️ <strong>{t('diseaseDetails.disclaimer')}:</strong> {t('diseaseDetails.disclaimerText')}
               </p>
             </CardContent>
           </Card>
