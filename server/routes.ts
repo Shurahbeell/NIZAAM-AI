@@ -623,6 +623,217 @@ router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
   }
 });
 
+// Get hospitals and healthcare facilities (no vets or pharmacies)
+router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
+  try {
+    const { lat, lng, limit = "50", filters = "" } = req.query;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "lat and lng query parameters are required" });
+    }
+    
+    // Hospital types to include (exclude vets, pharmacies, pet stores, etc.)
+    const validHospitalTypes = [
+      "hospital",
+      "health",
+      "clinic",
+      "medical",
+      "doctor",
+      "physicians",
+      "urgent care",
+      "emergency",
+      "bhu",
+      "health unit",
+      "nursing home",
+      "diagnostic center",
+      "lab",
+      "medical center"
+    ];
+    
+    // Types to exclude
+    const excludeTypes = [
+      "veterinary",
+      "vet",
+      "animal",
+      "pet",
+      "pharmacy",
+      "drug store",
+      "chemist"
+    ];
+    
+    // Mock hospitals (same as facility search but only hospitals)
+    const mockHospitals = [
+      {
+        id: 1,
+        name: "Jinnah Hospital",
+        lat: 31.4827,
+        lng: 74.3145,
+        type: "Hospital",
+        rating: 4.5,
+        isOpen: true,
+        phone: "+92 42 111 222 333",
+        address: "Ferozepur Road, Lahore",
+        distance: "2.3 km",
+        duration: "8 min"
+      },
+      {
+        id: 2,
+        name: "Services Hospital",
+        lat: 31.5050,
+        lng: 74.3293,
+        type: "Hospital",
+        rating: 4.3,
+        isOpen: true,
+        phone: "+92 42 111 222 444",
+        address: "Jail Road, Lahore",
+        distance: "1.8 km",
+        duration: "6 min"
+      },
+      {
+        id: 3,
+        name: "Model Town BHU",
+        lat: 31.4835,
+        lng: 74.3278,
+        type: "Health Unit",
+        rating: 4.0,
+        isOpen: true,
+        phone: "+92 42 111 222 555",
+        address: "Model Town, Lahore",
+        distance: "2.1 km",
+        duration: "7 min"
+      },
+      {
+        id: 4,
+        name: "Agha Khan Hospital Karachi",
+        lat: 24.8967,
+        lng: 67.0650,
+        type: "Hospital",
+        rating: 4.8,
+        isOpen: true,
+        phone: "+92 21 111 911 911",
+        address: "Stadium Road, Karachi",
+        distance: "3.5 km",
+        duration: "12 min"
+      },
+      {
+        id: 5,
+        name: "PIMS Hospital Islamabad",
+        lat: 33.7093,
+        lng: 73.0722,
+        type: "Hospital",
+        rating: 4.6,
+        isOpen: true,
+        phone: "+92 51 111 222 666",
+        address: "G-8/3, Islamabad",
+        distance: "2.8 km",
+        duration: "9 min"
+      },
+      {
+        id: 6,
+        name: "Civil Hospital Lahore",
+        lat: 31.5245,
+        lng: 74.3215,
+        type: "Hospital",
+        rating: 4.2,
+        isOpen: true,
+        phone: "+92 42 111 222 777",
+        address: "Mall Road, Lahore",
+        distance: "1.5 km",
+        duration: "5 min"
+      },
+      {
+        id: 7,
+        name: "Mayo Hospital",
+        lat: 31.5204,
+        lng: 74.3587,
+        type: "Hospital",
+        rating: 4.4,
+        isOpen: true,
+        phone: "+92 42 111 222 888",
+        address: "Guava Garden, Lahore",
+        distance: "2.0 km",
+        duration: "7 min"
+      },
+      {
+        id: 8,
+        name: "Shaukat Khanum Memorial Hospital",
+        lat: 31.4697,
+        lng: 74.2728,
+        type: "Hospital",
+        rating: 4.9,
+        isOpen: true,
+        phone: "+92 42 111 222 999",
+        address: "DHA Phase 5, Lahore",
+        distance: "3.2 km",
+        duration: "11 min"
+      },
+      {
+        id: 9,
+        name: "Liaquat National Hospital Karachi",
+        lat: 24.8700,
+        lng: 67.0631,
+        type: "Hospital",
+        rating: 4.5,
+        isOpen: true,
+        phone: "+92 21 111 444 555",
+        address: "Tariq Road, Karachi",
+        distance: "2.9 km",
+        duration: "10 min"
+      },
+      {
+        id: 10,
+        name: "Aga Khan University Hospital Karachi",
+        lat: 24.9056,
+        lng: 67.0822,
+        type: "Hospital",
+        rating: 4.7,
+        isOpen: true,
+        phone: "+92 21 111 444 666",
+        address: "Clifton Block 5, Karachi",
+        distance: "3.8 km",
+        duration: "13 min"
+      },
+      {
+        id: 11,
+        name: "Islamabad Healthcare Complex",
+        lat: 33.7077,
+        lng: 73.0469,
+        type: "Hospital",
+        rating: 4.3,
+        isOpen: true,
+        phone: "+92 51 111 555 777",
+        address: "Blue Area, Islamabad",
+        distance: "2.5 km",
+        duration: "8 min"
+      },
+      {
+        id: 12,
+        name: "United Hospital Islamabad",
+        lat: 33.6995,
+        lng: 73.0363,
+        type: "Hospital",
+        rating: 4.6,
+        isOpen: true,
+        phone: "+92 51 111 555 888",
+        address: "F-7 Markaz, Islamabad",
+        distance: "2.2 km",
+        duration: "7 min"
+      }
+    ];
+    
+    // Return results
+    res.json({
+      results: mockHospitals.slice(0, parseInt(limit as string)),
+      meta: {
+        total: mockHospitals.length,
+        returned: Math.min(parseInt(limit as string), mockHospitals.length)
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get doctors for a hospital
 router.get("/api/hospital/:hospitalId/doctors", async (req: Request, res: Response) => {
   try {
