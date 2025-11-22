@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/auth";
+import { useLanguage } from "@/lib/useLanguage";
 import type { Appointment } from "@shared/schema";
 
 export default function Dashboard() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
   const [greeting] = useState(() => {
@@ -50,44 +52,44 @@ export default function Dashboard() {
   // Main Modules - 7 core AI agent features
   const mainModules = [
     {
-      title: "Triage",
-      description: "AI symptom analysis",
+      title: t('dashboard.triage'),
+      description: t('dashboard.triageDesc'),
       icon: Stethoscope,
       path: "/symptom-chat"
     },
     {
-      title: "Women's Health",
-      description: "Maternal & wellness",
+      title: t('dashboard.womensHealthBtn'),
+      description: t('dashboard.womensHealthDesc'),
       icon: Heart,
       path: "/womens-health"
     },
     {
-      title: "Program Eligibility",
-      description: "Government programs",
+      title: t('dashboard.programEligibility'),
+      description: t('dashboard.programEligibilityDesc'),
       icon: Building2,
       path: "/programs-chat"
     },
     {
-      title: "Facility Finder",
-      description: "Find hospitals",
+      title: t('dashboard.facilityFinder'),
+      description: t('dashboard.facilityFinderDesc'),
       icon: MapPin,
       path: "/map"
     },
     {
-      title: "Follow-Up",
-      description: "Appointments & care",
+      title: t('dashboard.followUp'),
+      description: t('dashboard.followUpDesc'),
       icon: Calendar,
       path: "/appointments"
     },
     {
-      title: "Health Analytics",
-      description: "Lab tests & reports",
+      title: t('dashboard.healthAnalytics'),
+      description: t('dashboard.healthAnalyticsDesc'),
       icon: Activity,
       path: "/lab-tests"
     },
     {
-      title: "Knowledge",
-      description: "Health library",
+      title: t('dashboard.knowledge'),
+      description: t('dashboard.knowledgeDesc'),
       icon: BookOpen,
       path: "/medicine-library"
     }
@@ -96,32 +98,32 @@ export default function Dashboard() {
   // Micro Modules - Additional services
   const microModules = [
     {
-      title: "My Files",
-      description: "Medical documents",
+      title: t('dashboard.myFiles'),
+      description: t('dashboard.myFilesDesc'),
       icon: Folder,
       path: "/medical-profile"
     },
     {
-      title: "Medical History",
-      description: "Past records",
+      title: t('dashboard.medicalHistory'),
+      description: t('dashboard.medicalHistoryDesc'),
       icon: ClipboardList,
       path: "/history"
     },
     {
-      title: "Conditions",
-      description: "Disease info",
+      title: t('dashboard.conditions'),
+      description: t('dashboard.conditionsDesc'),
       icon: AlertCircle,
       path: "/disease-library"
     },
     {
-      title: "Medicines",
-      description: "Track & reminders",
+      title: t('dashboard.medicines'),
+      description: t('dashboard.medicinesDesc'),
       icon: Pill,
       path: "/medicines"
     },
     {
-      title: "User Manual",
-      description: "How to use the app",
+      title: t('dashboard.userManual'),
+      description: t('dashboard.userManualDesc'),
       icon: HelpCircle,
       path: "/user-manual"
     }

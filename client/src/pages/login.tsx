@@ -7,8 +7,10 @@ import { useLocation } from "wouter";
 import { Heart, AlertCircle, Activity, Shield } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function Login() {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -80,8 +82,8 @@ export default function Login() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-white drop-shadow-lg">NIZAAM-AI</h1>
-            <p className="text-white/90 text-lg">National Integrated Zonal Assessment, Assistance & Management</p>
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">{t('loginRegister.nizaamAi')}</h1>
+            <p className="text-white/90 text-lg">{t('loginRegister.subtitle')}</p>
           </div>
         </div>
 
@@ -104,7 +106,7 @@ export default function Login() {
                 }`}
                 data-testid="button-login-tab"
               >
-                Login
+                {t('loginRegister.loginTab')}
               </button>
               <button
                 type="button"
@@ -120,7 +122,7 @@ export default function Login() {
                 }`}
                 data-testid="button-register-tab"
               >
-                Register
+                {t('loginRegister.registerTab')}
               </button>
             </div>
 
