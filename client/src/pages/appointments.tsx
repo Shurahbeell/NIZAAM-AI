@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppointmentCard from "@/components/AppointmentCard";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/lib/auth";
 
 const doctorMap: Record<string, string> = {
   "dr-johnson": "Dr. Sarah Johnson",
@@ -81,6 +82,7 @@ const defaultAppointments: Appointment[] = [
 export default function Appointments() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuthStore();
   const [hospital, setHospital] = useState("");
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
@@ -101,6 +103,35 @@ export default function Appointments() {
       }
     },
   });
+
+  // Mutation to book appointment in database
+  const bookAppointmentMutation = useMutation({
+    mutationFn: async (appointmentData: any) => {
+      const res = await apiRequest("POST", "/api/appointments", appointmentData);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: "Appointment booked and sent to hospital"
+      });
+      setHospital("");
+      setDepartment("");
+      setDoctor("");
+      setDate(undefined);
+      setTime("");
+      setActiveTab("view");
+      // Refetch appointments
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments/user", user?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to book appointment",
+        variant: "destructive"
+      });
+    }
+  });
   
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const stored = localStorage.getItem("healthAppointments");
@@ -119,7 +150,7 @@ export default function Appointments() {
   }, [appointments]);
 
   const handleBook = () => {
-    if (!hospital || !department || !doctor || !date || !time) {
+    if (!hospital || !department || !doctor || !date || !time || !user?.id) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields to book an appointment",
@@ -128,40 +159,26 @@ export default function Appointments() {
       return;
     }
 
-    const formattedDate = date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+    // Combine date and time into full appointment date
+    const [hourStr, minuteStr] = time.split(':');
+    const appointmentDateTime = new Date(date);
+    appointmentDateTime.setHours(parseInt(hourStr), parseInt(minuteStr), 0, 0);
 
     const selectedHospital = hospitals.find((h: Hospital) => h.id === hospital);
     const hospitalName = selectedHospital?.name || hospital;
 
-    const newAppointment: Appointment = {
-      id: Date.now().toString(),
+    // POST to backend API
+    bookAppointmentMutation.mutate({
+      patientId: user.id,
       hospitalId: hospital,
-      hospitalName: hospitalName,
-      doctorName: doctorMap[doctor] || doctor,
-      department: departmentMap[department] || department,
-      date: formattedDate,
-      time: timeMap[time] || time,
-      status: "pending"
-    };
-
-    setAppointments([newAppointment, ...appointments]);
-
-    toast({
-      title: "Appointment Booked!",
-      description: `Your appointment with ${newAppointment.doctorName} at ${hospitalName} has been scheduled for ${formattedDate} at ${newAppointment.time}`,
+      doctorId: "demo-doctor", // Placeholder - ideally select from available doctors
+      appointmentDate: appointmentDateTime.toISOString(),
+      status: "pending",
+      patientName: user.fullName || user.username,
+      patientPhone: user.phone || "N/A",
+      symptoms: `${departmentMap[department] || department} consultation`,
+      notes: `Requested with ${doctorMap[doctor] || doctor}`
     });
-
-    setHospital("");
-    setDepartment("");
-    setDoctor("");
-    setDate(undefined);
-    setTime("");
-    
-    setActiveTab("view");
   };
 
   return (
