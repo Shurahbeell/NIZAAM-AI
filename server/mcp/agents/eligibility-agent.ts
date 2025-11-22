@@ -31,10 +31,10 @@ interface EligibilityResult {
 
 const PAKISTAN_HEALTH_PROGRAMS = [
   {
-    name: "Sehat Sahulat Program",
-    description: "Health insurance for families earning less than PKR 50,000/month",
-    benefits: ["Free hospitalization up to PKR 1,000,000/year", "Cashless treatment at empaneled hospitals"],
-    eligibility: ["Family income below PKR 50,000/month", "Pakistani citizen", "CNIC holder"]
+    name: "Sehat Sahulat Program (Sehat Card)",
+    description: "Universal health insurance program for all families and senior citizens (55+ years)",
+    benefits: ["Free hospitalization up to PKR 1,000,000/year", "Cashless treatment at empaneled hospitals", "Coverage for senior citizens", "Emergency care access"],
+    eligibility: ["Family income below PKR 50,000/month OR age 55+ (senior citizens)", "Pakistani citizen", "CNIC holder", "Senior citizens (55+) eligible regardless of income"]
   },
   {
     name: "TB DOTS Program",
@@ -135,7 +135,7 @@ export class EligibilityAgent implements Agent {
       const context = this.extractContext(history, userProfile);
       
       // Check if user is asking about where to use a program (facility location query)
-      const isFacilityQuery = /where|use|visit|go|hospital|clinic|health center|sehat card|program|location|nearest|near me|kaun si jagah|kidhar|kahan par|facility|center|hospital/i.test(processedMessage);
+      const isFacilityQuery = /where|use|visit|go|hospital|clinic|health center|sehat card|program|location|nearest|near me|kaun si jagah|kidhar|kahan par|facility|center|hospital|sehat|treatment|empaneled|available|can i use|apply|enrollment/i.test(processedMessage);
       
       // Get eligibility assessment
       const assessment = await this.assessEligibility(processedMessage, context, "english");
@@ -144,10 +144,17 @@ export class EligibilityAgent implements Agent {
       let response = await this.generateResponse(assessment, "english");
       
       // If asking about facilities, add facility information
+      // Show facilities even if no eligible programs yet (user might be asking about specific program)
       let facilityInfo = "";
       if (isFacilityQuery && userProfile?.address) {
         try {
-          facilityInfo = await this.searchNearbyFacilities(userProfile.address, assessment.eligiblePrograms);
+          // If no eligible programs found yet, provide facilities for common programs based on age/location
+          let programsToShow = assessment.eligiblePrograms;
+          if (programsToShow.length === 0 && userProfile.age && userProfile.age >= 55) {
+            // For seniors asking about Sehat Card, show facilities that accept it
+            programsToShow = [{ name: "Sehat Sahulat Program (Sehat Card)" }];
+          }
+          facilityInfo = await this.searchNearbyFacilities(userProfile.address, programsToShow);
         } catch (error) {
           console.log("[EligibilityAgent] Could not fetch facility info:", error);
         }
