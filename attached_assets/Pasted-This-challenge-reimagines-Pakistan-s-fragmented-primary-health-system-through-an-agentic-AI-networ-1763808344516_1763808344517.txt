@@ -1,0 +1,127 @@
+This challenge reimagines Pakistan’s fragmented primary-health system through an agentic 
+AI network that connects citizens, hospitals, doctors, nursing staff and Lady Health 
+Workers, into one intelligent digital ecosystem.  
+Teams must design a multi-agent healthcare system using LangGraph, CrewAI, OpenAI 
+SDK, or Google AI SDK integrated via a private MCP server to enable agents that reason, 
+plan, and collaborate like real team members and also have memory to enable contextual 
+understanding. The goal is to prove that Pakistan’s next generation “digital health front-line” 
+can operate through intelligent, cooperative AI agents that deliver equitable care anywhere 
+from Karachi’s clinics to Balochistan’s BHUs. 
+Core System Requirements 
+Suggested agents that may be implemented are mentioned below to give teams an idea of 
+expected agentic architecture. It is not mandatory to implement these exact agents. 
+Teams can design their own autonomous workflows and implement relevant agents. 
+At minimum, teams are required to implement 4 agents and demonstrate where the agent 
+makes an intelligent decision. 
+1. 
+Triage Agent (Citizen-Facing): Accepts symptoms via Urdu/English text chat, 
+Reasons about symptom severity using few-shot learning, decides urgency level: 
+Self-care / BHU Visit / Emergency. Plans for next steps based on assessment and 
+coordination with other agents when needed. 
+In Collaboration with   
+2. 
+3. 
+4. 
+5. 
+6. 
+Program Eligibility Agent: Reasons about eligibility for: Medical Card, EPI Vaccines, 
+Health Subsidy, plans information gathering (what data is missing?). Decides which 
+programs citizen qualifies for and generates pre-filled application forms 
+autonomously. Adapts questions based on citizen's answers. 
+Facility Finder Agent: Reasons about facility selection based on: Distance, 
+availability, opening hours, patient reviews. Decides best facility match for user's 
+specific needs or plans alternative routes if first choice unavailable. Coordinates 
+with Triage Agent to match facility capabilities with medical needs. 
+Follow-Up Agent: Plans medication/vaccination schedules autonomously. Decides 
+when to send reminders based on user behavior and adapts reminder frequency if 
+user non-adherent. Coordinates with Triage Agent for re-consultation needs. 
+Reasons for the intervention timing (when to escalate?). 
+Health Analytics Agent: Retrieves verified medical protocols from WHO, Pakistan 
+NIH, or pre-loaded knowledge base, reasons about which information is relevant to 
+current case, decides when to surface information vs. stay silent, cites sources for 
+transparency and coordinates with Triage Agent to provide evidence-based 
+guidance. 
+Knowledge Agent: Autonomously aggregates anonymized case data, detects 
+unusual patterns (e.g., dengue outbreak), decides when to raise alerts to health 
+authorities and plans data collection strategies. 
+Each agent must: 
+• Communicate through the MCP server (traceable inter-agent logs). 
+• Show autonomous decision making (e.g., if medicine is use, auto-notify patients). 
+• Demonstrate degraded mode (offline + cached orders). 
+Technical Requirements 
+Teams must build a multi-agent system using an Agentic AI SDK (LangGraph, CrewAI, 
+OpenAI SDK, Google AI SDK) integrated via a private MCP server. 
+• Implement with one of the Agentic AI SDKs: 
+▪ LangGraph, CrewAI, OpenAI SDK, or Google AI SDK. 
+In Collaboration with   
+• Host a Private MCP Server on Local Machine / Google Cloud using the free credits 
+provided to handle agent orchestration, secure context exchange, and logging. 
+• Show inter-agent reasoning traces including decisions, negotiations, and fallback 
+steps etc. 
+• Include Degraded Mode: Works offline / low bandwidth with cached triage rules and 
+local BHU lists. 
+Free / Open APIs & Tools (Recommended) 
+Category 
+API / Tool 
+Description 
+Mock APIs 
+https://mockapi.io/ 
+Simulate or integrate payment 
+confirmations 
+Messaging Twilio WhatsApp API Free Tier
+ Customer communication 
+Google Sheets API
+ Data 
+Storage 
+Product & order management 
+LLM / NLP 
+Gemini 1.5 via Google AI SDK, Groq 
+API Cloud 
+Text reasoning, generation 
+Translation 
+[Google Translate API Free Tier], 
+[Whisper OpenAI API] 
+Multilingual capability (Urdu, 
+Roman Urdu, English) 
+Deliverables 
+1. Deployed Agentic System: Running on Google Cloud / Firebase with private MCP 
+orchestration. 
+2. Interactive Demo: A citizen message like “Bachay ko bukhar hai, Sehat Card use 
+karna hai, kahan jaun?” triggers triage → eligibility → facility match → reminder. 
+3. Agent Trace Log: JSON or text log showing reasoning and inter-agent messages. 
+4. Product Pitch (≤ 5 min): Demonstrate national-scale viability, integration potential 
+with government portals (NITB / NADRA / Sehat Sahulat). 
+Evaluation Criteria 
+In Collaboration with   
+Criterion 
+Weight 
+Description 
+Agentic Architecture 
+30% 
+True autonomy + multi-agent collaboration via MCP 
+Technical Depth 
+25% 
+LLM use, API integration, offline fallback 
+Impact & Scalability 
+25% 
+Feasibility for Pakistan’s health ecosystem 
+Innovation & UX 
+10% 
+Localized language, ease for health workers 
+Degraded Mode 
+10% 
+Offline / low-bandwidth resilience 
+Confidentiality & Responsible Use Notice 
+The information and technical requirements provided in this document are intended solely 
+for the purpose of the National Agentic AI Hackathon Finale. Participants agree to: 
+• Use the challenge materials only for this competition and not for redistribution or 
+external publication without written consent from the organizers. 
+• Maintain confidentiality of any non-public information, APIs, or cloud resources 
+shared during the event. 
+• Adhere to ethical AI practices, ensuring that no model, dataset, or output violates 
+data privacy, security, or national regulatory frameworks. 
+• Retain ownership of their original code and ideas while granting organizers the right 
+to showcase and reference their work for educational, promotional, or reporting 
+purposes. 
+Violation of these terms may result in disqualification or revocation of access to cloud 
+resources. 
