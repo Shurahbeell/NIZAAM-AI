@@ -317,6 +317,8 @@ export const emergencyCases = pgTable("emergency_cases", {
   assignedToId: varchar("assigned_to_id"),
   status: text("status").notNull().default("new"), // 'new' | 'assigned' | 'ack' | 'in_progress' | 'completed'
   priority: integer("priority").default(1),
+  acknowledgedByHospitalId: varchar("acknowledged_by_hospital_id"), // Hospital ID that acknowledged
+  acknowledgedAt: timestamp("acknowledged_at"), // When hospital acknowledged
   log: jsonb("log").default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

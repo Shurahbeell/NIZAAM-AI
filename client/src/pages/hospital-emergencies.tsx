@@ -1,127 +1,93 @@
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Clock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, AlertTriangle, MapPin, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 
-interface Emergency {
+interface IncomingEmergency {
   id: string;
+  patientId: string;
   patientName: string;
-  patientPhone: string;
-  location: string;
-  emergencyType: string;
-  priority: "critical" | "high" | "medium" | "low";
-  symptoms: string;
-  status: "active" | "responding" | "resolved";
+  originLat: string;
+  originLng: string;
+  status: "assigned" | "ack" | "in_progress" | "completed";
+  priority: number;
   acknowledgedByHospitalId?: string | null;
   acknowledgedAt?: string | null;
   createdAt: string;
+  updatedAt: string;
+}
+
+// For display purposes
+interface Emergency extends IncomingEmergency {
+  emergencyType?: string;
+  symptoms?: string;
 }
 
 export default function HospitalEmergencies() {
   const [, setLocation] = useLocation();
+  const hospitalId = "4cd3d7c3-5e08-4086-89ec-a9610267a2f1"; // TODO: Get from user context
 
-  // Fetch emergencies with polling
-  const { data: emergencies = [], isLoading } = useQuery<Emergency[]>({
-    queryKey: ["/api/emergencies"],
-    refetchInterval: 5000 // Poll every 5 seconds
+  // Fetch incoming emergencies for this hospital with polling
+  const { data: emergencies = [], isLoading } = useQuery<IncomingEmergency[]>({
+    queryKey: ["/api/hospital", hospitalId, "incoming-emergencies"],
+    refetchInterval: 3000 // Poll every 3 seconds
   });
 
-  // Update status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const response = await fetch(`/api/emergencies/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
-      });
-      if (!response.ok) throw new Error("Failed to update status");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });
-    }
-  });
-
-  // Acknowledge emergency notification mutation
+  // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/emergencies/${id}/acknowledge`, {
+      const response = await fetch(`/api/emergency-cases/${id}/acknowledge`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hospitalId: "4cd3d7c3-5e08-4086-89ec-a9610267a2f1" }) // TODO: Get actual hospital ID from user context
+        body: JSON.stringify({ hospitalId })
       });
       if (!response.ok) throw new Error("Failed to acknowledge emergency");
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hospital", hospitalId, "incoming-emergencies"] });
     }
   });
-
-  const updateStatus = (id: string, status: Emergency["status"]) => {
-    updateStatusMutation.mutate({ id, status });
-  };
 
   const acknowledgeEmergency = (id: string) => {
     acknowledgeMutation.mutate(id);
   };
 
-  const getPriorityColor = (priority: Emergency["priority"]) => {
-    switch (priority) {
-      case "critical": return "destructive";
-      case "high": return "default";
-      case "medium": return "outline";
-      case "low": return "secondary";
-    }
+  const getPriorityColor = (priority: number) => {
+    if (priority <= 1) return "destructive";
+    if (priority === 2) return "default";
+    if (priority === 3) return "outline";
+    return "secondary";
   };
 
-  const getPriorityBg = (priority: Emergency["priority"]) => {
-    switch (priority) {
-      case "critical": return "bg-destructive/10 border-destructive";
-      case "high": return "bg-orange-500/10 border-orange-500/20";
-      case "medium": return "bg-yellow-500/10 border-yellow-500/20";
-      case "low": return "bg-blue-500/10 border-blue-500/20";
-    }
+  const getPriorityBg = (priority: number) => {
+    if (priority <= 1) return "bg-destructive/10 border-destructive";
+    if (priority === 2) return "bg-orange-500/10 border-orange-500/20";
+    if (priority === 3) return "bg-yellow-500/10 border-yellow-500/20";
+    return "bg-blue-500/10 border-blue-500/20";
   };
 
-  const getStatusColor = (status: Emergency["status"]) => {
-    switch (status) {
-      case "active": return "destructive";
-      case "responding": return "default";
-      case "resolved": return "secondary";
-    }
-  };
-
-  const filterByPriority = (priority?: Emergency["priority"]) => {
-    if (!priority) return emergencies;
-    return emergencies.filter(e => e.priority === priority);
-  };
-
-  const filterByStatus = (status?: Emergency["status"]) => {
-    if (!status) return emergencies;
-    return emergencies.filter(e => e.status === status);
+  const getPriorityLabel = (priority: number) => {
+    if (priority <= 1) return "CRITICAL";
+    if (priority === 2) return "HIGH";
+    if (priority === 3) return "MEDIUM";
+    return "LOW";
   };
 
   const filterIncoming = () => {
-    return emergencies.filter(e => 
-      e.status === "responding" && !e.acknowledgedByHospitalId
-    );
+    return emergencies.filter(e => !e.acknowledgedByHospitalId);
   };
 
-  const sortedEmergencies = isLoading ? [] : [...emergencies].sort((a, b) => {
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-    if (priorityDiff !== 0) return priorityDiff;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const filterAcknowledged = () => {
+    return emergencies.filter(e => e.acknowledgedByHospitalId);
+  };
 
-  const activeCount = emergencies.filter(e => e.status === "active").length;
-  const criticalCount = emergencies.filter(e => e.priority === "critical" && e.status === "active").length;
+  const incomingCount = filterIncoming().length;
+  const criticalCount = emergencies.filter(e => e.priority <= 1 && !e.acknowledgedByHospitalId).length;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -130,7 +96,7 @@ export default function HospitalEmergencies() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/hospital/dashboard")}
+            onClick={() => setLocation("/hospital-dashboard")}
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -138,10 +104,10 @@ export default function HospitalEmergencies() {
           <div className="flex-1">
             <h1 className="text-xl font-semibold text-foreground">Emergency Tracking</h1>
             <p className="text-xs text-muted-foreground">
-              {activeCount} active • {criticalCount} critical
+              {incomingCount} incoming • {criticalCount} critical
             </p>
           </div>
-          {activeCount > 0 && (
+          {incomingCount > 0 && (
             <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
           )}
         </div>
@@ -163,35 +129,26 @@ export default function HospitalEmergencies() {
         )}
 
         {filterIncoming().length > 0 && (
-          <Card className="mb-4 border-primary bg-primary/10">
+          <Card className="mb-4 border-destructive bg-destructive/10">
             <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-primary flex-shrink-0 animate-pulse" />
+              <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0 animate-pulse" />
               <div>
                 <p className="font-semibold text-foreground">
-                  {filterIncoming().length} Incoming Notification{filterIncoming().length > 1 ? 's' : ''}
+                  {filterIncoming().length} Incoming Emergency{filterIncoming().length > 1 ? 's' : ''}
                 </p>
-                <p className="text-sm text-muted-foreground">Frontliner has responded - acknowledge to dismiss</p>
+                <p className="text-sm text-muted-foreground">Click Acknowledge to dismiss notification</p>
               </div>
             </CardContent>
           </Card>
         )}
 
         <Tabs defaultValue="incoming" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="incoming" data-testid="tab-incoming">
               Incoming ({filterIncoming().length})
             </TabsTrigger>
-            <TabsTrigger value="all" data-testid="tab-all">
-              All ({emergencies.length})
-            </TabsTrigger>
-            <TabsTrigger value="critical" data-testid="tab-critical">
-              Critical ({filterByPriority("critical").length})
-            </TabsTrigger>
-            <TabsTrigger value="high" data-testid="tab-high">
-              High ({filterByPriority("high").length})
-            </TabsTrigger>
-            <TabsTrigger value="active" data-testid="tab-active">
-              Active ({filterByStatus("active").length})
+            <TabsTrigger value="acknowledged" data-testid="tab-acknowledged">
+              Acknowledged ({filterAcknowledged().length})
             </TabsTrigger>
           </TabsList>
 
@@ -205,39 +162,35 @@ export default function HospitalEmergencies() {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      emergency.priority === "critical" ? "bg-destructive/20 animate-pulse" : "bg-primary/10"
+                      emergency.priority <= 1 ? "bg-destructive/20 animate-pulse" : "bg-primary/10"
                     }`}>
                       <AlertTriangle className={`w-5 h-5 ${
-                        emergency.priority === "critical" ? "text-destructive" : "text-primary"
+                        emergency.priority <= 1 ? "text-destructive" : "text-primary"
                       }`} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
+                            <h3 className="font-semibold text-foreground">{emergency.patientName || "Unknown Patient"}</h3>
                             <Badge variant={getPriorityColor(emergency.priority)} className="uppercase text-xs">
-                              {emergency.priority}
+                              {getPriorityLabel(emergency.priority)}
                             </Badge>
                           </div>
                           <Badge variant="default" className="capitalize">
-                            Frontliner Responding
+                            In Progress
                           </Badge>
                         </div>
                       </div>
 
                       <div className="space-y-2 mt-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          {emergency.patientPhone}
+                          <MapPin className="w-4 h-4" />
+                          Lat: {emergency.originLat}, Lng: {emergency.originLng}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          {emergency.location}
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded text-sm">
-                          <p className="font-semibold text-foreground">Symptoms:</p>
-                          <p className="text-muted-foreground">{emergency.symptoms}</p>
+                          <Clock className="w-4 h-4" />
+                          {new Date(emergency.createdAt).toLocaleString()}
                         </div>
                       </div>
 
@@ -260,275 +213,60 @@ export default function HospitalEmergencies() {
               <Card>
                 <CardContent className="p-8 text-center">
                   <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground">No incoming notifications</p>
+                  <p className="text-muted-foreground">No incoming emergencies</p>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
-          <TabsContent value="all" className="space-y-3">
-            {sortedEmergencies.map((emergency) => (
+          <TabsContent value="acknowledged" className="space-y-3">
+            {filterAcknowledged().map((emergency) => (
               <Card
                 key={emergency.id}
                 className={getPriorityBg(emergency.priority)}
-                data-testid={`emergency-card-${emergency.id}`}
+                data-testid={`emergency-card-ack-${emergency.id}`}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      emergency.priority === "critical" ? "bg-destructive/20 animate-pulse" : "bg-primary/10"
-                    }`}>
-                      <AlertTriangle className={`w-5 h-5 ${
-                        emergency.priority === "critical" ? "text-destructive" : "text-primary"
-                      }`} />
+                    <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle className="w-5 h-5 text-secondary" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
+                            <h3 className="font-semibold text-foreground">{emergency.patientName || "Unknown Patient"}</h3>
                             <Badge variant={getPriorityColor(emergency.priority)} className="uppercase text-xs">
-                              {emergency.priority}
+                              {getPriorityLabel(emergency.priority)}
                             </Badge>
                           </div>
-                          <Badge variant={getStatusColor(emergency.status)} className="capitalize">
-                            {emergency.status}
+                          <Badge variant="secondary" className="capitalize">
+                            Acknowledged
                           </Badge>
                         </div>
                       </div>
 
                       <div className="space-y-2 mt-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          {emergency.patientPhone}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="w-4 h-4" />
-                          {emergency.location}
+                          Lat: {emergency.originLat}, Lng: {emergency.originLng}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
-                          {new Date(emergency.createdAt).toLocaleString()}
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded text-sm">
-                          <p className="font-semibold text-foreground">Emergency Type:</p>
-                          <p className="text-muted-foreground capitalize">{emergency.emergencyType.replace("-", " ")}</p>
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded text-sm">
-                          <p className="font-semibold text-foreground">Symptoms:</p>
-                          <p className="text-muted-foreground">{emergency.symptoms}</p>
+                          Acknowledged: {new Date(emergency.acknowledgedAt!).toLocaleString()}
                         </div>
                       </div>
-
-                      {emergency.status === "active" && (
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(emergency.id, "responding")}
-                            data-testid={`button-respond-${emergency.id}`}
-                          >
-                            Respond
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              window.open(`tel:${emergency.patientPhone}`);
-                            }}
-                            data-testid={`button-call-${emergency.id}`}
-                          >
-                            <Phone className="w-4 h-4 mr-1" />
-                            Call
-                          </Button>
-                        </div>
-                      )}
-
-                      {emergency.status === "responding" && (
-                        <Button
-                          size="sm"
-                          className="mt-4"
-                          onClick={() => updateStatus(emergency.id, "resolved")}
-                          data-testid={`button-resolve-${emergency.id}`}
-                        >
-                          Mark as Resolved
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
 
-            {emergencies.length === 0 && (
+            {filterAcknowledged().length === 0 && (
               <Card>
                 <CardContent className="p-8 text-center">
                   <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground">No emergencies reported</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="critical" className="space-y-3">
-            {filterByPriority("critical").map((emergency) => (
-              <Card
-                key={emergency.id}
-                className={getPriorityBg(emergency.priority)}
-                data-testid={`emergency-card-${emergency.id}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0 animate-pulse">
-                      <AlertTriangle className="w-5 h-5 text-destructive" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
-                            <Badge variant="destructive" className="uppercase text-xs">CRITICAL</Badge>
-                          </div>
-                          <Badge variant={getStatusColor(emergency.status)} className="capitalize">
-                            {emergency.status}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 mt-3">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          {emergency.patientPhone}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          {emergency.location}
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded text-sm">
-                          <p className="font-semibold text-foreground">Symptoms:</p>
-                          <p className="text-muted-foreground">{emergency.symptoms}</p>
-                        </div>
-                      </div>
-
-                      {emergency.status === "active" && (
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(emergency.id, "responding")}
-                            data-testid={`button-respond-${emergency.id}`}
-                          >
-                            Respond Now
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`tel:${emergency.patientPhone}`)}
-                            data-testid={`button-call-${emergency.id}`}
-                          >
-                            <Phone className="w-4 h-4 mr-1" />
-                            Call
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filterByPriority("critical").length === 0 && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No critical emergencies</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="high" className="space-y-3">
-            {filterByPriority("high").map((emergency) => (
-              <Card
-                key={emergency.id}
-                className={getPriorityBg(emergency.priority)}
-                data-testid={`emergency-card-${emergency.id}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <AlertTriangle className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
-                        <Badge variant="default" className="uppercase text-xs">HIGH</Badge>
-                        <Badge variant={getStatusColor(emergency.status)} className="capitalize">
-                          {emergency.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{emergency.symptoms}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filterByPriority("high").length === 0 && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No high priority emergencies</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="active" className="space-y-3">
-            {filterByStatus("active").map((emergency) => (
-              <Card
-                key={emergency.id}
-                className={getPriorityBg(emergency.priority)}
-                data-testid={`emergency-card-${emergency.id}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      emergency.priority === "critical" ? "bg-destructive/20 animate-pulse" : "bg-primary/10"
-                    }`}>
-                      <AlertTriangle className={`w-5 h-5 ${
-                        emergency.priority === "critical" ? "text-destructive" : "text-primary"
-                      }`} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
-                        <Badge variant={getPriorityColor(emergency.priority)} className="uppercase text-xs">
-                          {emergency.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">{emergency.symptoms}</p>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatus(emergency.id, "responding")}
-                          data-testid={`button-respond-${emergency.id}`}
-                        >
-                          Respond
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(`tel:${emergency.patientPhone}`)}
-                          data-testid={`button-call-${emergency.id}`}
-                        >
-                          <Phone className="w-4 h-4 mr-1" />
-                          Call
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filterByStatus("active").length === 0 && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No active emergencies</p>
+                  <p className="text-muted-foreground">No acknowledged emergencies</p>
                 </CardContent>
               </Card>
             )}

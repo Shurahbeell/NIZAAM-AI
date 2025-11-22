@@ -157,6 +157,7 @@ export interface IStorage {
   updateEmergencyCaseStatus(id: string, status: string, log?: any): Promise<EmergencyCase | undefined>;
   getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]>;
   getIncomingEmergencies(hospitalId: string): Promise<any[]>;
+  acknowledgeEmergencyCase(id: string, hospitalId: string): Promise<EmergencyCase | undefined>;
   getAllEmergencyCases(): Promise<EmergencyCase[]>;
 
   // Medical History methods
@@ -800,6 +801,8 @@ export class DrizzleStorage implements IStorage {
         originLng: emergencyCases.originLng,
         status: emergencyCases.status,
         priority: emergencyCases.priority,
+        acknowledgedByHospitalId: emergencyCases.acknowledgedByHospitalId,
+        acknowledgedAt: emergencyCases.acknowledgedAt,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
       })
@@ -814,6 +817,18 @@ export class DrizzleStorage implements IStorage {
       )
       .orderBy(desc(emergencyCases.createdAt));
     return results;
+  }
+
+  async acknowledgeEmergencyCase(id: string, hospitalId: string): Promise<EmergencyCase | undefined> {
+    const result = await db
+      .update(emergencyCases)
+      .set({
+        acknowledgedByHospitalId: hospitalId,
+        acknowledgedAt: new Date()
+      })
+      .where(eq(emergencyCases.id, id))
+      .returning();
+    return result[0];
   }
 
   // ==================== MEDICAL HISTORY METHODS ====================

@@ -596,6 +596,20 @@ router.get("/api/hospital/:hospitalId/incoming-emergencies", async (req: Request
   }
 });
 
+// Acknowledge incoming emergency case (hospital staff)
+router.patch("/api/emergency-cases/:id/acknowledge", async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.body;
+    if (!hospitalId) {
+      return res.status(400).json({ error: "hospitalId is required" });
+    }
+    const emergencyCase = await storage.acknowledgeEmergencyCase(req.params.id, hospitalId);
+    res.json(emergencyCase);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
   try {
     const { lat, lng, limit = "10" } = req.query;
