@@ -36,8 +36,8 @@ export default function AppointmentCard({ doctorName, department, date, time, st
     }
   };
 
-  const config = statusConfig[status];
-  const StatusIcon = config.icon;
+  const config = statusConfig[status] || statusConfig.pending;
+  const StatusIcon = config?.icon || AlertCircle;
 
   return (
     <Card
