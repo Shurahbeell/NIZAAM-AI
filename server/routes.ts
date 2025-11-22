@@ -623,53 +623,119 @@ router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
   }
 });
 
-// Get hospitals and healthcare facilities (no vets or pharmacies)
+// Get hospitals and healthcare facilities (live data from OpenStreetMap via Overpass API)
 router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
   try {
-    const { lat, lng, limit = "50", filters = "" } = req.query;
+    const { lat, lng, limit = "50" } = req.query;
     
     if (!lat || !lng) {
       return res.status(400).json({ error: "lat and lng query parameters are required" });
     }
     
-    // Hospital types to include (exclude vets, pharmacies, pet stores, etc.)
-    const validHospitalTypes = [
-      "hospital",
-      "health",
-      "clinic",
-      "medical",
-      "doctor",
-      "physicians",
-      "urgent care",
-      "emergency",
-      "bhu",
-      "health unit",
-      "nursing home",
-      "diagnostic center",
-      "lab",
-      "medical center"
-    ];
+    const latitude = parseFloat(lat as string);
+    const longitude = parseFloat(lng as string);
     
-    // Types to exclude
-    const excludeTypes = [
-      "veterinary",
-      "vet",
-      "animal",
-      "pet",
-      "pharmacy",
-      "drug store",
-      "chemist"
-    ];
+    // Define search radius in degrees (~5 km radius)
+    const radius = 0.05;
+    const south = latitude - radius;
+    const north = latitude + radius;
+    const west = longitude - radius;
+    const east = longitude + radius;
     
-    // Mock hospitals (same as facility search but only hospitals)
-    const mockHospitals = [
+    // Query OpenStreetMap via Overpass API for hospitals and healthcare facilities
+    // Excludes veterinary clinics, pharmacies, dentists, and other non-hospital facilities
+    const overpassQuery = `[bbox:${south},${west},${north},${east}];
+(
+  node["amenity"="hospital"];
+  node["amenity"="clinic"]
+  node["amenity"="doctors"];
+  node["healthcare"="hospital"];
+  node["healthcare"="clinic"];
+  node["healthcare"="urgent_care"];
+  way["amenity"="hospital"];
+  way["amenity"="clinic"];
+  way["healthcare"="hospital"];
+  way["healthcare"="clinic"];
+  way["healthcare"="urgent_care"];
+  relation["amenity"="hospital"];
+  relation["healthcare"="hospital"];
+);
+out center;`;
+    
+    // Fetch from Overpass API
+    const overpassUrl = "https://overpass-api.de/api/interpreter";
+    const response = await fetch(overpassUrl, {
+      method: "POST",
+      body: overpassQuery,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+    
+    if (!response.ok) {
+      console.error("[Overpass API] Error:", response.status);
+      // Fallback to cached hospitals if API fails
+      throw new Error("Overpass API error, using fallback");
+    }
+    
+    const data = await response.json();
+    
+    // Transform Overpass API response to our format
+    const hospitals = data.elements
+      ?.filter((element: any) => {
+        // Exclude vets, pharmacies, and other non-hospital facilities
+        const amenity = element.tags?.amenity || "";
+        const healthcare = element.tags?.healthcare || "";
+        const name = element.tags?.name || "";
+        
+        // Exclude list
+        const excludedKeywords = ["veterinary", "vet", "pharmacy", "chemist", "dentist", "dental", "pet"];
+        const hasExcludedKeyword = excludedKeywords.some(keyword => 
+          name.toLowerCase().includes(keyword) || 
+          amenity.toLowerCase().includes(keyword)
+        );
+        
+        return !hasExcludedKeyword;
+      })
+      ?.map((element: any, index: number) => {
+        // Get lat/long from center or node
+        const elemLat = element.center?.lat || element.lat;
+        const elemLng = element.center?.lon || element.lon;
+        
+        return {
+          id: index + 1,
+          name: element.tags?.name || "Unknown Facility",
+          lat: elemLat,
+          lng: elemLng,
+          type: element.tags?.healthcare || element.tags?.amenity || "Healthcare Facility",
+          isOpen: true,
+          phone: element.tags?.phone || "",
+          address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || "",
+          website: element.tags?.website || "",
+          distance: "Calculating...",
+          duration: "--"
+        };
+      })
+      ?.slice(0, parseInt(limit as string)) || [];
+    
+    // Return results
+    res.json({
+      results: hospitals,
+      meta: {
+        total: hospitals.length,
+        returned: hospitals.length,
+        source: "OpenStreetMap (Live Data)"
+      }
+    });
+  } catch (error: any) {
+    console.error("[Hospital Search] Error:", error.message);
+    
+    // Fallback to mock hospitals if live data fails
+    const fallbackHospitals = [
       {
         id: 1,
         name: "Jinnah Hospital",
         lat: 31.4827,
         lng: 74.3145,
-        type: "Hospital",
-        rating: 4.5,
+        type: "hospital",
         isOpen: true,
         phone: "+92 42 111 222 333",
         address: "Ferozepur Road, Lahore",
@@ -681,8 +747,7 @@ router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
         name: "Services Hospital",
         lat: 31.5050,
         lng: 74.3293,
-        type: "Hospital",
-        rating: 4.3,
+        type: "hospital",
         isOpen: true,
         phone: "+92 42 111 222 444",
         address: "Jail Road, Lahore",
@@ -691,63 +756,10 @@ router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
       },
       {
         id: 3,
-        name: "Model Town BHU",
-        lat: 31.4835,
-        lng: 74.3278,
-        type: "Health Unit",
-        rating: 4.0,
-        isOpen: true,
-        phone: "+92 42 111 222 555",
-        address: "Model Town, Lahore",
-        distance: "2.1 km",
-        duration: "7 min"
-      },
-      {
-        id: 4,
-        name: "Agha Khan Hospital Karachi",
-        lat: 24.8967,
-        lng: 67.0650,
-        type: "Hospital",
-        rating: 4.8,
-        isOpen: true,
-        phone: "+92 21 111 911 911",
-        address: "Stadium Road, Karachi",
-        distance: "3.5 km",
-        duration: "12 min"
-      },
-      {
-        id: 5,
-        name: "PIMS Hospital Islamabad",
-        lat: 33.7093,
-        lng: 73.0722,
-        type: "Hospital",
-        rating: 4.6,
-        isOpen: true,
-        phone: "+92 51 111 222 666",
-        address: "G-8/3, Islamabad",
-        distance: "2.8 km",
-        duration: "9 min"
-      },
-      {
-        id: 6,
-        name: "Civil Hospital Lahore",
-        lat: 31.5245,
-        lng: 74.3215,
-        type: "Hospital",
-        rating: 4.2,
-        isOpen: true,
-        phone: "+92 42 111 222 777",
-        address: "Mall Road, Lahore",
-        distance: "1.5 km",
-        duration: "5 min"
-      },
-      {
-        id: 7,
         name: "Mayo Hospital",
         lat: 31.5204,
         lng: 74.3587,
-        type: "Hospital",
-        rating: 4.4,
+        type: "hospital",
         isOpen: true,
         phone: "+92 42 111 222 888",
         address: "Guava Garden, Lahore",
@@ -755,82 +767,40 @@ router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
         duration: "7 min"
       },
       {
-        id: 8,
-        name: "Shaukat Khanum Memorial Hospital",
-        lat: 31.4697,
-        lng: 74.2728,
-        type: "Hospital",
-        rating: 4.9,
+        id: 4,
+        name: "Civil Hospital Lahore",
+        lat: 31.5245,
+        lng: 74.3215,
+        type: "hospital",
         isOpen: true,
-        phone: "+92 42 111 222 999",
-        address: "DHA Phase 5, Lahore",
-        distance: "3.2 km",
-        duration: "11 min"
+        phone: "+92 42 111 222 777",
+        address: "Mall Road, Lahore",
+        distance: "1.5 km",
+        duration: "5 min"
       },
       {
-        id: 9,
-        name: "Liaquat National Hospital Karachi",
-        lat: 24.8700,
-        lng: 67.0631,
-        type: "Hospital",
-        rating: 4.5,
+        id: 5,
+        name: "Agha Khan Hospital Karachi",
+        lat: 24.8967,
+        lng: 67.0650,
+        type: "hospital",
         isOpen: true,
-        phone: "+92 21 111 444 555",
-        address: "Tariq Road, Karachi",
-        distance: "2.9 km",
-        duration: "10 min"
-      },
-      {
-        id: 10,
-        name: "Aga Khan University Hospital Karachi",
-        lat: 24.9056,
-        lng: 67.0822,
-        type: "Hospital",
-        rating: 4.7,
-        isOpen: true,
-        phone: "+92 21 111 444 666",
-        address: "Clifton Block 5, Karachi",
-        distance: "3.8 km",
-        duration: "13 min"
-      },
-      {
-        id: 11,
-        name: "Islamabad Healthcare Complex",
-        lat: 33.7077,
-        lng: 73.0469,
-        type: "Hospital",
-        rating: 4.3,
-        isOpen: true,
-        phone: "+92 51 111 555 777",
-        address: "Blue Area, Islamabad",
-        distance: "2.5 km",
-        duration: "8 min"
-      },
-      {
-        id: 12,
-        name: "United Hospital Islamabad",
-        lat: 33.6995,
-        lng: 73.0363,
-        type: "Hospital",
-        rating: 4.6,
-        isOpen: true,
-        phone: "+92 51 111 555 888",
-        address: "F-7 Markaz, Islamabad",
-        distance: "2.2 km",
-        duration: "7 min"
+        phone: "+92 21 111 911 911",
+        address: "Stadium Road, Karachi",
+        distance: "3.5 km",
+        duration: "12 min"
       }
     ];
     
-    // Return results
     res.json({
-      results: mockHospitals.slice(0, parseInt(limit as string)),
+      results: fallbackHospitals,
       meta: {
-        total: mockHospitals.length,
-        returned: Math.min(parseInt(limit as string), mockHospitals.length)
+        total: fallbackHospitals.length,
+        returned: fallbackHospitals.length,
+        source: "Fallback (OpenStreetMap API unavailable)",
+        error: "Live data fetch failed, showing cached hospitals"
       }
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
   }
 });
 
