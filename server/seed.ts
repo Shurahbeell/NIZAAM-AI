@@ -59,20 +59,58 @@ async function seed() {
 
     // 3. Create Doctors
     console.log("👨‍⚕️ Creating doctors...");
-    const doctor1 = await db
+    await db
       .insert(doctors)
-      .values({
-        hospitalId: hospital[0].id,
-        name: "Dr. Sarah Johnson",
-        specialization: "General Medicine",
-        qualification: "MBBS, MD",
-        consultationFee: 1500,
-        availability: '{"Monday":"09:00-17:00","Tuesday":"09:00-17:00","Wednesday":"09:00-17:00","Thursday":"09:00-17:00","Friday":"09:00-17:00"}',
-        isAvailable: true,
-      })
+      .values([
+        {
+          hospitalId: hospital[0].id,
+          name: "Dr. Sarah Johnson",
+          specialization: "General Medicine",
+          qualification: "MBBS, MD",
+          consultationFee: 1500,
+          availability: '{"Monday":"09:00-17:00","Tuesday":"09:00-17:00","Wednesday":"09:00-17:00","Thursday":"09:00-17:00","Friday":"09:00-17:00"}',
+          isAvailable: true,
+        },
+        {
+          hospitalId: hospital[0].id,
+          name: "Dr. Michael Chen",
+          specialization: "Cardiology",
+          qualification: "MBBS, MD (Cardiology)",
+          consultationFee: 2500,
+          availability: '{"Monday":"10:00-16:00","Tuesday":"10:00-16:00","Wednesday":"10:00-16:00","Thursday":"10:00-16:00","Friday":"10:00-16:00"}',
+          isAvailable: true,
+        },
+        {
+          hospitalId: hospital[0].id,
+          name: "Dr. Priya Patel",
+          specialization: "Orthopedics",
+          qualification: "MBBS, MS (Orthopedics)",
+          consultationFee: 2000,
+          availability: '{"Monday":"08:00-15:00","Tuesday":"08:00-15:00","Wednesday":"08:00-15:00","Thursday":"08:00-15:00","Friday":"08:00-15:00"}',
+          isAvailable: true,
+        },
+        {
+          hospitalId: hospital[0].id,
+          name: "Dr. Fatima Khan",
+          specialization: "Pediatrics",
+          qualification: "MBBS, DCH (Pediatrics)",
+          consultationFee: 1800,
+          availability: '{"Monday":"09:00-17:00","Tuesday":"09:00-17:00","Wednesday":"09:00-17:00","Thursday":"09:00-17:00","Friday":"09:00-17:00"}',
+          isAvailable: true,
+        },
+        {
+          hospitalId: hospital[0].id,
+          name: "Dr. Ahmad Malik",
+          specialization: "Dermatology",
+          qualification: "MBBS, MD (Dermatology)",
+          consultationFee: 1600,
+          availability: '{"Monday":"11:00-18:00","Tuesday":"11:00-18:00","Wednesday":"11:00-18:00","Thursday":"11:00-18:00","Friday":"11:00-18:00"}',
+          isAvailable: true,
+        },
+      ])
       .returning();
 
-    console.log("✅ Doctors created");
+    console.log("✅ 5 Doctors created");
 
     // 4. Create Patient User (Diabetic)
     console.log("👤 Creating patient user...");
