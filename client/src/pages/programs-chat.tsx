@@ -9,11 +9,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/useLanguage";
+import { useAuthStore } from "@/lib/auth";
 import type { AgentSession, AgentMessage } from "@shared/schema";
 
 export default function ProgramsChat() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuthStore();
   const [message, setMessage] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const { language: globalLanguage } = useLanguage();
@@ -21,12 +23,12 @@ export default function ProgramsChat() {
 
   // Create agent session on mount
   useEffect(() => {
-    if (sessionId) return;
+    if (sessionId || !user) return;
     
     const initSession = async () => {
       try {
         const response = await apiRequest("POST", "/api/agent/sessions", {
-          userId: "demo-user",
+          userId: user.id,
           agent: "eligibility",
           language: globalLanguage
         });
@@ -41,7 +43,7 @@ export default function ProgramsChat() {
       }
     };
     initSession();
-  }, [sessionId, toast, globalLanguage]);
+  }, [sessionId, toast, globalLanguage, user]);
 
   // Fetch conversation history
   const { data: messages = [], isLoading } = useQuery<AgentMessage[]>({

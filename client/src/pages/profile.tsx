@@ -49,11 +49,13 @@ export default function Profile() {
     mutationFn: async (data: any) => {
       if (!user) throw new Error("No user logged in");
       const response = await apiRequest("PATCH", `/api/auth/users/${user.id}`, data);
-      return response as any as typeof user;
+      const updatedUserData = await response.json();
+      return updatedUserData;
     },
     onSuccess: (updatedUser) => {
+      console.log("[Profile] Update successful, received user:", updatedUser);
       // Update auth store with server response (authoritative data)
-      if (token) {
+      if (token && updatedUser) {
         setAuth(token, updatedUser);
       }
       toast({
