@@ -236,6 +236,48 @@ export async function findNearbyFacilities(
       }
     }
     
+    // ========== CRITICAL FILTER AFTER ALL RESULTS COLLECTED ==========
+    // Remove veterinary clinics, pharmacies, and non-hospital facilities
+    const blockedKeywords = [
+      "pet", "vet", "veterinary", "animal", "pharmacy", "chemist", 
+      "drug store", "dentist", "dental", "salon", "beauty", "barber",
+      "acupuncture", "massage", "spa", "wellness", "clinic privé",
+      "physiotherapy", "podiatry", "optician", "vision", "herbal",
+      "store", "shop", "medical store", "medicine", "homeopathic",
+      "ayurveda", "unani", "traditional", "dawaakhana"
+    ];
+    
+    console.log(`[Filter] Starting filter on ${allResults.length} total results...`);
+    allResults = allResults.filter(place => {
+      const nameLC = place.name.toLowerCase();
+      const addressLC = (place.vicinity || place.formatted_address || '').toLowerCase();
+      
+      // If name OR address contains ANY blocked keyword, reject it
+      for (const keyword of blockedKeywords) {
+        if (nameLC.includes(keyword) || addressLC.includes(keyword)) {
+          console.log(`[Filter] REJECTING "${place.name}" - keyword: "${keyword}"`);
+          return false;
+        }
+      }
+      
+      // WHITELIST APPROACH: Only accept if clearly a hospital
+      const hasHospitalType = place.types?.includes('hospital');
+      const hasHospitalName = nameLC.includes('hospital') || nameLC.includes('infirmary');
+      const nameHasDoctor = nameLC.includes('dr.') || nameLC.includes('doctor');
+      
+      // Accept ONLY if it has hospital type AND hospital-related name
+      // OR clearly named as a hospital
+      if (hasHospitalType && (hasHospitalName || nameLC.includes('medical') || nameLC.includes('center'))) {
+        return true;
+      }
+      
+      // Reject everything else - too risky to include clinics, centers, etc.
+      console.log(`[Filter] REJECTING "${place.name}" - not clearly a hospital`);
+      return false;
+    });
+    
+    console.log(`[Filter COMPLETE] ${allResults.length} results remain after filtering`);
+    
     const mapped: FacilityResult[] = allResults.slice(0, limit).map(place => ({
       name: place.name,
       address: place.vicinity || place.formatted_address || '',

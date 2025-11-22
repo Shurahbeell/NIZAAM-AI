@@ -623,7 +623,7 @@ router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
   }
 });
 
-// Get hospitals and healthcare facilities (live data from OpenStreetMap via Overpass API)
+// Get hospitals and healthcare facilities (with aggressive vet/pharmacy filtering)
 router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
   try {
     const { lat, lng, limit = "50" } = req.query;
@@ -634,115 +634,17 @@ router.get("/api/facilities/hospitals", async (req: Request, res: Response) => {
     
     const latitude = parseFloat(lat as string);
     const longitude = parseFloat(lng as string);
+    const limitNum = parseInt(limit as string) || 50;
     
-    // Define search radius in degrees (~5 km radius)
-    const radius = 0.05;
-    const south = latitude - radius;
-    const north = latitude + radius;
-    const west = longitude - radius;
-    const east = longitude + radius;
+    // Import facility finder agent with aggressive filtering
+    const { findNearbyFacilities } = await import("./mcp/agents/facility-finder-agent");
     
-    // Query OpenStreetMap via Overpass API for hospitals and healthcare facilities ONLY
-    // Strict whitelist: only hospitals, emergency, and urgent care centers
-    // Excludes veterinary, pharmacies, dentists, and pet clinics
-    const overpassQuery = `[bbox:${south},${west},${north},${east}];
-(
-  node["amenity"="hospital"];
-  node["amenity"="emergency"];
-  node["healthcare"="hospital"];
-  node["healthcare"="emergency"];
-  node["healthcare"="urgent_care"];
-  way["amenity"="hospital"];
-  way["amenity"="emergency"];
-  way["healthcare"="hospital"];
-  way["healthcare"="emergency"];
-  way["healthcare"="urgent_care"];
-  relation["amenity"="hospital"];
-  relation["healthcare"="hospital"];
-);
-out center;`;
+    // Call agent with filtering
+    const result = await findNearbyFacilities(latitude, longitude, { limit: limitNum });
     
-    // Fetch from Overpass API
-    const overpassUrl = "https://overpass-api.de/api/interpreter";
-    const response = await fetch(overpassUrl, {
-      method: "POST",
-      body: overpassQuery,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
-    });
-    
-    if (!response.ok) {
-      console.error("[Overpass API] Error:", response.status);
-      // Fallback to cached hospitals if API fails
-      throw new Error("Overpass API error, using fallback");
-    }
-    
-    const data = await response.json();
-    
-    // Transform Overpass API response to our format
-    const hospitals = data.elements
-      ?.filter((element: any) => {
-        // Strict filtering - only accept actual hospitals
-        const amenity = element.tags?.amenity || "";
-        const healthcare = element.tags?.healthcare || "";
-        const name = element.tags?.name || "";
-        const nameLC = name.toLowerCase();
-        
-        // AGGRESSIVE EXCLUDE LIST - remove anything suspicious
-        const blockedKeywords = [
-          "pet", "vet", "veterinary", "animal", "pharmacy", "chemist", 
-          "drug store", "dentist", "dental", "salon", "beauty", "barber",
-          "clinic privé", "acupuncture", "massage", "spa", "wellness",
-          "physiotherapy", "podiatry", "optician", "vision"
-        ];
-        
-        // If name contains ANY blocked keyword, reject it
-        if (blockedKeywords.some(keyword => nameLC.includes(keyword))) {
-          return false;
-        }
-        
-        // WHITELIST APPROACH - only accept if it's clearly a hospital
-        const isHospital = 
-          amenity === "hospital" || 
-          healthcare === "hospital" || 
-          healthcare === "emergency" ||
-          amenity === "emergency" ||
-          nameLC.includes("hospital") ||
-          nameLC.includes("infirmary") ||
-          nameLC.includes("medical center") ||
-          nameLC.includes("healthcare") ||
-          (healthcare === "urgent_care" && !nameLC.includes("walk-in"));
-        
-        return isHospital;
-      })
-      ?.map((element: any, index: number) => {
-        // Get lat/long from center or node
-        const elemLat = element.center?.lat || element.lat;
-        const elemLng = element.center?.lon || element.lon;
-        
-        return {
-          id: index + 1,
-          name: element.tags?.name || "Unknown Facility",
-          lat: elemLat,
-          lng: elemLng,
-          type: element.tags?.healthcare || element.tags?.amenity || "Healthcare Facility",
-          isOpen: true,
-          phone: element.tags?.phone || "",
-          address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || "",
-          website: element.tags?.website || "",
-          distance: "Calculating...",
-          duration: "--"
-        };
-      })
-      ?.slice(0, parseInt(limit as string)) || [];
-    
-    // Return results
     res.json({
-      results: hospitals,
-      meta: {
-        total: hospitals.length,
-        returned: hospitals.length,
-        source: "OpenStreetMap (Live Data)"
-      }
+      results: result.results,
+      meta: result.meta
     });
   } catch (error: any) {
     console.error("[Hospital Search] Error:", error.message);
@@ -750,73 +652,40 @@ out center;`;
     // Fallback to mock hospitals if live data fails
     const fallbackHospitals = [
       {
-        id: 1,
         name: "Jinnah Hospital",
         lat: 31.4827,
         lng: 74.3145,
-        type: "hospital",
-        isOpen: true,
-        phone: "+92 42 111 222 333",
         address: "Ferozepur Road, Lahore",
-        distance: "2.3 km",
-        duration: "8 min"
+        rating: 4.2,
+        place_id: "mock_jinnah",
+        distance: { text: "2.3 km", value: 2300 }
       },
       {
-        id: 2,
         name: "Services Hospital",
         lat: 31.5050,
         lng: 74.3293,
-        type: "hospital",
-        isOpen: true,
-        phone: "+92 42 111 222 444",
         address: "Jail Road, Lahore",
-        distance: "1.8 km",
-        duration: "6 min"
+        rating: 4.0,
+        place_id: "mock_services",
+        distance: { text: "1.8 km", value: 1800 }
       },
       {
-        id: 3,
         name: "Mayo Hospital",
         lat: 31.5204,
         lng: 74.3587,
-        type: "hospital",
-        isOpen: true,
-        phone: "+92 42 111 222 888",
         address: "Guava Garden, Lahore",
-        distance: "2.0 km",
-        duration: "7 min"
-      },
-      {
-        id: 4,
-        name: "Civil Hospital Lahore",
-        lat: 31.5245,
-        lng: 74.3215,
-        type: "hospital",
-        isOpen: true,
-        phone: "+92 42 111 222 777",
-        address: "Mall Road, Lahore",
-        distance: "1.5 km",
-        duration: "5 min"
-      },
-      {
-        id: 5,
-        name: "Agha Khan Hospital Karachi",
-        lat: 24.8967,
-        lng: 67.0650,
-        type: "hospital",
-        isOpen: true,
-        phone: "+92 21 111 911 911",
-        address: "Stadium Road, Karachi",
-        distance: "3.5 km",
-        duration: "12 min"
+        rating: 4.1,
+        place_id: "mock_mayo",
+        distance: { text: "2.0 km", value: 2000 }
       }
     ];
     
     res.json({
       results: fallbackHospitals,
       meta: {
-        total: fallbackHospitals.length,
-        returned: fallbackHospitals.length,
-        source: "Fallback (OpenStreetMap API unavailable)",
+        cached: true,
+        source: "google",
+        fetched_at: Date.now(),
         error: "Live data fetch failed, showing cached hospitals"
       }
     });
