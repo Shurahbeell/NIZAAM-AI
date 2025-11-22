@@ -120,10 +120,19 @@ export class EligibilityAgent implements Agent {
         processedMessage = await translationService.translate(message, "en", "Program eligibility");
       }
       
+      // Get session to retrieve user ID
+      const session = await storage.getAgentSession(sessionId);
+      if (!session) {
+        throw new Error("Session not found");
+      }
+      
       const history = await storage.getSessionMessages(sessionId);
       
-      // Extract context from conversation
-      const context = this.extractContext(history);
+      // Fetch user's actual profile from database
+      const userProfile = await storage.getUser(session.userId);
+      
+      // Extract context from conversation AND user profile
+      const context = this.extractContext(history, userProfile);
       
       // Get eligibility assessment
       const assessment = await this.assessEligibility(processedMessage, context, "en");
@@ -163,7 +172,7 @@ export class EligibilityAgent implements Agent {
     }
   }
 
-  private extractContext(history: any[]): EligibilityContext {
+  private extractContext(history: any[], userProfile?: any): EligibilityContext {
     const context: EligibilityContext = {
       programs: PAKISTAN_HEALTH_PROGRAMS.map(p => p.name),
       userProfile: {},
@@ -173,10 +182,18 @@ export class EligibilityAgent implements Agent {
       }))
     };
 
-    // Extract profile information from conversation
+    // Use user's actual profile from database first
+    if (userProfile) {
+      if (userProfile.age) context.userProfile.age = userProfile.age;
+      if (userProfile.address) context.userProfile.location = userProfile.address;
+      // Determine gender from name or explicit field if available
+      if (userProfile.bloodGroup) context.userProfile.conditions = [userProfile.bloodGroup];
+    }
+
+    // Extract additional profile information from conversation (for dynamic updates)
     const fullText = history.map(m => m.content).join(" ");
     
-    // Age extraction
+    // Age extraction from conversation (overrides if explicitly mentioned)
     const ageMatch = fullText.match(/(\d+)\s*(years?|saal|sal)/i);
     if (ageMatch) context.userProfile.age = parseInt(ageMatch[1]);
     
@@ -205,42 +222,45 @@ export class EligibilityAgent implements Agent {
       `${p.name}: ${p.description}\nBenefits: ${p.benefits.join(", ")}\nEligibility: ${p.eligibility.join(", ")}`
     ).join("\n\n");
 
-    const prompt = `You are an AI assistant helping users determine eligibility for Pakistan's health programs.
+    // Format user profile for the prompt
+    const profileInfo = Object.entries(context.userProfile)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+
+    const prompt = `You are a health program eligibility expert for Pakistan. Respond ONLY with valid JSON.
+
+USER PROFILE:
+${profileInfo || "No profile information provided"}
 
 Available Programs:
 ${programsInfo}
-
-User Profile (extracted from conversation):
-Age: ${context.userProfile.age || "unknown"}
-Gender: ${context.userProfile.gender || "unknown"}
-Income: ${context.userProfile.income || "unknown"}
-Location: ${context.userProfile.location || "unknown"}
 
 Conversation History:
 ${context.conversationHistory.map(m => `${m.role}: ${m.content}`).join("\n")}
 
 Latest User Message: ${userMessage}
 
-Task: Analyze eligibility for all programs and provide:
-1. List of potentially eligible programs with scores (0.0-1.0)
+Task: Based on the user's profile and message, analyze eligibility for all Pakistan health programs. Provide:
+1. List of programs they are eligible for with confidence scores (0.0-1.0)
 2. Missing information needed to confirm eligibility
-3. Recommended follow-up questions to gather missing info
-4. Clear reasoning for assessments
+3. Benefits for each eligible program
+4. Next steps to apply
+5. Clear reasoning for each assessment
 
-Respond in JSON format:
+Respond ONLY in this JSON format (no markdown, no extra text):
 {
   "eligiblePrograms": [
     {
       "name": "program name",
-      "eligibilityScore": 0.0-1.0,
-      "missingInfo": ["info needed"],
-      "benefits": ["key benefits"],
-      "nextSteps": ["what to do next"]
+      "eligibilityScore": 0.85,
+      "missingInfo": [],
+      "benefits": ["benefit 1", "benefit 2"],
+      "nextSteps": ["step 1", "step 2"]
     }
   ],
   "recommendedQuestions": ["question to ask user"],
-  "reasoning": "explanation of assessment",
-  "confidence": 0.0-1.0
+  "reasoning": "explanation of why they are eligible",
+  "confidence": 0.85
 }`;
 
     try {
