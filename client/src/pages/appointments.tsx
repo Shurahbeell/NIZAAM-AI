@@ -369,22 +369,76 @@ export default function Appointments() {
         </TabsContent>
 
         <TabsContent value="view" className="space-y-4 mt-6">
-          {appointments.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">No appointments scheduled yet</p>
-            </Card>
-          ) : (
-            appointments.map((appointment) => (
-              <AppointmentCard
-                key={appointment.id}
-                doctorName={appointment.doctorName}
-                department={appointment.department}
-                date={appointment.date}
-                time={appointment.time}
-                status={appointment.status}
-              />
-            )).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          )}
+          {(() => {
+            // Filter out completed appointments and sort by date
+            const activeAppointments = appointments
+              .filter(apt => apt.status !== "completed")
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            // Get next appointment (first in sorted list)
+            const nextAppointment = activeAppointments[0];
+
+            // Get remaining appointments
+            const remainingAppointments = activeAppointments.slice(1);
+
+            if (appointments.length === 0 || activeAppointments.length === 0) {
+              return (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No upcoming appointments scheduled</p>
+                </Card>
+              );
+            }
+
+            return (
+              <>
+                {/* Next Appointment - Highlighted */}
+                {nextAppointment && (
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold text-muted-foreground mb-3">Next Appointment</p>
+                    <Card className="p-4 border-2 border-accent bg-accent/5">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">{nextAppointment.doctorName}</p>
+                            <p className="text-sm text-muted-foreground">{nextAppointment.department}</p>
+                          </div>
+                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground">
+                            {nextAppointment.status === "confirmed" ? "Confirmed" : "Pending"}
+                          </span>
+                        </div>
+                        <div className="flex gap-4 text-sm text-muted-foreground">
+                          <span>{nextAppointment.date}</span>
+                          <span>{nextAppointment.time}</span>
+                        </div>
+                        {nextAppointment.hospitalName && (
+                          <p className="text-sm text-muted-foreground">{nextAppointment.hospitalName}</p>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Other Upcoming Appointments */}
+                {remainingAppointments.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground mb-3">Other Upcoming Appointments</p>
+                    <div className="space-y-3">
+                      {remainingAppointments.map((appointment) => (
+                        <AppointmentCard
+                          key={appointment.id}
+                          doctorName={appointment.doctorName}
+                          department={appointment.department}
+                          date={appointment.date}
+                          time={appointment.time}
+                          status={appointment.status}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>
