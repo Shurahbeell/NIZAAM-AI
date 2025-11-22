@@ -85,6 +85,8 @@ export const emergencies = pgTable("emergencies", {
   status: text("status").notNull().default("active"), // "active", "responding", "resolved"
   assignedHospitalId: varchar("assigned_hospital_id"),
   notes: text("notes"),
+  acknowledgedByHospitalId: varchar("acknowledged_by_hospital_id"), // Hospital ID that acknowledged the notification
+  acknowledgedAt: timestamp("acknowledged_at"), // When hospital staff acknowledged the notification
   createdAt: timestamp("created_at").defaultNow(),
 });
 

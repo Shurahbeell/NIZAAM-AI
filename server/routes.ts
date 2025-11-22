@@ -396,6 +396,20 @@ router.patch("/api/emergencies/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Acknowledge incoming emergency notification (hospital staff)
+router.patch("/api/emergencies/:id/acknowledge", async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.body;
+    if (!hospitalId) {
+      return res.status(400).json({ error: "hospitalId is required" });
+    }
+    const emergency = await storage.acknowledgeEmergency(req.params.id, hospitalId);
+    res.json(emergency);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ==================== WOMEN'S HEALTH ROUTES ====================
 
 // Get all women's health topics

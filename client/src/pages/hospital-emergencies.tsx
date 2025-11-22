@@ -17,6 +17,8 @@ interface Emergency {
   priority: "critical" | "high" | "medium" | "low";
   symptoms: string;
   status: "active" | "responding" | "resolved";
+  acknowledgedByHospitalId?: string | null;
+  acknowledgedAt?: string | null;
   createdAt: string;
 }
 
@@ -45,8 +47,28 @@ export default function HospitalEmergencies() {
     }
   });
 
+  // Acknowledge emergency notification mutation
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/emergencies/${id}/acknowledge`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hospitalId: "4cd3d7c3-5e08-4086-89ec-a9610267a2f1" }) // TODO: Get actual hospital ID from user context
+      });
+      if (!response.ok) throw new Error("Failed to acknowledge emergency");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });
+    }
+  });
+
   const updateStatus = (id: string, status: Emergency["status"]) => {
     updateStatusMutation.mutate({ id, status });
+  };
+
+  const acknowledgeEmergency = (id: string) => {
+    acknowledgeMutation.mutate(id);
   };
 
   const getPriorityColor = (priority: Emergency["priority"]) => {
@@ -83,6 +105,12 @@ export default function HospitalEmergencies() {
   const filterByStatus = (status?: Emergency["status"]) => {
     if (!status) return emergencies;
     return emergencies.filter(e => e.status === status);
+  };
+
+  const filterIncoming = () => {
+    return emergencies.filter(e => 
+      e.status === "responding" && !e.acknowledgedByHospitalId
+    );
   };
 
   const sortedEmergencies = isLoading ? [] : [...emergencies].sort((a, b) => {
@@ -134,8 +162,25 @@ export default function HospitalEmergencies() {
           </Card>
         )}
 
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        {filterIncoming().length > 0 && (
+          <Card className="mb-4 border-primary bg-primary/10">
+            <CardContent className="p-4 flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-primary flex-shrink-0 animate-pulse" />
+              <div>
+                <p className="font-semibold text-foreground">
+                  {filterIncoming().length} Incoming Notification{filterIncoming().length > 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">Frontliner has responded - acknowledge to dismiss</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs defaultValue="incoming" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="incoming" data-testid="tab-incoming">
+              Incoming ({filterIncoming().length})
+            </TabsTrigger>
             <TabsTrigger value="all" data-testid="tab-all">
               All ({emergencies.length})
             </TabsTrigger>
@@ -149,6 +194,77 @@ export default function HospitalEmergencies() {
               Active ({filterByStatus("active").length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="incoming" className="space-y-3">
+            {filterIncoming().map((emergency) => (
+              <Card
+                key={emergency.id}
+                className={getPriorityBg(emergency.priority)}
+                data-testid={`emergency-card-${emergency.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      emergency.priority === "critical" ? "bg-destructive/20 animate-pulse" : "bg-primary/10"
+                    }`}>
+                      <AlertTriangle className={`w-5 h-5 ${
+                        emergency.priority === "critical" ? "text-destructive" : "text-primary"
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground">{emergency.patientName}</h3>
+                            <Badge variant={getPriorityColor(emergency.priority)} className="uppercase text-xs">
+                              {emergency.priority}
+                            </Badge>
+                          </div>
+                          <Badge variant="default" className="capitalize">
+                            Frontliner Responding
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          {emergency.patientPhone}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="w-4 h-4" />
+                          {emergency.location}
+                        </div>
+                        <div className="p-2 bg-muted/50 rounded text-sm">
+                          <p className="font-semibold text-foreground">Symptoms:</p>
+                          <p className="text-muted-foreground">{emergency.symptoms}</p>
+                        </div>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => acknowledgeEmergency(emergency.id)}
+                        data-testid={`button-acknowledge-${emergency.id}`}
+                        disabled={acknowledgeMutation.isPending}
+                      >
+                        {acknowledgeMutation.isPending ? "Acknowledging..." : "Acknowledge"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {filterIncoming().length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">No incoming notifications</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="all" className="space-y-3">
             {sortedEmergencies.map((emergency) => (

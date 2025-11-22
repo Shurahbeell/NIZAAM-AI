@@ -92,6 +92,7 @@ export interface IStorage {
   getEmergenciesByUser(userId: string): Promise<Emergency[]>;
   getEmergencyById(id: string): Promise<Emergency | undefined>;
   updateEmergencyStatus(id: string, status: string, assignedHospitalId?: string): Promise<Emergency | undefined>;
+  acknowledgeEmergency(id: string, hospitalId: string): Promise<Emergency | undefined>;
 
   // Women's Health Awareness methods
   getAllWomensHealthTopics(): Promise<WomensHealthAwareness[]>;
@@ -343,6 +344,18 @@ export class DrizzleStorage implements IStorage {
     const result = await db
       .update(emergencies)
       .set(updates)
+      .where(eq(emergencies.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async acknowledgeEmergency(id: string, hospitalId: string): Promise<Emergency | undefined> {
+    const result = await db
+      .update(emergencies)
+      .set({ 
+        acknowledgedByHospitalId: hospitalId,
+        acknowledgedAt: new Date()
+      })
       .where(eq(emergencies.id, id))
       .returning();
     return result[0];
