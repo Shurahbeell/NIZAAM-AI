@@ -1,4 +1,4 @@
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { haversineDistanceMeters, parseCoordinate } from "./utils/geo";
 import {
@@ -148,6 +148,7 @@ export interface IStorage {
   assignEmergencyCase(id: string, assignedToType: string, assignedToId: string): Promise<EmergencyCase | undefined>;
   updateEmergencyCaseStatus(id: string, status: string, log?: any): Promise<EmergencyCase | undefined>;
   getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]>;
+  getIncomingEmergencies(hospitalId: string): Promise<any[]>;
   getAllEmergencyCases(): Promise<EmergencyCase[]>;
 
   // Medical History methods
@@ -757,6 +758,32 @@ export class DrizzleStorage implements IStorage {
 
   async getAllEmergencyCases(): Promise<EmergencyCase[]> {
     return await db.select().from(emergencyCases).orderBy(desc(emergencyCases.createdAt));
+  }
+
+  async getIncomingEmergencies(hospitalId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: emergencyCases.id,
+        patientId: emergencyCases.patientId,
+        patientName: users.fullName,
+        originLat: emergencyCases.originLat,
+        originLng: emergencyCases.originLng,
+        status: emergencyCases.status,
+        priority: emergencyCases.priority,
+        createdAt: emergencyCases.createdAt,
+        updatedAt: emergencyCases.updatedAt,
+      })
+      .from(emergencyCases)
+      .leftJoin(users, eq(emergencyCases.patientId, users.id))
+      .where(
+        and(
+          eq(emergencyCases.assignedToType, "hospital"),
+          eq(emergencyCases.assignedToId, hospitalId),
+          inArray(emergencyCases.status, ["assigned", "ack", "in_progress"])
+        )
+      )
+      .orderBy(desc(emergencyCases.createdAt));
+    return results;
   }
 
   // ==================== MEDICAL HISTORY METHODS ====================

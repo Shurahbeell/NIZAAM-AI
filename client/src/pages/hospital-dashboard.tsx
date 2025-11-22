@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Users, Calendar, FileText, Activity, TrendingUp, TrendingDown, Minus, AlertCircle, User, Stethoscope, AlertTriangle, Building2, LogOut } from "lucide-react";
+import { Users, Calendar, FileText, Activity, TrendingUp, TrendingDown, Minus, AlertCircle, User, Stethoscope, AlertTriangle, Building2, LogOut, MapPin, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuthStore } from "@/lib/auth";
 
 interface StatCard {
   title: string;
@@ -16,6 +17,7 @@ interface StatCard {
 
 export default function HospitalDashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
 
   // Fetch emergencies to get active count
   const { data: emergencies = [] } = useQuery<any[]>({
@@ -23,7 +25,20 @@ export default function HospitalDashboard() {
     refetchInterval: 5000
   });
 
+  // Fetch incoming emergencies for this hospital
+  const { data: incomingEmergencies = [] } = useQuery<any[]>({
+    queryKey: ["/api/hospital", user?.hospitalId, "incoming-emergencies"],
+    queryFn: async () => {
+      if (!user?.hospitalId) return [];
+      const response = await fetch(`/api/hospital/${user.hospitalId}/incoming-emergencies`);
+      return response.json();
+    },
+    enabled: !!user?.hospitalId,
+    refetchInterval: 3000,
+  });
+
   const activeEmergencies = emergencies.filter((e: any) => e.status === "active").length;
+  const incomingCount = incomingEmergencies.length;
 
   const stats: StatCard[] = [
     { title: "Today's Appointments", value: "24", change: "+12%", icon: Calendar, trend: "up" },
@@ -97,6 +112,38 @@ export default function HospitalDashboard() {
               <Badge className="bg-destructive text-white text-base px-4 py-2 shadow-md">
                 {activeEmergencies}
               </Badge>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Incoming Emergencies */}
+        {incomingCount > 0 && (
+          <Card className="border-orange-400/30 bg-gradient-to-br from-orange-50 to-orange-100/20 shadow-lg">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  Incoming Patients ({incomingCount})
+                </CardTitle>
+                <Badge className="bg-orange-600 text-white">{incomingCount}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {incomingEmergencies.map((emergency: any) => (
+                <div key={emergency.id} className="flex items-start gap-3 p-3 bg-white/70 rounded-lg border border-orange-200">
+                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <AlertTriangle className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{emergency.patientName || "Unknown Patient"}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>{new Date(emergency.createdAt).toLocaleTimeString()}</span>
+                    </div>
+                    <Badge variant="outline" className="mt-1 text-xs">{emergency.status}</Badge>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

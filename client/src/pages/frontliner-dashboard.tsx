@@ -148,7 +148,40 @@ export default function FrontlinerDashboard() {
     },
   });
 
-  const handleAction = (caseId: string, status: "ack" | "in_progress" | "completed") => {
+  const handleAction = async (caseId: string, status: "ack" | "in_progress" | "completed") => {
+    // If status is "in_progress", find nearest hospital and assign the case
+    if (status === "in_progress") {
+      try {
+        // Get emergency case details
+        const caseResponse = await apiRequest("GET", `/api/emergency-cases/${caseId}`);
+        const emergencyCase = await caseResponse.json();
+        
+        // Find nearest hospitals
+        const hospitalsResponse = await apiRequest("GET", `/api/nearby-hospitals?lat=${emergencyCase.originLat}&lng=${emergencyCase.originLng}&limit=1`);
+        const { hospitals } = await hospitalsResponse.json();
+        
+        if (hospitals && hospitals.length > 0) {
+          const nearestHospital = hospitals[0];
+          // Assign case to the nearest hospital
+          await apiRequest("PATCH", `/api/emergency-cases/${caseId}/assign`, {
+            assignedToType: "hospital",
+            assignedToId: nearestHospital.id,
+          });
+          toast({
+            title: "Hospital Notified",
+            description: `${nearestHospital.name} has been notified about incoming patient`,
+          });
+        }
+      } catch (error: any) {
+        console.error("Failed to assign hospital:", error);
+        toast({
+          title: "Warning",
+          description: "Could not notify hospital, continuing with status update",
+          variant: "default",
+        });
+      }
+    }
+
     const statusMessages = {
       ack: "Acknowledged",
       in_progress: "En route to location",

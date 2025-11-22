@@ -556,18 +556,6 @@ router.patch("/api/emergency-cases/:id/status", async (req: Request, res: Respon
     const { status, log } = req.body;
     
     const updated = await storage.updateEmergencyCaseStatus(id, status, log);
-    
-    // Invalidate all related caches when frontliner accepts/updates emergency
-    queryClient.invalidateQueries({ queryKey: ["/api/emergency-cases"] });
-    
-    // If status changed to 'ack' (frontliner accepted), also invalidate hospital dashboard
-    if (status === 'ack') {
-      const emergencyCase = await storage.getEmergencyCaseById(id);
-      if (emergencyCase?.assignedToType === 'hospital') {
-        queryClient.invalidateQueries({ queryKey: ["/api/hospital", emergencyCase.assignedToId] });
-      }
-    }
-    
     res.json(updated);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -579,6 +567,29 @@ router.get("/api/frontliner/:frontlinerId/open-cases", async (req: Request, res:
     const { frontlinerId } = req.params;
     const cases = await storage.getOpenCasesForFrontliner(frontlinerId);
     res.json(cases);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/api/hospital/:hospitalId/incoming-emergencies", async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.params;
+    const cases = await storage.getIncomingEmergencies(hospitalId);
+    res.json(cases);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/api/nearby-hospitals", async (req: Request, res: Response) => {
+  try {
+    const { lat, lng, limit = "10" } = req.query;
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "lat and lng query parameters are required" });
+    }
+    const hospitals = await storage.findNearestHospitals(lat as string, lng as string, parseInt(limit as string));
+    res.json({ hospitals });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
