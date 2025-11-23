@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import MedicalHistoryCard from "@/components/MedicalHistoryCard";
 import { useLanguage } from "@/lib/useLanguage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface MedicalReport {
   id: string;
@@ -19,6 +22,19 @@ interface MedicalReport {
   date: string;
   summary: string;
   details?: string;
+  emergencyType?: string;
+}
+
+interface BackendEmergency {
+  id: string;
+  patientId: string;
+  patientName: string;
+  emergencyType: string;
+  priority: string;
+  symptoms: string;
+  notes?: string;
+  status: string;
+  createdAt: string;
 }
 
 const DEFAULT_REPORTS: MedicalReport[] = [
@@ -57,6 +73,7 @@ const DEFAULT_REPORTS: MedicalReport[] = [
 
 export default function History() {
   const { t } = useLanguage();
+  const { user } = useAuthStore();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -70,12 +87,43 @@ export default function History() {
     details: ""
   });
 
+  // Fetch emergency history from backend
+  const { data: emergenciesData, isLoading: loadingEmergencies } = useQuery({
+    queryKey: ["/api/emergencies", "patient", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const response = await apiRequest("GET", `/api/emergencies?patientId=${user.id}`);
+      const data = await response.json();
+      return data.emergencies || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Merge backend emergencies with local medical reports
   useEffect(() => {
     const stored = localStorage.getItem("medicalReports");
-    if (stored) {
-      setMedicalReports(JSON.parse(stored));
+    let reports = stored ? JSON.parse(stored) : DEFAULT_REPORTS;
+
+    // Add emergencies from backend
+    if (emergenciesData && emergenciesData.length > 0) {
+      const backendEmergencies: MedicalReport[] = emergenciesData.map((emergency: BackendEmergency) => ({
+        id: emergency.id,
+        type: "emergency" as const,
+        title: `Emergency - ${emergency.emergencyType}`,
+        date: new Date(emergency.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        summary: emergency.symptoms || emergency.notes || "Emergency assistance received",
+        details: emergency.notes ? `Patient's Description: ${emergency.notes}` : undefined,
+        emergencyType: emergency.emergencyType,
+      }));
+
+      // Remove duplicates - only add if not already present
+      const existingIds = new Set(reports.map((r: MedicalReport) => r.id));
+      const newEmergencies = backendEmergencies.filter((e: MedicalReport) => !existingIds.has(e.id));
+      reports = [...newEmergencies, ...reports];
     }
-  }, []);
+
+    setMedicalReports(reports);
+  }, [emergenciesData]);
 
   useEffect(() => {
     localStorage.setItem("medicalReports", JSON.stringify(medicalReports));
