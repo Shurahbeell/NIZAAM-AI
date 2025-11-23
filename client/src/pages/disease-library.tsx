@@ -183,6 +183,77 @@ export default function DiseaseLibrary() {
         </div>
       ) : (
         <div className="p-4 space-y-4 pb-24">
+          {/* Disease AI Chat Section - Moved to Top */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Ask About {selectedDisease.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Chat Messages Container */}
+              <div className="bg-background border rounded-lg h-96 overflow-y-auto p-4 space-y-4" data-testid="disease-chat-container">
+                {chatMessages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Start asking questions about {selectedDisease.name}</p>
+                  </div>
+                ) : (
+                  <>
+                    {chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            msg.type === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-foreground"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {isLoadingChat && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted px-4 py-2 rounded-lg">
+                          <Loader className="w-4 h-4 animate-spin" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ask about symptoms, stages, what happens to body, critical level..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !isLoadingChat && sendChatMessage()}
+                  disabled={isLoadingChat}
+                  data-testid="input-disease-chat"
+                />
+                <Button
+                  size="icon"
+                  onClick={sendChatMessage}
+                  disabled={isLoadingChat || !chatInput.trim()}
+                  data-testid="button-send-disease-chat"
+                >
+                  {isLoadingChat ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="flex items-start gap-3">
@@ -258,77 +329,6 @@ export default function DiseaseLibrary() {
               <p className="text-xs text-muted-foreground">
                 ⚕️ <strong>{t('diseaseDetails.disclaimer')}:</strong> {t('diseaseDetails.disclaimerText')}
               </p>
-            </CardContent>
-          </Card>
-
-          {/* Disease AI Chat Section */}
-          <Card className="border-primary/30 bg-primary/5 mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Ask About This Disease
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Chat Messages Container */}
-              <div className="bg-background border rounded-lg h-96 overflow-y-auto p-4 space-y-4" data-testid="disease-chat-container">
-                {chatMessages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Start asking questions about {selectedDisease.name}</p>
-                  </div>
-                ) : (
-                  <>
-                    {chatMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-xs px-4 py-2 rounded-lg ${
-                            msg.type === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {isLoadingChat && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted px-4 py-2 rounded-lg">
-                          <Loader className="w-4 h-4 animate-spin" />
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </>
-                )}
-              </div>
-
-              {/* Chat Input */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ask about symptoms, stages, what happens to body, critical level..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !isLoadingChat && sendChatMessage()}
-                  disabled={isLoadingChat}
-                  data-testid="input-disease-chat"
-                />
-                <Button
-                  size="icon"
-                  onClick={sendChatMessage}
-                  disabled={isLoadingChat || !chatInput.trim()}
-                  data-testid="button-send-disease-chat"
-                >
-                  {isLoadingChat ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </div>
