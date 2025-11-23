@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX, Check, Clock } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX, Check, Clock, MessageCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -205,6 +205,12 @@ export default function Dashboard() {
       description: t('dashboardModules.conditionsDesc'),
       icon: AlertCircle,
       path: "/disease-library"
+    },
+    {
+      title: "Disease Chatbot",
+      description: "Ask about any disease",
+      icon: MessageCircle,
+      path: "/disease-chatbot"
     },
     {
       title: t('dashboardModules.medicines'),

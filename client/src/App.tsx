@@ -38,6 +38,7 @@ import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import LanguageSelector from "@/components/LanguageSelector";
 import UserManual from "@/pages/user-manual";
+import DiseaseChatbot from "@/pages/disease-chatbot";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/lab-tests" component={LabTests} />
       <Route path="/medicine-library" component={MedicineLibrary} />
       <Route path="/disease-library" component={DiseaseLibrary} />
+      <Route path="/disease-chatbot" component={DiseaseChatbot} />
       <Route path="/vaccinations" component={VaccinationTracker} />
       <Route path="/mental-health" component={MentalHealth} />
       <Route path="/womens-health" component={WomensHealth} />
