@@ -43,10 +43,9 @@ export class HealthProgramsAgent implements Agent {
       // Determine if this is a facility query
       const isFacilityQuery = this.detectFacilityQuery(message);
 
-      // Translate message to English if needed for processing
-      const isUrdu = language === "ur" || language === "ru";
+      // Translate message to English for internal processing
       let processedMessage = message;
-      if (isUrdu) {
+      if (language === "ur" || language === "ru") {
         processedMessage = await translationService.translate(message, "english", "health query");
       }
 
@@ -57,18 +56,19 @@ export class HealthProgramsAgent implements Agent {
 
       const userContext = this.buildUserContext(userProfile);
 
-      // Generate response using Gemini
+      // Generate response using Gemini (will respond in requested language)
       let responseText = await this.generateGeminiResponse(
         processedMessage,
         conversationContext,
         userContext,
-        isFacilityQuery
+        isFacilityQuery,
+        language
       );
 
       // If it's a facility query and we have location, add real hospital data
       if (isFacilityQuery && userProfile?.address) {
         try {
-          const facilityInfo = await this.searchNearbyFacilities(userProfile.address);
+          const facilityInfo = await this.searchNearbyFacilities(userProfile.address, language);
           if (facilityInfo) {
             responseText = `${responseText}\n\n${facilityInfo}`;
           }
@@ -78,26 +78,23 @@ export class HealthProgramsAgent implements Agent {
         }
       }
 
-      // Translate back to user's language if needed
-      if (isUrdu) {
-        responseText = await translationService.translate(responseText, "urdu", "health response");
-      }
-
       // Save agent message to database
       await storage.createAgentMessage({
         sessionId,
         senderType: "agent",
         content: responseText,
-        language: isUrdu ? "ur" : "en"
+        language: language
       });
 
       return responseText;
     } catch (error) {
       console.error("[HealthProgramsAgent] Error:", error);
-      const fallback = "I apologize for the confusion. Could you please rephrase your question about health programs or facilities in Pakistan?";
-      return language !== "en" && (language === "ur" || language === "ru")
-        ? await translationService.translate(fallback, "urdu")
-        : fallback;
+      if (language === "ur") {
+        return "معافی چاہتا ہوں، براہ کرم اپنے سوال کو پاکستان کے صحت کے پروگراموں یا سہولیات کے بارے میں دوبارہ بیان کریں۔";
+      } else if (language === "ru") {
+        return "Maafi chahta hoon, brahay kram apne swal ko Pakistan ke sehat ke programon ya sahooliyat ke barey mein dobarah bayan karen.";
+      }
+      return "I apologize for the confusion. Could you please rephrase your question about health programs or facilities in Pakistan?";
     }
   }
 
@@ -108,14 +105,26 @@ export class HealthProgramsAgent implements Agent {
     userMessage: string,
     conversationHistory: string,
     userContext: string,
-    isFacilityQuery: boolean
+    isFacilityQuery: boolean,
+    language: string = "en"
   ): Promise<string> {
+    // Map language codes to full language names
+    const languageMap: { [key: string]: string } = {
+      en: "English",
+      ur: "Urdu Script",
+      ru: "Roman Urdu (Romanized Urdu)"
+    };
+
+    const targetLanguage = languageMap[language] || "English";
+
     const systemPrompt = `You are an expert health programs advisor for Pakistan. You provide accurate, helpful information about:
 - Pakistan's health programs (Sehat Card, TB DOTS, EPI, etc.)
 - Program eligibility requirements
 - Available healthcare facilities and services
 - How to access and use health programs
 - Health services and treatments
+
+**IMPORTANT: You MUST respond ONLY in ${targetLanguage}. Do not translate or provide any English text.**
 
 Your responses should be:
 - Clear, concise, and in simple language
@@ -130,7 +139,9 @@ If you don't know something, be honest and suggest they contact their local heal
 
     const userPrompt = `${systemPrompt}\n\n${conversationHistory ? `Previous conversation:\n${conversationHistory}\n\n` : ""}${userContext ? `User context:\n${userContext}\n\n` : ""}Current user message: "${userMessage}"
 
-Provide a helpful, natural response. Be conversational and supportive.`;
+Provide a helpful, natural response IN ${targetLanguage}. Be conversational and supportive.
+
+CRITICAL: Respond ONLY in ${targetLanguage}. Do not mix languages.`;
 
     try {
       const result = await gemini.models.generateContent({
@@ -143,10 +154,10 @@ Provide a helpful, natural response. Be conversational and supportive.`;
         ]
       });
 
-      return result.text || "I apologize, I couldn't generate a response. Please try again.";
+      return result.text || (language === "ur" ? "معافی چاہتا ہوں، میں جواب پیدا نہیں کر سکا۔ براہ کرم دوبارہ کوشش کریں۔" : language === "ru" ? "Maafi chahta hoon, main jawab paida nahin kar saka. Brahay kram dobarah koshish karien." : "I apologize, I couldn't generate a response. Please try again.");
     } catch (error) {
       console.error("[HealthProgramsAgent] Gemini error:", error);
-      return "I apologize, I'm having trouble processing your request. Please try again or contact your local health facility.";
+      return language === "ur" ? "معافی چاہتا ہوں، آپ کی درخواست کو سمجھنے میں مجھے مشکل ہو رہی ہے۔ براہ کرم دوبارہ کوشش کریں یا اپنی مقامی صحت کی سہولت سے رابطہ کریں۔" : language === "ru" ? "Maafi chahta hoon, aapki darkhwast ko samjhne mein mujhe mushkil ho rahi hai. Brahay kram dobarah koshish karien ya apni muqami sehat ki sahooliat se rabta karien." : "I apologize, I'm having trouble processing your request. Please try again or contact your local health facility.";
     }
   }
 
@@ -201,8 +212,15 @@ Provide a helpful, natural response. Be conversational and supportive.`;
    * Search for nearby healthcare facilities using Gemini
    * Dynamically generates facility recommendations based on user's location
    */
-  private async searchNearbyFacilities(location: string): Promise<string> {
+  private async searchNearbyFacilities(location: string, language: string = "en"): Promise<string> {
     try {
+      const languageMap: { [key: string]: string } = {
+        en: "English",
+        ur: "Urdu Script",
+        ru: "Roman Urdu"
+      };
+      const targetLanguage = languageMap[language] || "English";
+
       const prompt = `The user is located in: ${location}
 
 Generate a helpful list of 3-5 real healthcare facilities in this location that:
@@ -221,7 +239,9 @@ Format your response as:
 
 Continue for other hospitals...
 
-Be specific with real hospitals if you know them, otherwise suggest typical reliable facilities found in that area.`;
+Be specific with real hospitals if you know them, otherwise suggest typical reliable facilities found in that area.
+
+CRITICAL: Respond ONLY in ${targetLanguage}. Do not mix languages.`;
 
       const result = await gemini.models.generateContent({
         model: MCP_CONFIG.model,

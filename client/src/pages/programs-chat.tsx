@@ -3,6 +3,13 @@ import ChatBubble from "@/components/ChatBubble";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Send, Mic, Building2, Sparkles, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -19,6 +26,7 @@ export default function ProgramsChat() {
   const [message, setMessage] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const { language: globalLanguage } = useLanguage();
+  const [chatLanguage, setChatLanguage] = useState<"en" | "ur" | "ru">("en");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Create or restore agent session on mount
@@ -27,26 +35,14 @@ export default function ProgramsChat() {
     
     const initSession = async () => {
       try {
-        // First, check if there's an existing eligibility session for this user
-        const sessionsResponse = await apiRequest("GET", "/api/agent/sessions");
-        const sessions: AgentSession[] = await sessionsResponse.json();
-        
-        // Look for an existing eligibility session
-        const existingSession = sessions.find(s => s.agent === "eligibility" && s.status === "active");
-        
-        if (existingSession) {
-          // Use existing session and its messages will be loaded
-          setSessionId(existingSession.id);
-        } else {
-          // Create new session only if no existing one
-          const newSessionResponse = await apiRequest("POST", "/api/agent/sessions", {
-            userId: user.id,
-            agent: "eligibility",
-            language: globalLanguage
-          });
-          const newSession: AgentSession = await newSessionResponse.json();
-          setSessionId(newSession.id);
-        }
+        // Create new session with chat language
+        const newSessionResponse = await apiRequest("POST", "/api/agent/sessions", {
+          userId: user.id,
+          agent: "eligibility",
+          language: chatLanguage
+        });
+        const newSession: AgentSession = await newSessionResponse.json();
+        setSessionId(newSession.id);
       } catch (error) {
         toast({
           title: "Error",
@@ -56,7 +52,7 @@ export default function ProgramsChat() {
       }
     };
     initSession();
-  }, [sessionId, toast, globalLanguage, user]);
+  }, [sessionId, toast, chatLanguage, user]);
 
   // Fetch conversation history
   const { data: messages = [], isLoading } = useQuery<AgentMessage[]>({
@@ -71,7 +67,7 @@ export default function ProgramsChat() {
         sessionId,
         agentName: "eligibility",
         message: userMessage,
-        language: globalLanguage
+        language: chatLanguage
       });
       return response.json();
     },
@@ -123,14 +119,31 @@ export default function ProgramsChat() {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">
-                {globalLanguage !== "en" ? "Sehat Programs" : "Health Programs"}
+                {chatLanguage === "en" ? "Health Programs" : chatLanguage === "ur" ? "صحت کے پروگرام" : "Sehat Ke Program"}
               </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {globalLanguage !== "en" ? "Pakistan sarkaari programs" : "Pakistan government programs"}
+                {chatLanguage === "en" ? "Pakistan government programs" : chatLanguage === "ur" ? "پاکستان کے سرکاری پروگرام" : "Pakistan sarkaari programs"}
               </p>
             </div>
           </div>
+          <Select value={chatLanguage} onValueChange={(value) => {
+            setChatLanguage(value as "en" | "ur" | "ru");
+            setSessionId(null);
+            toast({
+              title: "Language Changed",
+              description: value === "en" ? "English" : value === "ur" ? "اردو (Urdu)" : "رومن اردو (Roman Urdu)",
+            });
+          }}>
+            <SelectTrigger className="w-[200px] bg-white/20 border-white/30 text-white hover:bg-white/30 rounded-xl" data-testid="select-chat-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ur">اردو (Urdu)</SelectItem>
+              <SelectItem value="ru">رومن اردو (Roman Urdu)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </header>
 
@@ -143,21 +156,27 @@ export default function ProgramsChat() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0 shadow-md">
                 <Info className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1" dir={chatLanguage === "ur" ? "rtl" : "ltr"}>
                 <h3 className="font-bold text-lg mb-2">
-                  {globalLanguage !== "en" 
-                    ? "Khush aamdeed!" 
-                    : "Welcome!"}
+                  {chatLanguage === "en" 
+                    ? "Welcome!" 
+                    : chatLanguage === "ur"
+                    ? "خوش آمدید!"
+                    : "Khush aamdeed!"}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">
-                  {globalLanguage !== "en"
-                    ? "Main aapko Pakistan ke sab sarkaari sehat programs ke barey mein jaankari dene mein madad kar sakta hoon."
-                    : "I can help you find information about all Pakistan government health programs."}
+                  {chatLanguage === "en"
+                    ? "I can help you find information about all Pakistan government health programs."
+                    : chatLanguage === "ur"
+                    ? "میں آپ کو پاکستان کے تمام سرکاری صحت کے پروگراموں کی معلومات تلاش کرنے میں مدد کر سکتا ہوں۔"
+                    : "Main aapko Pakistan ke tamam sarkaari sehat ke programon ki maloomaat talash karnay mein madad kar sakta hoon."}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {globalLanguage !== "en"
-                    ? "Aap poochen:\n• 'Sab programs' dekhnay ke liye\n• Kisi khaas program ke barey mein\n• Apni eligibility check karnay ke liye"
-                    : "You can ask:\n• 'List all programs' to see available programs\n• About specific programs\n• To check your eligibility"}
+                  {chatLanguage === "en"
+                    ? "You can ask:\n• 'List all programs' to see available programs\n• About specific programs\n• To check your eligibility"
+                    : chatLanguage === "ur"
+                    ? "آپ پوچھ سکتے ہیں:\n• 'تمام پروگرام' دیکھنے کے لیے\n• کسی خاص پروگرام کے بارے میں\n• اپنی اہلیت چیک کرنے کے لیے"
+                    : "Aap poochen sakte hain:\n• 'Tamam program' dekhne ke liye\n• Kisi khas program ke barey mein\n• Apni ahliyat check karne ke liye"}
                 </p>
               </div>
             </div>
@@ -208,11 +227,17 @@ export default function ProgramsChat() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !sendMessageMutation.isPending && handleSend()}
-            placeholder={globalLanguage !== "en" ? "Sehat programs ke barey mein pochain..." : "Ask about health programs..."}
+            placeholder={
+              chatLanguage === "en"
+                ? "Ask about health programs..."
+                : chatLanguage === "ur"
+                ? "صحت کے پروگرام کے بارے میں پوچھیں..."
+                : "Sehat ke program ke barey mein pochain..."
+            }
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             data-testid="input-message"
             disabled={!sessionId || sendMessageMutation.isPending}
-            dir={globalLanguage === "ur" ? "rtl" : "ltr"}
+            dir={chatLanguage === "ur" ? "rtl" : "ltr"}
           />
           <Button 
             variant="ghost" 
@@ -235,9 +260,11 @@ export default function ProgramsChat() {
         </div>
         <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1.5">
           <Sparkles className="w-3 h-3" />
-          {globalLanguage !== "en"
-            ? "Gemini se taaqatwar • 20+ Pakistan sehat programs"
-            : "Powered by Gemini • 20+ Pakistan health programs"}
+          {chatLanguage === "en"
+            ? "Powered by Gemini • 20+ Pakistan health programs"
+            : chatLanguage === "ur"
+            ? "Gemini سے چلتا ہے • 20+ پاکستان صحت کے پروگرام"
+            : "Gemini se chalta hai • 20+ Pakistan sehat ke program"}
         </p>
       </div>
     </div>
