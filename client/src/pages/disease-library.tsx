@@ -194,38 +194,30 @@ export default function DiseaseLibrary() {
             <CardContent className="space-y-4">
               {/* Chat Messages Container */}
               <div className="bg-background border rounded-lg h-96 overflow-y-auto p-4 space-y-4" data-testid="disease-chat-container">
-                {chatMessages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Start asking questions about {selectedDisease.name}</p>
+                {chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.type === "ai" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div
+                      className={`max-w-xs px-4 py-2 rounded-lg ${
+                        msg.type === "ai"
+                          ? "bg-muted text-foreground"
+                          : "bg-primary text-primary-foreground"
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    {chatMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-xs px-4 py-2 rounded-lg ${
-                            msg.type === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {isLoadingChat && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted px-4 py-2 rounded-lg">
-                          <Loader className="w-4 h-4 animate-spin" />
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </>
+                ))}
+                {isLoadingChat && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted px-4 py-2 rounded-lg">
+                      <Loader className="w-4 h-4 animate-spin" />
+                    </div>
+                  </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input */}
