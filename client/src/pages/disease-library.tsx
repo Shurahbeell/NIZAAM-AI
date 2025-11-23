@@ -182,7 +182,7 @@ export default function DiseaseLibrary() {
           )}
         </div>
       ) : (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           <Card>
             <CardHeader>
               <div className="flex items-start gap-3">
@@ -262,14 +262,16 @@ export default function DiseaseLibrary() {
           </Card>
 
           {/* Disease AI Chat Section */}
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Ask About This Disease
-            </h2>
-            <Card className="flex flex-col h-[500px]">
-              {/* Chat Messages */}
-              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+          <Card className="border-primary/30 bg-primary/5 mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Ask About This Disease
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Chat Messages Container */}
+              <div className="bg-background border rounded-lg h-96 overflow-y-auto p-4 space-y-4" data-testid="disease-chat-container">
                 {chatMessages.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Start asking questions about {selectedDisease.name}</p>
@@ -302,10 +304,10 @@ export default function DiseaseLibrary() {
                     <div ref={messagesEndRef} />
                   </>
                 )}
-              </CardContent>
+              </div>
 
               {/* Chat Input */}
-              <div className="border-t p-4 flex gap-2">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Ask about symptoms, stages, what happens to body, critical level..."
                   value={chatInput}
@@ -327,8 +329,8 @@ export default function DiseaseLibrary() {
                   )}
                 </Button>
               </div>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
