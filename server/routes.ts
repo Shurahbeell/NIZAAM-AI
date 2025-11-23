@@ -458,6 +458,132 @@ router.patch("/api/screening-reminders/:id", async (req: Request, res: Response)
   }
 });
 
+// ==================== MEDICINE CHATBOT ====================
+
+// Medicine chatbot powered by Gemini (using Replit AI Integrations)
+// Supports multilingual responses in English, Urdu Script, and Roman Urdu
+router.post("/api/medicine/chat", async (req: Request, res: Response) => {
+  try {
+    const { medicine, question, context, language = "english" } = req.body;
+    
+    if (!medicine || !question) {
+      return res.status(400).json({ error: "Missing medicine or question" });
+    }
+
+    // Import Gemini and translation service
+    const { GoogleGenAI } = await import("@google/genai");
+    const { translationService } = await import("./mcp/services/translation");
+    
+    // Use Replit's AI Integrations for Gemini access
+    const client = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "",
+      httpOptions: {
+        apiVersion: "",
+        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || ""
+      }
+    });
+
+    // Map language codes to full language names (same as triage agent)
+    const languageMap: { [key: string]: string } = {
+      "english": "English",
+      "ur": "Urdu (written in Arabic-Persian script)",
+      "ru": "Roman Urdu (written in Romanized Latin script)"
+    };
+
+    const targetLanguage = languageMap[language] || "English";
+
+    // Translate user question to English for processing if needed
+    let processedQuestion = question;
+    if (language === "ur" || language === "ru") {
+      processedQuestion = await translationService.translate(question, "english", "medicine query");
+    }
+
+    // Create a detailed prompt for medicine information
+    const systemPrompt = `You are a knowledgeable pharmaceutical specialist for Pakistan. Your role is to provide accurate, comprehensive information about medicines and drugs.
+
+**CRITICAL LANGUAGE REQUIREMENT: You MUST respond ONLY in ${targetLanguage}. Do not provide any text in Hindi, English (unless specified), or any other language. Do not mix languages.**
+
+When users ask about a medicine, provide comprehensive information including:
+- Clear explanation of what the medicine is
+- Proper dosage and how to take it
+- Common side effects and serious side effects
+- Drug interactions with other medicines
+- Contraindications and when NOT to use
+- Special precautions for pregnant women, elderly, or children
+- Storage and handling instructions
+- Effectiveness and how long it takes to work
+- Whether it requires a prescription
+- Common brand names
+
+Always use simple, clear language and end by reminding the user to consult a healthcare professional for proper medical advice.
+
+**PAKISTAN CONTEXT:**
+- Use context appropriate for Pakistan's healthcare system
+- Reference common medicines available in Pakistan
+- Be empathetic and culturally sensitive`;
+
+    const medicineContext = context ? `
+Additional Medicine Information Available:
+- Generic Name: ${context.genericName}
+- Category: ${context.category}
+- Usage: ${context.usage}
+- Dosage: ${context.dosage}
+- Side Effects: ${context.sideEffects?.join(", ")}
+- Drug Interactions: ${context.interactions?.join(", ")}
+- Contraindications: ${context.contraindications?.join(", ")}
+- Precautions: ${context.precautions}
+` : "";
+
+    const userPrompt = `About ${medicine}: ${processedQuestion}${medicineContext}
+
+Respond ONLY in ${targetLanguage}. Do not mix languages. Do not use Hindi. Do not provide English translation unless specifically requested.`;
+
+    console.log(`[Medicine Chat] Processing question about ${medicine} in language: ${language}`);
+
+    // Call Gemini API with proper configuration
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: systemPrompt + "\n\n" + userPrompt
+            }
+          ]
+        }
+      ]
+    });
+
+    // Extract response text with better error handling
+    let responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!responseText) {
+      console.error("[Medicine Chat] No response text from Gemini", { 
+        response: JSON.stringify(response) 
+      });
+      return res.status(500).json({ 
+        error: "Failed to generate response from AI. Please try again." 
+      });
+    }
+
+    // If language was Urdu or Roman Urdu but Gemini responded in English, translate back
+    if ((language === "ur" || language === "ru") && !responseText.match(/[\u0600-\u06FF]/)) {
+      // Gemini didn't respond in Urdu, translate English to Urdu
+      const targetLanguage = language === "ur" ? "urdu" : "urdu"; // Both map to urdu translation
+      responseText = await translationService.translate(responseText, targetLanguage, "medicine information");
+    }
+
+    console.log(`[Medicine Chat] Successfully generated response for ${medicine}`);
+    res.json({ response: responseText });
+  } catch (error: any) {
+    console.error("[Medicine Chat] Error:", error.message || error);
+    res.status(500).json({ 
+      error: error.message || "Failed to process medicine question" 
+    });
+  }
+});
+
 // ==================== DISEASE CHATBOT ====================
 
 // Disease chatbot powered by Gemini (using Replit AI Integrations)
