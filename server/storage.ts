@@ -762,6 +762,7 @@ export class DrizzleStorage implements IStorage {
   }
 
   async getOpenCasesForFrontliner(frontlinerId: string): Promise<any[]> {
+    const { emergencies } = await import("@shared/schema");
     const results = await db
       .select({
         id: emergencyCases.id,
@@ -773,9 +774,13 @@ export class DrizzleStorage implements IStorage {
         priority: emergencyCases.priority,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
+        emergencyType: emergencies.emergencyType,
+        symptoms: emergencies.symptoms,
+        notes: emergencies.notes,
       })
       .from(emergencyCases)
       .leftJoin(users, eq(emergencyCases.patientId, users.id))
+      .leftJoin(emergencies, eq(emergencyCases.patientId, emergencies.patientId))
       .where(
         and(
           eq(emergencyCases.assignedToType, "frontliner"),
@@ -792,6 +797,7 @@ export class DrizzleStorage implements IStorage {
   }
 
   async getIncomingEmergencies(hospitalId: string): Promise<any[]> {
+    const { emergencies } = await import("@shared/schema");
     const results = await db
       .select({
         id: emergencyCases.id,
@@ -805,9 +811,13 @@ export class DrizzleStorage implements IStorage {
         acknowledgedAt: emergencyCases.acknowledgedAt,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
+        emergencyType: emergencies.emergencyType,
+        symptoms: emergencies.symptoms,
+        notes: emergencies.notes,
       })
       .from(emergencyCases)
       .leftJoin(users, eq(emergencyCases.patientId, users.id))
+      .leftJoin(emergencies, eq(emergencyCases.patientId, emergencies.patientId))
       .where(
         and(
           eq(emergencyCases.assignedToType, "hospital"),
