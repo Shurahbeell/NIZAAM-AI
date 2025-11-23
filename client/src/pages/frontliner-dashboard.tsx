@@ -20,6 +20,8 @@ interface EmergencyCaseWithPatient {
   status: string;
   createdAt: string;
   notes?: string | null;
+  emergencyType?: string;
+  symptoms?: string;
 }
 
 interface DirectionsMapProps {
@@ -334,10 +336,28 @@ export default function FrontlinerDashboard() {
                       </div>
                     </div>
 
+                    {/* Emergency Type and Symptoms */}
+                    {(emergencyCase.emergencyType || emergencyCase.symptoms) && (
+                      <div className="mt-3 mb-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md space-y-2">
+                        {emergencyCase.emergencyType && (
+                          <div>
+                            <p className="text-xs font-semibold text-red-900 dark:text-red-100">Emergency Type:</p>
+                            <p className="text-sm text-red-900 dark:text-red-200 font-semibold">{emergencyCase.emergencyType}</p>
+                          </div>
+                        )}
+                        {emergencyCase.symptoms && (
+                          <div>
+                            <p className="text-xs font-semibold text-red-900 dark:text-red-100">Symptoms:</p>
+                            <p className="text-sm text-red-900 dark:text-red-200">{emergencyCase.symptoms}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Condition Description */}
                     {emergencyCase.notes && (
                       <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Condition Description:</p>
+                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Detailed Description:</p>
                         <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{emergencyCase.notes}</p>
                       </div>
                     )}
