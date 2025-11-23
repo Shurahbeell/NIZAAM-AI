@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ambulance, MapPin, Clock, AlertCircle, User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,10 +54,9 @@ function DirectionsMap({ originLat, originLng, frontlinerLat, frontlinerLng }: D
       zoom: 15,
       center: { lat: originLat_num, lng: originLng_num },
       mapTypeControl: false,
-      fullscreenControl: false,
     });
 
-    // Emergency marker (red)
+    // Mark emergency location
     new google.maps.Marker({
       position: { lat: originLat_num, lng: originLng_num },
       map: mapInstance,
@@ -64,7 +64,7 @@ function DirectionsMap({ originLat, originLng, frontlinerLat, frontlinerLng }: D
       icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
     });
 
-    // Frontliner marker if available (blue)
+    // Mark frontliner location if available
     if (frontlinerLat && frontlinerLng) {
       const frontlinerLat_num = parseFloat(frontlinerLat);
       const frontlinerLng_num = parseFloat(frontlinerLng);
@@ -74,36 +74,193 @@ function DirectionsMap({ originLat, originLng, frontlinerLat, frontlinerLng }: D
         title: "Your Location",
         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
       });
-
-      // Draw line between frontliner and emergency
-      new google.maps.Polyline({
-        path: [
-          { lat: frontlinerLat_num, lng: frontlinerLng_num },
-          { lat: originLat_num, lng: originLng_num },
-        ],
-        geodesic: true,
-        strokeColor: "#4285F4",
-        strokeOpacity: 0.7,
-        strokeWeight: 2,
-        map: mapInstance,
-      });
     }
 
     setMap(mapInstance);
-  }, [originLat, originLng, frontlinerLat, frontlinerLng]);
+  }, [originLat, originLng, frontlinerLat, frontlinerLng, map]);
 
-  return <div ref={mapRef} className="w-full h-64 rounded-md border" />;
+  return <div ref={mapRef} className="w-full h-64 rounded-lg border border-border" />;
+}
+
+// Case Card Component - Renders a single emergency case
+function CaseCard({
+  emergencyCase,
+  frontlinerData,
+  handleAction,
+  updateStatusMutation,
+}: {
+  emergencyCase: EmergencyCaseWithPatient;
+  frontlinerData: any;
+  handleAction: (caseId: string, status: string) => void;
+  updateStatusMutation: any;
+}) {
+  return (
+    <Card key={emergencyCase.id} className="overflow-hidden" data-testid={`card-case-${emergencyCase.id}`}>
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold" data-testid={`text-case-id-${emergencyCase.id}`}>
+                Case #{emergencyCase.id.substring(0, 8)}
+              </h3>
+              <Badge variant={emergencyCase.priority >= 3 ? "destructive" : "secondary"}>
+                Priority {emergencyCase.priority}
+              </Badge>
+              <Badge variant="outline">{emergencyCase.status}</Badge>
+            </div>
+
+            {/* Patient Name */}
+            <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-950 p-2 rounded">
+              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div>
+                <p className="text-xs text-muted-foreground">Patient</p>
+                <p className="font-semibold text-foreground" data-testid={`text-patient-name-${emergencyCase.id}`}>
+                  {emergencyCase.patientName || "Unknown Patient"}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-sm text-muted-foreground mb-3">
+              <div className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                Location: {emergencyCase.originLat}, {emergencyCase.originLng}
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Created: {new Date(emergencyCase.createdAt).toLocaleString()}
+              </div>
+            </div>
+
+            {/* Emergency Type and Symptoms */}
+            {(emergencyCase.emergencyType || emergencyCase.symptoms) && (
+              <div className="mt-3 mb-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md space-y-2">
+                {emergencyCase.emergencyType && (
+                  <div>
+                    <p className="text-xs font-semibold text-red-900 dark:text-red-100">Emergency Type:</p>
+                    <p className="text-sm text-red-900 dark:text-red-200 font-semibold">{emergencyCase.emergencyType}</p>
+                  </div>
+                )}
+                {emergencyCase.symptoms && (
+                  <div>
+                    <p className="text-xs font-semibold text-red-900 dark:text-red-100">Symptoms:</p>
+                    <p className="text-sm text-red-900 dark:text-red-200">{emergencyCase.symptoms}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Condition Description */}
+            {emergencyCase.notes && (
+              <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Detailed Description:</p>
+                <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{emergencyCase.notes}</p>
+              </div>
+            )}
+
+            {/* Map */}
+            <div className="mt-3 mb-3">
+              <p className="text-xs font-semibold mb-2 text-muted-foreground">Directions to Emergency</p>
+              <DirectionsMap 
+                originLat={emergencyCase.originLat} 
+                originLng={emergencyCase.originLng}
+                frontlinerLat={frontlinerData?.frontliner?.currentLat}
+                frontlinerLng={frontlinerData?.frontliner?.currentLng}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {emergencyCase.status === "assigned" && (
+              <>
+                <Button
+                  onClick={() => handleAction(emergencyCase.id, "ack")}
+                  disabled={updateStatusMutation.isPending}
+                  size="sm"
+                  data-testid={`button-acknowledge-${emergencyCase.id}`}
+                >
+                  Acknowledge
+                </Button>
+                <Button
+                  onClick={() => handleAction(emergencyCase.id, "in_progress")}
+                  disabled={updateStatusMutation.isPending}
+                  variant="secondary"
+                  size="sm"
+                  data-testid={`button-in-progress-${emergencyCase.id}`}
+                >
+                  Start Response
+                </Button>
+              </>
+            )}
+            {(emergencyCase.status === "ack" || emergencyCase.status === "in_progress") && (
+              <Button
+                onClick={() => handleAction(emergencyCase.id, "completed")}
+                disabled={updateStatusMutation.isPending}
+                variant="default"
+                size="sm"
+                data-testid={`button-complete-${emergencyCase.id}`}
+              >
+                Mark Complete
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// Tab Content Component - Renders cases for a specific status
+function TabCasesContent({
+  cases,
+  statuses,
+  frontlinerData,
+  handleAction,
+  updateStatusMutation,
+  emptyMessage,
+}: {
+  cases: EmergencyCaseWithPatient[];
+  statuses: string[];
+  frontlinerData: any;
+  handleAction: (caseId: string, status: string) => void;
+  updateStatusMutation: any;
+  emptyMessage: string;
+}) {
+  const filteredCases = cases.filter((c) => statuses.includes(c.status));
+
+  if (filteredCases.length === 0) {
+    return (
+      <Card className="p-8">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">{emptyMessage}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {filteredCases.map((emergencyCase) => (
+        <CaseCard
+          key={emergencyCase.id}
+          emergencyCase={emergencyCase}
+          frontlinerData={frontlinerData}
+          handleAction={handleAction}
+          updateStatusMutation={updateStatusMutation}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function FrontlinerDashboard() {
-  const { user } = useAuthStore();
-  const { toast } = useToast();
+  const user = useAuthStore((state) => state.user);
   const [, setLocation] = useLocation();
-  const [frontlinerId, setFrontlinerId] = useState<string | null>(null);
-  const [expandedCase, setExpandedCase] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [frontlinerId, setFrontlinerId] = useState<string>("");
 
-  // Get frontliner profile (auto-creates if missing)
-  const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery<{ frontliner: any }>({
+  // Get frontliner profile
+  const { data: frontlinerData, isLoading: loadingFrontliner } = useQuery({
     queryKey: ["/api/frontliners/me"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/frontliners/me");
@@ -153,7 +310,7 @@ export default function FrontlinerDashboard() {
     },
   });
 
-  const handleAction = async (caseId: string, status: "ack" | "in_progress" | "completed") => {
+  const handleAction = async (caseId: string, status: string) => {
     // If status is "in_progress", find nearest hospital and assign the case
     if (status === "in_progress") {
       try {
@@ -187,12 +344,12 @@ export default function FrontlinerDashboard() {
       }
     }
 
-    const statusMessages = {
+    const statusMessages: Record<string, string> = {
       ack: "Acknowledged",
       in_progress: "En route to location",
       completed: "Completed successfully",
     };
-    updateStatusMutation.mutate({ caseId, status, note: statusMessages[status] });
+    updateStatusMutation.mutate({ caseId, status, note: statusMessages[status] || status });
   };
 
   const cases = casesData?.cases || [];
@@ -282,9 +439,9 @@ export default function FrontlinerDashboard() {
         </div>
       </Card>
 
-      {/* Cases */}
+      {/* Cases organized by status */}
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Active Cases</h2>
+        <h2 className="text-2xl font-semibold">Emergency Cases</h2>
         <Badge variant="outline" data-testid="text-case-count">{cases.length} case(s)</Badge>
       </div>
 
@@ -298,121 +455,66 @@ export default function FrontlinerDashboard() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {cases.map((emergencyCase: EmergencyCaseWithPatient) => (
-            <Card key={emergencyCase.id} className="overflow-hidden" data-testid={`card-case-${emergencyCase.id}`}>
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold" data-testid={`text-case-id-${emergencyCase.id}`}>
-                        Case #{emergencyCase.id.substring(0, 8)}
-                      </h3>
-                      <Badge variant={emergencyCase.priority >= 3 ? "destructive" : "secondary"}>
-                        Priority {emergencyCase.priority}
-                      </Badge>
-                      <Badge variant="outline">{emergencyCase.status}</Badge>
-                    </div>
+        <Tabs defaultValue="new" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="new" data-testid="tab-new-cases">
+              New ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "new" || c.status === "assigned").length})
+            </TabsTrigger>
+            <TabsTrigger value="ack" data-testid="tab-acknowledged-cases">
+              Acknowledged ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "ack").length})
+            </TabsTrigger>
+            <TabsTrigger value="in_progress" data-testid="tab-in-progress-cases">
+              In Progress ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "in_progress").length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" data-testid="tab-completed-cases">
+              Completed ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "completed").length})
+            </TabsTrigger>
+          </TabsList>
 
-                    {/* Patient Name */}
-                    <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-950 p-2 rounded">
-                      <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Patient</p>
-                        <p className="font-semibold text-foreground" data-testid={`text-patient-name-${emergencyCase.id}`}>
-                          {emergencyCase.patientName || "Unknown Patient"}
-                        </p>
-                      </div>
-                    </div>
+          <TabsContent value="new">
+            <TabCasesContent
+              cases={cases}
+              statuses={["new", "assigned"]}
+              frontlinerData={frontlinerData}
+              handleAction={handleAction}
+              updateStatusMutation={updateStatusMutation}
+              emptyMessage="No new cases"
+            />
+          </TabsContent>
 
-                    <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        Location: {emergencyCase.originLat}, {emergencyCase.originLng}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        Created: {new Date(emergencyCase.createdAt).toLocaleString()}
-                      </div>
-                    </div>
+          <TabsContent value="ack">
+            <TabCasesContent
+              cases={cases}
+              statuses={["ack"]}
+              frontlinerData={frontlinerData}
+              handleAction={handleAction}
+              updateStatusMutation={updateStatusMutation}
+              emptyMessage="No acknowledged cases"
+            />
+          </TabsContent>
 
-                    {/* Emergency Type and Symptoms */}
-                    {(emergencyCase.emergencyType || emergencyCase.symptoms) && (
-                      <div className="mt-3 mb-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md space-y-2">
-                        {emergencyCase.emergencyType && (
-                          <div>
-                            <p className="text-xs font-semibold text-red-900 dark:text-red-100">Emergency Type:</p>
-                            <p className="text-sm text-red-900 dark:text-red-200 font-semibold">{emergencyCase.emergencyType}</p>
-                          </div>
-                        )}
-                        {emergencyCase.symptoms && (
-                          <div>
-                            <p className="text-xs font-semibold text-red-900 dark:text-red-100">Symptoms:</p>
-                            <p className="text-sm text-red-900 dark:text-red-200">{emergencyCase.symptoms}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+          <TabsContent value="in_progress">
+            <TabCasesContent
+              cases={cases}
+              statuses={["in_progress"]}
+              frontlinerData={frontlinerData}
+              handleAction={handleAction}
+              updateStatusMutation={updateStatusMutation}
+              emptyMessage="No in-progress cases"
+            />
+          </TabsContent>
 
-                    {/* Condition Description */}
-                    {emergencyCase.notes && (
-                      <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Detailed Description:</p>
-                        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{emergencyCase.notes}</p>
-                      </div>
-                    )}
-
-                    {/* Map */}
-                    <div className="mt-3 mb-3">
-                      <p className="text-xs font-semibold mb-2 text-muted-foreground">Directions to Emergency</p>
-                      <DirectionsMap 
-                        originLat={emergencyCase.originLat} 
-                        originLng={emergencyCase.originLng}
-                        frontlinerLat={frontlinerData?.frontliner?.currentLat}
-                        frontlinerLng={frontlinerData?.frontliner?.currentLng}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    {emergencyCase.status === "assigned" && (
-                      <>
-                        <Button
-                          onClick={() => handleAction(emergencyCase.id, "ack")}
-                          disabled={updateStatusMutation.isPending}
-                          size="sm"
-                          data-testid={`button-acknowledge-${emergencyCase.id}`}
-                        >
-                          Acknowledge
-                        </Button>
-                        <Button
-                          onClick={() => handleAction(emergencyCase.id, "in_progress")}
-                          disabled={updateStatusMutation.isPending}
-                          variant="secondary"
-                          size="sm"
-                          data-testid={`button-in-progress-${emergencyCase.id}`}
-                        >
-                          Start Response
-                        </Button>
-                      </>
-                    )}
-                    {(emergencyCase.status === "ack" || emergencyCase.status === "in_progress") && (
-                      <Button
-                        onClick={() => handleAction(emergencyCase.id, "completed")}
-                        disabled={updateStatusMutation.isPending}
-                        variant="default"
-                        size="sm"
-                        data-testid={`button-complete-${emergencyCase.id}`}
-                      >
-                        Mark Complete
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+          <TabsContent value="completed">
+            <TabCasesContent
+              cases={cases}
+              statuses={["completed"]}
+              frontlinerData={frontlinerData}
+              handleAction={handleAction}
+              updateStatusMutation={updateStatusMutation}
+              emptyMessage="No completed cases"
+            />
+          </TabsContent>
+        </Tabs>
       )}
       </div>
     </div>
