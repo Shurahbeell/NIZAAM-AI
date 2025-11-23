@@ -221,7 +221,13 @@ export default function Map() {
               type={facility.type}
               isOpen={facility.isOpen}
               phone={facility.phone}
-              onNavigate={() => console.log(`Navigate to ${facility.name}`)}
+              lat={facility.lat}
+              lng={facility.lng}
+              onNavigate={() => {
+                // Open Google Maps with navigation to the facility
+                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${facility.lat},${facility.lng}&travelmode=driving`;
+                window.open(mapsUrl, '_blank');
+              }}
               onCall={() => window.open(`tel:${facility.phone}`)}
               onBook={() => setLocation("/appointments")}
             />

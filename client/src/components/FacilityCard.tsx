@@ -9,12 +9,14 @@ interface FacilityCardProps {
   type: string;
   isOpen: boolean;
   phone?: string;
+  lat?: number;
+  lng?: number;
   onNavigate?: () => void;
   onCall?: () => void;
   onBook?: () => void;
 }
 
-export default function FacilityCard({ name, distance, type, isOpen, phone, onNavigate, onCall, onBook }: FacilityCardProps) {
+export default function FacilityCard({ name, distance, type, isOpen, phone, lat, lng, onNavigate, onCall, onBook }: FacilityCardProps) {
   return (
     <Card className="p-4" data-testid={`facility-card-${name.toLowerCase().replace(/\s+/g, '-')}`}>
       <div className="space-y-4">
@@ -34,7 +36,13 @@ export default function FacilityCard({ name, distance, type, isOpen, phone, onNa
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={onNavigate} data-testid="button-navigate">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={onNavigate} 
+            disabled={!lat || !lng}
+            data-testid="button-navigate"
+          >
             <Navigation className="w-4 h-4 mr-2" />
             Navigate
           </Button>
