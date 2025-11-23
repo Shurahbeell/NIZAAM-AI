@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface Medicine {
   id: string;
@@ -34,9 +35,12 @@ interface Medicine {
 
 export default function Medicines() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const notificationShownRef = useRef<Set<string>>(new Set());
   
   const [newMedicine, setNewMedicine] = useState({
     name: "",
@@ -45,15 +49,23 @@ export default function Medicines() {
     frequency: "daily"
   });
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     const stored = localStorage.getItem("medicines");
     if (stored) {
       setMedicines(JSON.parse(stored));
     }
     
+    // Update every second for accurate countdown
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
+    }, 1000);
     
     return () => clearInterval(timer);
   }, []);
@@ -127,6 +139,85 @@ export default function Medicines() {
 
     return reminders.sort((a, b) => a.time.localeCompare(b.time));
   };
+
+  const calculateTimeLeft = () => {
+    const reminders = getUpcomingReminders();
+    const nextReminder = reminders.find(r => !r.isPast);
+    
+    if (!nextReminder) {
+      return "";
+    }
+
+    const now = new Date();
+    const [hours, minutes] = nextReminder.time.split(':').map(Number);
+    
+    let reminderDate = new Date();
+    reminderDate.setHours(hours, minutes, 0, 0);
+
+    // If reminder time has passed, it's for tomorrow
+    if (reminderDate < now) {
+      reminderDate.setDate(reminderDate.getDate() + 1);
+    }
+
+    const diffMs = reminderDate.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+
+    if (diffMins < 0) return "";
+    if (diffMins === 0) return `${diffSecs}s`;
+    if (diffMins < 60) return `${diffMins}m ${diffSecs}s`;
+    
+    const hrs = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hrs}h ${mins}m`;
+  };
+
+  const checkAndNotify = () => {
+    const reminders = getUpcomingReminders();
+    const nextReminder = reminders.find(r => !r.isPast);
+    
+    if (!nextReminder) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+
+    // Check if current time matches reminder time (within same minute)
+    if (currentTimeStr === nextReminder.time) {
+      const notificationKey = `${nextReminder.medicine.id}-${nextReminder.time}`;
+      
+      // Only show notification once per reminder time
+      if (!notificationShownRef.current.has(notificationKey)) {
+        notificationShownRef.current.add(notificationKey);
+
+        // Show in-app toast notification
+        toast({
+          title: "Medicine Reminder",
+          description: `Time to take ${nextReminder.medicine.name} - ${nextReminder.medicine.dosage}`,
+        });
+
+        // Show browser push notification if allowed
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Medicine Reminder", {
+            body: `Time to take ${nextReminder.medicine.name} - ${nextReminder.medicine.dosage}`,
+            icon: "/pill-icon.png",
+          });
+        }
+
+        // Clear the notification key after 2 minutes so it can trigger again tomorrow
+        setTimeout(() => {
+          notificationShownRef.current.delete(notificationKey);
+        }, 120000);
+      }
+    }
+  };
+
+  // Update time left and check for notifications
+  useEffect(() => {
+    setTimeLeft(calculateTimeLeft());
+    checkAndNotify();
+  }, [currentTime, medicines]);
 
   const reminders = getUpcomingReminders();
   const nextReminder = reminders.find(r => !r.isPast);
@@ -261,6 +352,12 @@ export default function Medicines() {
                 <p className="text-sm text-muted-foreground">
                   {nextReminder.medicine.name} - {nextReminder.medicine.dosage} at {nextReminder.time}
                 </p>
+              </div>
+              <div className="text-right">
+                {timeLeft && (
+                  <div className="text-sm font-medium text-primary">{timeLeft}</div>
+                )}
+                <p className="text-xs text-muted-foreground">Time left</p>
               </div>
             </CardContent>
           </Card>
