@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Heart, Building2, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
@@ -47,6 +48,7 @@ export default function Emergency() {
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
   const [emergencyType, setEmergencyType] = useState("");
+  const [conditionDescription, setConditionDescription] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -101,7 +103,7 @@ export default function Emergency() {
         lat,
         lng,
         assignedHospitalId: null,
-        notes: null
+        notes: conditionDescription || null
       });
 
       const data = await response.json();
@@ -283,6 +285,21 @@ export default function Emergency() {
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Condition Description */}
+        <div className="space-y-3">
+          <Label htmlFor="condition-description" className="text-sm font-bold text-foreground">
+            Describe Your Condition
+          </Label>
+          <Textarea
+            id="condition-description"
+            placeholder="Please describe your condition thoroughly... (e.g., symptoms, severity, any medications you're taking, allergies, etc.)"
+            value={conditionDescription}
+            onChange={(e) => setConditionDescription(e.target.value)}
+            data-testid="textarea-condition-description"
+            className="rounded-xl border-2 border-border shadow-md bg-white min-h-32 resize-none text-base"
+          />
         </div>
 
         {/* Progress Indicator */}
