@@ -25,7 +25,12 @@ export default function DiseaseLibrary() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [freeChatMessages, setFreeChatMessages] = useState<ChatMessage[]>([]);
+  const [freeDiseaseName, setFreeDiseaseName] = useState("");
+  const [freeChatInput, setFreeChatInput] = useState("");
+  const [isLoadingFreeChat, setIsLoadingFreeChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const freeMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredDiseases = diseaseLibrary.filter(disease =>
     disease.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -40,6 +45,72 @@ export default function DiseaseLibrary() {
   useEffect(() => {
     scrollToBottom();
   }, [chatMessages]);
+
+  useEffect(() => {
+    freeMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [freeChatMessages]);
+
+  const handleStartFreeChat = () => {
+    if (freeDiseaseName.trim()) {
+      setFreeChatMessages([
+        {
+          id: "1",
+          type: "ai",
+          content: `Hello! I'm your AI health assistant. I can provide information about ${freeDiseaseName}. Feel free to ask me about symptoms, treatments, prevention, risk factors, and more. Remember to consult with a healthcare professional for diagnosis and treatment.`,
+          timestamp: new Date()
+        }
+      ]);
+    }
+  };
+
+  const sendFreeChatMessage = async () => {
+    if (!freeChatInput.trim() || !freeDiseaseName.trim() || isLoadingFreeChat) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: "user",
+      content: freeChatInput,
+      timestamp: new Date()
+    };
+
+    setFreeChatMessages(prev => [...prev, userMessage]);
+    setFreeChatInput("");
+    setIsLoadingFreeChat(true);
+
+    try {
+      const response = await fetch("/api/disease/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disease: freeDiseaseName,
+          question: userMessage.content,
+          context: {}
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: "ai",
+        content: data.response,
+        timestamp: new Date()
+      };
+
+      setFreeChatMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to get response from AI. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingFreeChat(false);
+    }
+  };
 
   const handleDiseaseSelect = (disease: typeof diseaseLibrary[0]) => {
     setSelectedDisease(disease);
@@ -131,55 +202,164 @@ export default function DiseaseLibrary() {
 
       {!selectedDisease ? (
         <div className="p-4 space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={t('diseaseLibrary.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                data-testid="input-search"
-              />
-            </div>
-          </div>
+          {/* Free-Form Disease Chatbot Section */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Ask About Any Disease
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Disease Name Input */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter disease name (e.g., Diabetes, Fever, Asthma)"
+                  value={freeDiseaseName}
+                  onChange={(e) => setFreeDiseaseName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && freeDiseaseName.trim() && !freeChatMessages.length) {
+                      handleStartFreeChat();
+                    }
+                  }}
+                  disabled={freeChatMessages.length > 0}
+                  data-testid="input-free-disease-name"
+                  className="flex-1"
+                />
+                {freeChatMessages.length === 0 && (
+                  <Button
+                    onClick={handleStartFreeChat}
+                    disabled={!freeDiseaseName.trim()}
+                    data-testid="button-start-free-chat"
+                  >
+                    Start
+                  </Button>
+                )}
+              </div>
 
-          <div className="space-y-3">
-            {filteredDiseases.map((disease, index) => (
-              <Card 
-                key={index} 
-                className="hover-elevate cursor-pointer"
-                onClick={() => handleDiseaseSelect(disease)}
-                data-testid={`disease-card-${index}`}
-              >
-                <CardHeader>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Activity className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base">{disease.name}</CardTitle>
-                      <Badge variant="outline" className="mt-2">{disease.category}</Badge>
-                    </div>
+              {/* Chat Messages Container */}
+              {freeChatMessages.length > 0 && (
+                <>
+                  <div className="bg-background border rounded-lg h-80 overflow-y-auto p-4 space-y-4" data-testid="free-chat-container">
+                    {freeChatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.type === "ai" ? "justify-start" : "justify-end"}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            msg.type === "ai"
+                              ? "bg-muted text-foreground"
+                              : "bg-primary text-primary-foreground"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {isLoadingFreeChat && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted px-4 py-2 rounded-lg">
+                          <Loader className="w-4 h-4 animate-spin" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={freeMessagesEndRef} />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {t('diseaseDetails.commonSymptoms')} {disease.symptoms.slice(0, 3).join(", ")}
-                  </p>
+
+                  {/* Chat Input */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ask about symptoms, treatment, prevention..."
+                      value={freeChatInput}
+                      onChange={(e) => setFreeChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !isLoadingFreeChat && sendFreeChatMessage()}
+                      disabled={isLoadingFreeChat}
+                      data-testid="input-free-chat-question"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={sendFreeChatMessage}
+                      disabled={isLoadingFreeChat || !freeChatInput.trim()}
+                      data-testid="button-send-free-chat"
+                    >
+                      {isLoadingFreeChat ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFreeDiseaseName("");
+                      setFreeChatMessages([]);
+                    }}
+                    className="w-full"
+                    data-testid="button-change-free-disease"
+                  >
+                    Ask About Different Disease
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Disease Library Section */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground px-1">Or Browse Disease Library</h2>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('diseaseLibrary.searchPlaceholder')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {filteredDiseases.map((disease, index) => (
+                <Card 
+                  key={index} 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => handleDiseaseSelect(disease)}
+                  data-testid={`disease-card-${index}`}
+                >
+                  <CardHeader>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Activity className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-base">{disease.name}</CardTitle>
+                        <Badge variant="outline" className="mt-2">{disease.category}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {t('diseaseDetails.commonSymptoms')} {disease.symptoms.slice(0, 3).join(", ")}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {filteredDiseases.length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Activity className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">{t('diseaseLibrary.noResults')}</p>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
-
-          {filteredDiseases.length === 0 && (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Activity className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">{t('diseaseLibrary.noResults')}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       ) : (
         <div className="p-4 space-y-4 pb-24">
