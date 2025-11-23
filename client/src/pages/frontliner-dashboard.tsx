@@ -19,6 +19,7 @@ interface EmergencyCaseWithPatient {
   priority: number;
   status: string;
   createdAt: string;
+  notes?: string | null;
 }
 
 interface DirectionsMapProps {
@@ -332,6 +333,14 @@ export default function FrontlinerDashboard() {
                         Created: {new Date(emergencyCase.createdAt).toLocaleString()}
                       </div>
                     </div>
+
+                    {/* Condition Description */}
+                    {emergencyCase.notes && (
+                      <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Condition Description:</p>
+                        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{emergencyCase.notes}</p>
+                      </div>
+                    )}
 
                     {/* Map */}
                     <div className="mt-3 mb-3">

@@ -20,6 +20,7 @@ interface IncomingEmergency {
   acknowledgedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  notes?: string | null;
 }
 
 // For display purposes
@@ -196,6 +197,12 @@ export default function HospitalEmergencies() {
                           <Clock className="w-4 h-4" />
                           {new Date(emergency.createdAt).toLocaleString()}
                         </div>
+                        {emergency.notes && (
+                          <div className="mt-3 p-3 bg-white/50 rounded-md border border-border/50">
+                            <p className="text-xs font-semibold text-foreground mb-1">Patient's Description:</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{emergency.notes}</p>
+                          </div>
+                        )}
                       </div>
 
                       <Button
@@ -259,6 +266,12 @@ export default function HospitalEmergencies() {
                           <Clock className="w-4 h-4" />
                           Acknowledged: {new Date(emergency.acknowledgedAt!).toLocaleString()}
                         </div>
+                        {emergency.notes && (
+                          <div className="mt-3 p-3 bg-white/50 rounded-md border border-border/50">
+                            <p className="text-xs font-semibold text-foreground mb-1">Patient's Description:</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{emergency.notes}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
