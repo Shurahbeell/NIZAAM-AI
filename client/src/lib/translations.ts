@@ -582,7 +582,7 @@ export const translations = {
       myFilesDesc: 'طبی دستاویزات',
       medicalHistory: 'طبی تاریخ',
       medicalHistoryDesc: 'ماضی کی ریکارڈز',
-      conditions: 'Disease Library',
+      conditions: 'بیماری کی لائبریری',
       conditionsDesc: 'بیماری کی معلومات',
       medicines: 'ادویات',
       medicinesDesc: 'ٹریک اور یادگاریاں',
