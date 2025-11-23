@@ -36,37 +36,29 @@ export class TriageAgent implements Agent {
     try {
       console.log(`[TriageAgent] Processing message in language: ${language}`);
       
-      const isUrdu = language === "ur" || language === "ru";
-      
-      // Translate to English for processing if needed
+      // For Urdu/Roman Urdu, translate user input to English for internal processing
+      // But Gemini will respond in the requested language directly
       let processedMessage = message;
-      if (isUrdu) {
+      if (language === "ur" || language === "ru") {
         processedMessage = await translationService.translate(message, "english", "Medical triage");
       }
       
       // Get conversation history
       const history = await storage.getSessionMessages(sessionId);
       
-      // Perform triage analysis
+      // Perform triage analysis (Gemini will respond in the requested language)
       const triageResult = await this.performTriage(processedMessage, history, language);
       
       // Apply PII protection before storage
       const userMessageProcessed = piiProtection.processForStorage(message);
-      
-      // Translate response back to user's language
-      let responseContent = triageResult.content;
-      if (isUrdu) {
-        responseContent = await translationService.translate(triageResult.content, "urdu", "Medical triage response");
-      }
-      
-      const agentResponseProcessed = piiProtection.processForStorage(responseContent);
+      const agentResponseProcessed = piiProtection.processForStorage(triageResult.content);
       
       // Store user message (with PII minimization)
       await storage.createAgentMessage({
         sessionId,
         senderType: "user",
         content: userMessageProcessed.processed,
-        language: isUrdu ? "urdu" : "english",
+        language: language,
         metadata: {
           piiProtection: userMessageProcessed.metadata
         }
@@ -81,13 +73,8 @@ export class TriageAgent implements Agent {
           urgency: triageResult.urgency,
           piiProtection: agentResponseProcessed.metadata
         },
-        language: isUrdu ? "urdu" : "english"
+        language: language
       });
-      
-      // Return unredacted response to user
-      const localizedResponse = isUrdu
-        ? responseContent
-        : triageResult.content;
       
       // Emit events based on urgency
       if (triageResult.urgency === URGENCY_LEVELS.EMERGENCY) {
@@ -103,15 +90,18 @@ export class TriageAgent implements Agent {
         });
       }
       
-      return localizedResponse;
+      // Return Gemini's response directly (already in requested language)
+      return triageResult.content;
       
     } catch (error) {
       console.error("[TriageAgent] Error handling message:", error);
       
-      const errorMsg = "I apologize, but I encountered an error. Please try again or contact emergency services if this is urgent.";
-      return language === "ur" || language === "ru"
-        ? await translationService.translate(errorMsg, "urdu")
-        : errorMsg;
+      if (language === "ur") {
+        return "معافی چاہتا ہوں، لیکن مجھے ایک خرابی کا سامنا ہے۔ براہ کرم دوبارہ کوشش کریں یا اگر یہ فوری ہے تو 1122 پر کال کریں۔";
+      } else if (language === "ru") {
+        return "Main maafi chahta hoon, lekin mujhe ek kharabi ka saamna hai. Brahay kram dobarah koshish karien ya agar ye fori hai to 1122 par call karien.";
+      }
+      return "I apologize, but I encountered an error. Please try again or contact emergency services if this is urgent.";
     }
   }
 
