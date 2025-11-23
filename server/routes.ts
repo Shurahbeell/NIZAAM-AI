@@ -461,7 +461,7 @@ router.patch("/api/screening-reminders/:id", async (req: Request, res: Response)
 // ==================== DISEASE CHATBOT ====================
 
 // Disease chatbot powered by Gemini (using Replit AI Integrations)
-// Supports multilingual responses in English, Urdu, and Roman Urdu
+// Supports multilingual responses in English, Urdu Script, and Roman Urdu
 router.post("/api/disease/chat", async (req: Request, res: Response) => {
   try {
     const { disease, question, context, language = "english" } = req.body;
@@ -483,6 +483,15 @@ router.post("/api/disease/chat", async (req: Request, res: Response) => {
       }
     });
 
+    // Map language codes to full language names (same as triage agent)
+    const languageMap: { [key: string]: string } = {
+      "english": "English",
+      "ur": "Urdu (written in Arabic-Persian script)",
+      "ru": "Roman Urdu (written in Romanized Latin script)"
+    };
+
+    const targetLanguage = languageMap[language] || "English";
+
     // Translate user question to English for processing if needed
     let processedQuestion = question;
     if (language === "ur" || language === "ru") {
@@ -490,7 +499,11 @@ router.post("/api/disease/chat", async (req: Request, res: Response) => {
     }
 
     // Create a detailed prompt for disease information
-    const systemPrompt = `You are a knowledgeable health educator. When users ask about a disease, provide comprehensive information including:
+    const systemPrompt = `You are a knowledgeable health educator for Pakistan. Your role is to provide accurate, comprehensive information about diseases and medical conditions.
+
+**CRITICAL LANGUAGE REQUIREMENT: You MUST respond ONLY in ${targetLanguage}. Do not provide any text in Hindi, English (unless specified), or any other language. Do not mix languages.**
+
+When users ask about a disease, provide comprehensive information including:
 - Clear explanation of what the disease is
 - Key symptoms and how they present
 - Disease progression and stages (if applicable)
@@ -503,7 +516,12 @@ router.post("/api/disease/chat", async (req: Request, res: Response) => {
 - Complications if untreated
 - Prognosis and long-term outlook
 
-Always use simple, clear language and end by reminding the user to consult healthcare professionals for diagnosis and treatment.`;
+Always use simple, clear language and end by reminding the user to consult healthcare professionals for diagnosis and treatment.
+
+**PAKISTAN CONTEXT:**
+- Use context appropriate for Pakistan's healthcare system
+- Reference common diseases in Pakistan
+- Be empathetic and culturally sensitive`;
 
     const diseaseContext = context ? `
 Additional Disease Information Available:
@@ -515,17 +533,11 @@ Additional Disease Information Available:
 - When to see doctor: ${context.whenToSeeDoctor}
 ` : "";
 
-    const userPrompt = `About ${disease}: ${processedQuestion}${diseaseContext}`;
+    const userPrompt = `About ${disease}: ${processedQuestion}${diseaseContext}
+
+Respond ONLY in ${targetLanguage}. Do not mix languages. Do not use Hindi. Do not provide English translation unless specifically requested.`;
 
     console.log(`[Disease Chat] Processing question about ${disease} in language: ${language}`);
-
-    // Determine language instruction for Gemini response
-    let languageInstruction = "";
-    if (language === "ur") {
-      languageInstruction = "\n\nIMPORTANT: Respond in Urdu (Roman Urdu - Latin script). Use formal, clear language appropriate for healthcare education.";
-    } else if (language === "ru") {
-      languageInstruction = "\n\nIMPORTANT: Respond in Roman Urdu (Latin script). Use formal, clear language appropriate for healthcare education.";
-    }
 
     // Call Gemini API with proper configuration
     const response = await client.models.generateContent({
@@ -535,7 +547,7 @@ Additional Disease Information Available:
           role: "user",
           parts: [
             {
-              text: systemPrompt + languageInstruction + "\n\n" + userPrompt
+              text: systemPrompt + "\n\n" + userPrompt
             }
           ]
         }
