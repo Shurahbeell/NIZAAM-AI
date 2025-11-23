@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Heart, Calendar, AlertTriangle, Baby, Search, Bell, Stethoscope, BookOpen, Activity, CheckCircle } from "lucide-react";
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface PeriodEntry {
   startDate: string;
@@ -224,6 +225,7 @@ const awarenessTopics: AwarenessTopic[] = [
 
 export default function WomensHealth() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [periodEntries, setPeriodEntries] = useState<PeriodEntry[]>([]);
   const [lastPeriodDate, setLastPeriodDate] = useState("");
   const [isPregnant, setIsPregnant] = useState(false);
@@ -233,6 +235,7 @@ export default function WomensHealth() {
   const [reminders, setReminders] = useState<ScreeningReminder[]>([]);
   const [symptomInput, setSymptomInput] = useState("");
   const [symptomResult, setSymptomResult] = useState<SymptomCheckResult | null>(null);
+  const tabsRef = useRef<any>(null);
 
   useEffect(() => {
     const storedPeriods = localStorage.getItem("periodEntries");
@@ -312,6 +315,13 @@ export default function WomensHealth() {
     const updated = [...reminders, newReminder];
     setReminders(updated);
     localStorage.setItem("screeningReminders", JSON.stringify(updated));
+    
+    // Show success toast
+    toast({
+      title: "Reminder Added!",
+      description: `${type} reminder set for ${frequency} starting ${nextDate.toLocaleDateString()}`,
+      variant: "default"
+    });
   };
 
   const toggleReminder = (id: string) => {
@@ -610,7 +620,7 @@ export default function WomensHealth() {
       </header>
 
       <div className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <Tabs defaultValue="awareness" className="space-y-4">
+        <Tabs ref={tabsRef} defaultValue="awareness" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4 h-12 rounded-xl bg-muted p-1">
             <TabsTrigger value="awareness" data-testid="tab-awareness" className="rounded-lg">Awareness</TabsTrigger>
             <TabsTrigger value="period" data-testid="tab-period" className="rounded-lg">Period</TabsTrigger>
