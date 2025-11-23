@@ -17,9 +17,16 @@ interface ChatMessage {
 }
 
 export default function DiseaseLibrary() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Map language code to API format
+  const getLanguageCode = (): "english" | "ur" | "ru" => {
+    if (language === "ur") return "ur";
+    if (language === "ru") return "ru";
+    return "english";
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDisease, setSelectedDisease] = useState<typeof diseaseLibrary[0] | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -52,11 +59,19 @@ export default function DiseaseLibrary() {
 
   const handleStartFreeChat = () => {
     if (freeDiseaseName.trim()) {
+      let greetingMessage = `Hello! I'm your AI health assistant. I can provide information about ${freeDiseaseName}. Feel free to ask me about symptoms, treatments, prevention, risk factors, and more. Remember to consult with a healthcare professional for diagnosis and treatment.`;
+      
+      if (language === "ur") {
+        greetingMessage = `السلام علیکم! میں آپ کے صحت کی معاونت کے لیے یہاں ہوں۔ میں ${freeDiseaseName} کے بارے میں تفصیلی معلومات فراہم کر سکتا ہوں۔ علامات، علاج، روک تھام اور خطرے والے عوامل کے بارے میں پوچھیں۔ یاد رکھیں کہ تشخیص اور علاج کے لیے ڈاکٹر سے ملیں۔`;
+      } else if (language === "ru") {
+        greetingMessage = `Assalamu alaikum! Main aapke sehat ki muavna ke liye yahan hoon. Main ${freeDiseaseName} ke baray mein tafseeli ma'lumaat frahm kar sakta hoon. Alaamat, ilaj, rok tham, aur khatre wale awamil ke baray mein poochein. Yaad rakhen ke tashkhees aur ilaj ke liye doctor se milen.`;
+      }
+
       setFreeChatMessages([
         {
           id: "1",
           type: "ai",
-          content: `Hello! I'm your AI health assistant. I can provide information about ${freeDiseaseName}. Feel free to ask me about symptoms, treatments, prevention, risk factors, and more. Remember to consult with a healthcare professional for diagnosis and treatment.`,
+          content: greetingMessage,
           timestamp: new Date()
         }
       ]);
@@ -84,7 +99,8 @@ export default function DiseaseLibrary() {
         body: JSON.stringify({
           disease: freeDiseaseName,
           question: userMessage.content,
-          context: {}
+          context: {},
+          language: getLanguageCode()
         })
       });
 
@@ -114,11 +130,20 @@ export default function DiseaseLibrary() {
 
   const handleDiseaseSelect = (disease: typeof diseaseLibrary[0]) => {
     setSelectedDisease(disease);
+    
+    let greeting = `Hello! I'm your health assistant. Ask me anything about ${disease.name}. I can explain the symptoms, critical levels, what happens to your body, disease stages, and more.`;
+    
+    if (language === "ur") {
+      greeting = `السلام علیکم! میں آپ کے صحت کی معاونت کے لیے یہاں ہوں۔ ${disease.name} کے بارے میں کچھ بھی پوچھیں۔ میں علامات، نازک سطحوں، آپ کے جسم میں کیا ہوتا ہے، بیماری کے مراحل اور بہت کچھ سمجھا سکتا ہوں۔`;
+    } else if (language === "ru") {
+      greeting = `Assalamu alaikum! Main aapke sehat ke liye yahan hoon. ${disease.name} ke baray mein kuch bhi poochein. Main alamaat, nazuk satahon, aapke jism mein kya hota hai, beemari ke marhalein aur bahut kuch samjha sakta hoon.`;
+    }
+
     setChatMessages([
       {
         id: "1",
         type: "ai",
-        content: `Hello! I'm your health assistant. Ask me anything about ${disease.name}. I can explain the symptoms, critical levels, what happens to your body, disease stages, and more.`,
+        content: greeting,
         timestamp: new Date()
       }
     ]);
@@ -153,7 +178,8 @@ export default function DiseaseLibrary() {
             treatments: selectedDisease.treatments,
             prevention: selectedDisease.prevention,
             whenToSeeDoctor: selectedDisease.whenToSeeDoctor
-          }
+          },
+          language: getLanguageCode()
         })
       });
 

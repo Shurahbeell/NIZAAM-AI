@@ -461,16 +461,18 @@ router.patch("/api/screening-reminders/:id", async (req: Request, res: Response)
 // ==================== DISEASE CHATBOT ====================
 
 // Disease chatbot powered by Gemini (using Replit AI Integrations)
+// Supports multilingual responses in English, Urdu, and Roman Urdu
 router.post("/api/disease/chat", async (req: Request, res: Response) => {
   try {
-    const { disease, question, context } = req.body;
+    const { disease, question, context, language = "english" } = req.body;
     
     if (!disease || !question) {
       return res.status(400).json({ error: "Missing disease or question" });
     }
 
-    // Import Gemini with Replit AI Integrations configuration
+    // Import Gemini and translation service
     const { GoogleGenAI } = await import("@google/genai");
+    const { translationService } = await import("./mcp/services/translation");
     
     // Use Replit's AI Integrations for Gemini access
     const client = new GoogleGenAI({
@@ -480,6 +482,12 @@ router.post("/api/disease/chat", async (req: Request, res: Response) => {
         baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || ""
       }
     });
+
+    // Translate user question to English for processing if needed
+    let processedQuestion = question;
+    if (language === "ur" || language === "ru") {
+      processedQuestion = await translationService.translate(question, "english", "disease query");
+    }
 
     // Create a detailed prompt for disease information
     const systemPrompt = `You are a knowledgeable health educator. When users ask about a disease, provide comprehensive information including:
@@ -507,9 +515,17 @@ Additional Disease Information Available:
 - When to see doctor: ${context.whenToSeeDoctor}
 ` : "";
 
-    const userPrompt = `About ${disease}: ${question}${diseaseContext}`;
+    const userPrompt = `About ${disease}: ${processedQuestion}${diseaseContext}`;
 
-    console.log(`[Disease Chat] Processing question about ${disease}`);
+    console.log(`[Disease Chat] Processing question about ${disease} in language: ${language}`);
+
+    // Determine language instruction for Gemini response
+    let languageInstruction = "";
+    if (language === "ur") {
+      languageInstruction = "\n\nIMPORTANT: Respond in Urdu (Roman Urdu - Latin script). Use formal, clear language appropriate for healthcare education.";
+    } else if (language === "ru") {
+      languageInstruction = "\n\nIMPORTANT: Respond in Roman Urdu (Latin script). Use formal, clear language appropriate for healthcare education.";
+    }
 
     // Call Gemini API with proper configuration
     const response = await client.models.generateContent({
@@ -519,7 +535,7 @@ Additional Disease Information Available:
           role: "user",
           parts: [
             {
-              text: systemPrompt + "\n\n" + userPrompt
+              text: systemPrompt + languageInstruction + "\n\n" + userPrompt
             }
           ]
         }
@@ -527,7 +543,7 @@ Additional Disease Information Available:
     });
 
     // Extract response text with better error handling
-    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    let responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!responseText) {
       console.error("[Disease Chat] No response text from Gemini", { 
@@ -536,6 +552,13 @@ Additional Disease Information Available:
       return res.status(500).json({ 
         error: "Failed to generate response from AI. Please try again." 
       });
+    }
+
+    // If language was Urdu or Roman Urdu but Gemini responded in English, translate back
+    if ((language === "ur" || language === "ru") && !responseText.match(/[\u0600-\u06FF]/)) {
+      // Gemini didn't respond in Urdu, translate English to Urdu
+      const targetLanguage = language === "ur" ? "urdu" : "urdu"; // Both map to urdu translation
+      responseText = await translationService.translate(responseText, targetLanguage, "disease information");
     }
 
     console.log(`[Disease Chat] Successfully generated response for ${disease}`);
