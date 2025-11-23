@@ -2,12 +2,18 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Activity, Search, AlertCircle, Send, Loader } from "lucide-react";
+import { ArrowLeft, Activity, Search, AlertCircle, Send, Loader, Globe } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { diseaseLibrary } from "@shared/disease-library";
 import { useLanguage } from "@/lib/useLanguage";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatMessage {
   id: string;
@@ -17,7 +23,7 @@ interface ChatMessage {
 }
 
 export default function DiseaseLibrary() {
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -207,22 +213,68 @@ export default function DiseaseLibrary() {
     }
   };
 
+  const getLanguageName = (): string => {
+    switch (language) {
+      case "ur":
+        return "Urdu";
+      case "ru":
+        return "Roman Urdu";
+      default:
+        return "English";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="border-b sticky top-0 bg-background z-10">
-        <div className="p-4 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => selectedDisease ? setSelectedDisease(null) : setLocation("/dashboard")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-foreground">{t('diseaseLibrary.title')}</h1>
-            <p className="text-xs text-muted-foreground">{t('diseaseLibrary.subtitle')}</p>
+        <div className="p-4 flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => selectedDisease ? setSelectedDisease(null) : setLocation("/dashboard")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">{t('diseaseLibrary.title')}</h1>
+              <p className="text-xs text-muted-foreground">{t('diseaseLibrary.subtitle')}</p>
+            </div>
           </div>
+          
+          {/* Language Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-language-selector">
+                <Globe className="w-4 h-4 mr-2" />
+                {getLanguageName()}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => setLanguage("en")}
+                className={language === "en" ? "bg-primary/10" : ""}
+                data-testid="option-language-english"
+              >
+                English
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setLanguage("ur")}
+                className={language === "ur" ? "bg-primary/10" : ""}
+                data-testid="option-language-urdu"
+              >
+                اردو (Urdu)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setLanguage("ru")}
+                className={language === "ru" ? "bg-primary/10" : ""}
+                data-testid="option-language-roman-urdu"
+              >
+                Roman Urdu
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
