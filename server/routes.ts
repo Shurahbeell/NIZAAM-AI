@@ -458,6 +458,72 @@ router.patch("/api/screening-reminders/:id", async (req: Request, res: Response)
   }
 });
 
+// ==================== DISEASE CHATBOT ====================
+
+// Disease chatbot powered by Gemini
+router.post("/api/disease/chat", async (req: Request, res: Response) => {
+  try {
+    const { disease, question, context } = req.body;
+    
+    if (!disease || !question) {
+      return res.status(400).json({ error: "Missing disease or question" });
+    }
+
+    // Import Gemini and create prompt
+    const { GoogleGenAI } = await import("@google/genai");
+    const client = new GoogleGenAI({
+      apiKey: process.env.GOOGLE_GENAI_API_KEY || ""
+    });
+
+    // Create a detailed prompt for disease information
+    const systemPrompt = `You are a knowledgeable health educator. When users ask about a disease, provide:
+- A clear, concise explanation of the disease
+- Key symptoms (organized by severity if applicable)
+- Critical/severity levels and what happens to the body at each stage
+- Disease stages (if applicable)
+- Risk factors
+- Treatment options
+- Prevention methods
+
+Be factual, use simple language, and always remind users to consult healthcare professionals for diagnosis and treatment.`;
+
+    const diseaseContext = context ? `
+Disease Information Available:
+- Symptoms: ${context.symptoms?.join(", ")}
+- Risk Factors: ${context.riskFactors?.join(", ")}
+- Complications: ${context.complications?.join(", ")}
+- Treatments: ${context.treatments?.join(", ")}
+- Prevention: ${context.prevention?.join(", ")}
+- When to see doctor: ${context.whenToSeeDoctor}
+` : "";
+
+    const userPrompt = `About ${disease}: ${question}${diseaseContext}`;
+
+    // Call Gemini API
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: systemPrompt + "\n\n" + userPrompt
+            }
+          ]
+        }
+      ]
+    });
+
+    // Extract response text
+    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate response";
+
+    res.json({ response: responseText });
+  } catch (error: any) {
+    console.error("[Disease Chat] Error:", error);
+    res.status(500).json({ error: error.message || "Failed to process disease question" });
+  }
+});
+
 export default router;
 
 // Export registerRoutes for server/index.ts

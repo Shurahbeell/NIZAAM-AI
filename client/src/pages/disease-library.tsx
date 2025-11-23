@@ -1,24 +1,114 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Activity, Search, AlertCircle } from "lucide-react";
+import { ArrowLeft, Activity, Search, AlertCircle, Send, Loader } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { diseaseLibrary } from "@shared/disease-library";
 import { useLanguage } from "@/lib/useLanguage";
+import { useToast } from "@/hooks/use-toast";
+
+interface ChatMessage {
+  id: string;
+  type: "user" | "ai";
+  content: string;
+  timestamp: Date;
+}
 
 export default function DiseaseLibrary() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDisease, setSelectedDisease] = useState<typeof diseaseLibrary[0] | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredDiseases = diseaseLibrary.filter(disease =>
     disease.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     disease.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
     disease.symptoms.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
+
+  const handleDiseaseSelect = (disease: typeof diseaseLibrary[0]) => {
+    setSelectedDisease(disease);
+    setChatMessages([
+      {
+        id: "1",
+        type: "ai",
+        content: `Hello! I'm your health assistant. Ask me anything about ${disease.name}. I can explain the symptoms, critical levels, what happens to your body, disease stages, and more.`,
+        timestamp: new Date()
+      }
+    ]);
+    setChatInput("");
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || !selectedDisease || isLoadingChat) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: "user",
+      content: chatInput,
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput("");
+    setIsLoadingChat(true);
+
+    try {
+      const response = await fetch("/api/disease/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disease: selectedDisease.name,
+          question: userMessage.content,
+          context: {
+            symptoms: selectedDisease.symptoms,
+            riskFactors: selectedDisease.riskFactors,
+            complications: selectedDisease.complications,
+            treatments: selectedDisease.treatments,
+            prevention: selectedDisease.prevention,
+            whenToSeeDoctor: selectedDisease.whenToSeeDoctor
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: "ai",
+        content: data.response,
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to get response from AI. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingChat(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -59,7 +149,7 @@ export default function DiseaseLibrary() {
               <Card 
                 key={index} 
                 className="hover-elevate cursor-pointer"
-                onClick={() => setSelectedDisease(disease)}
+                onClick={() => handleDiseaseSelect(disease)}
                 data-testid={`disease-card-${index}`}
               >
                 <CardHeader>
@@ -170,6 +260,75 @@ export default function DiseaseLibrary() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Disease AI Chat Section */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Ask About This Disease
+            </h2>
+            <Card className="flex flex-col h-[500px]">
+              {/* Chat Messages */}
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                {chatMessages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Start asking questions about {selectedDisease.name}</p>
+                  </div>
+                ) : (
+                  <>
+                    {chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            msg.type === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-foreground"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {isLoadingChat && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted px-4 py-2 rounded-lg">
+                          <Loader className="w-4 h-4 animate-spin" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </CardContent>
+
+              {/* Chat Input */}
+              <div className="border-t p-4 flex gap-2">
+                <Input
+                  placeholder="Ask about symptoms, stages, what happens to body, critical level..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !isLoadingChat && sendChatMessage()}
+                  disabled={isLoadingChat}
+                  data-testid="input-disease-chat"
+                />
+                <Button
+                  size="icon"
+                  onClick={sendChatMessage}
+                  disabled={isLoadingChat || !chatInput.trim()}
+                  data-testid="button-send-disease-chat"
+                >
+                  {isLoadingChat ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
     </div>
