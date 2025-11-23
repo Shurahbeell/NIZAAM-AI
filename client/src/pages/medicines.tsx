@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Trash2, Clock, Pill, Bell } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Clock, Pill, Bell, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,6 +31,14 @@ interface Medicine {
   times: string[];
   frequency: string;
   startDate: string;
+  takenToday?: Record<string, boolean>; // Track which times were taken today (time -> boolean)
+}
+
+interface ReminderWithTaken {
+  medicine: Medicine;
+  time: string;
+  isPast: boolean;
+  isTaken: boolean;
 }
 
 export default function Medicines() {
@@ -122,22 +130,81 @@ export default function Medicines() {
     setNewMedicine({ ...newMedicine, times: updatedTimes });
   };
 
-  const getUpcomingReminders = () => {
+  const getUpcomingReminders = (): ReminderWithTaken[] => {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
 
-    const reminders: { medicine: Medicine; time: string; isPast: boolean }[] = [];
+    const reminders: ReminderWithTaken[] = [];
 
     medicines.forEach(medicine => {
       medicine.times.forEach(time => {
         const isPast = time < currentTimeStr;
-        reminders.push({ medicine, time, isPast });
+        const isTaken = medicine.takenToday?.[time] || false;
+        reminders.push({ medicine, time, isPast, isTaken });
       });
     });
 
     return reminders.sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const markAsTaken = (medicineId: string, time: string) => {
+    setMedicines(medicines.map(med => {
+      if (med.id === medicineId) {
+        return {
+          ...med,
+          takenToday: {
+            ...med.takenToday,
+            [time]: true
+          }
+        };
+      }
+      return med;
+    }));
+    
+    toast({
+      title: "Medicine Taken",
+      description: "Thank you for taking your medicine!",
+    });
+  };
+
+  const getMissedMedicines = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+
+    const missed: ReminderWithTaken[] = [];
+
+    medicines.forEach(medicine => {
+      medicine.times.forEach(time => {
+        const isPast = time < currentTimeStr;
+        const isTaken = medicine.takenToday?.[time] || false;
+        
+        // A medicine is missed if its time has passed but it wasn't marked as taken
+        if (isPast && !isTaken) {
+          missed.push({ medicine, time, isPast, isTaken });
+        }
+      });
+    });
+
+    return missed.sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const getMinutesUntilReminder = (time: string): number => {
+    const now = new Date();
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    let reminderDate = new Date();
+    reminderDate.setHours(hours, minutes, 0, 0);
+
+    if (reminderDate < now) {
+      reminderDate.setDate(reminderDate.getDate() + 1);
+    }
+
+    const diffMs = reminderDate.getTime() - now.getTime();
+    return Math.floor(diffMs / 60000);
   };
 
   const calculateTimeLeft = () => {
@@ -220,7 +287,8 @@ export default function Medicines() {
   }, [currentTime, medicines]);
 
   const reminders = getUpcomingReminders();
-  const nextReminder = reminders.find(r => !r.isPast);
+  const nextReminder = reminders.find(r => !r.isPast && !r.isTaken);
+  const missedMedicines = getMissedMedicines();
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -436,7 +504,7 @@ export default function Medicines() {
                     key={index}
                     className={`p-4 flex items-center gap-3 ${
                       index !== reminders.length - 1 ? 'border-b' : ''
-                    } ${reminder.isPast ? 'opacity-50' : ''}`}
+                    } ${reminder.isTaken ? 'opacity-50' : ''}`}
                   >
                     <div className="w-16 text-sm font-medium text-foreground">
                       {reminder.time}
@@ -449,12 +517,58 @@ export default function Medicines() {
                         {reminder.medicine.dosage}
                       </p>
                     </div>
-                    {reminder.isPast && (
-                      <Badge variant="outline" className="text-xs">Taken</Badge>
+                    {reminder.isTaken && (
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-taken-${reminder.medicine.id}-${reminder.time}`}>
+                        <Check className="w-3 h-3 mr-1" />
+                        Taken
+                      </Badge>
                     )}
-                    {!reminder.isPast && reminder === nextReminder && (
-                      <Badge className="text-xs">Next</Badge>
+                    {!reminder.isTaken && !reminder.isPast && reminder === nextReminder && (
+                      <Badge className="text-xs" data-testid={`badge-next-${reminder.medicine.id}-${reminder.time}`}>Next</Badge>
                     )}
+                    {!reminder.isTaken && !reminder.isPast && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markAsTaken(reminder.medicine.id, reminder.time)}
+                        data-testid={`button-mark-taken-${reminder.medicine.id}-${reminder.time}`}
+                      >
+                        Mark Taken
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {missedMedicines.length > 0 && (
+          <div>
+            <h2 className="text-sm font-semibold text-destructive mb-3">Missed Medicines</h2>
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="p-0">
+                {missedMedicines.map((reminder, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 flex items-center gap-3 ${
+                      index !== missedMedicines.length - 1 ? 'border-b border-destructive/20' : ''
+                    }`}
+                  >
+                    <div className="w-16 text-sm font-medium text-destructive">
+                      {reminder.time}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {reminder.medicine.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {reminder.medicine.dosage}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                      Missed
+                    </Badge>
                   </div>
                 ))}
               </CardContent>

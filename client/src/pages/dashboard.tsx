@@ -2,25 +2,116 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX, Check, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/auth";
 import { useLanguage } from "@/lib/useLanguage";
+import { useToast } from "@/hooks/use-toast";
 import type { Appointment } from "@shared/schema";
+
+interface Medicine {
+  id: string;
+  name: string;
+  dosage: string;
+  times: string[];
+  frequency: string;
+  startDate: string;
+  takenToday?: Record<string, boolean>;
+}
+
+interface MedicineReminder {
+  medicine: Medicine;
+  time: string;
+  minutesLeft: number;
+  isTaken: boolean;
+}
 
 export default function Dashboard() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
+  const { toast } = useToast();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [medicineReminders, setMedicineReminders] = useState<MedicineReminder[]>([]);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+
   const [greeting] = useState(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   });
+
+  // Load medicines from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("medicines");
+    if (stored) {
+      setMedicines(JSON.parse(stored));
+    }
+
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Calculate upcoming reminders < 1 hour
+  useEffect(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+
+    const upcoming: MedicineReminder[] = [];
+
+    medicines.forEach(medicine => {
+      medicine.times.forEach(time => {
+        const [hours, minutes] = time.split(':').map(Number);
+        let reminderDate = new Date();
+        reminderDate.setHours(hours, minutes, 0, 0);
+
+        if (reminderDate < now) {
+          reminderDate.setDate(reminderDate.getDate() + 1);
+        }
+
+        const diffMs = reminderDate.getTime() - now.getTime();
+        const minutesLeft = Math.floor(diffMs / 60000);
+        const isTaken = medicine.takenToday?.[time] || false;
+        const isPast = time < currentTimeStr;
+
+        // Show reminders that are less than 60 minutes away, not taken, and not past
+        if (minutesLeft < 60 && minutesLeft >= 0 && !isTaken && !isPast) {
+          upcoming.push({ medicine, time, minutesLeft, isTaken });
+        }
+      });
+    });
+
+    setMedicineReminders(upcoming.sort((a, b) => a.minutesLeft - b.minutesLeft));
+  }, [medicines, currentTime]);
+
+  const markAsTakenDashboard = (medicineId: string, time: string) => {
+    const updated = medicines.map(med => {
+      if (med.id === medicineId) {
+        return {
+          ...med,
+          takenToday: {
+            ...med.takenToday,
+            [time]: true
+          }
+        };
+      }
+      return med;
+    });
+    setMedicines(updated);
+    localStorage.setItem("medicines", JSON.stringify(updated));
+    
+    toast({
+      title: "Medicine Taken",
+      description: "Thank you for taking your medicine!",
+    });
+  };
 
   // Fetch upcoming appointment for this user
   const { data: nextAppointment, isLoading: appointmentLoading, refetch: refetchNextAppointment } = useQuery<Appointment | null>({
@@ -184,6 +275,40 @@ export default function Dashboard() {
             </div>
           </div>
         </Card>
+
+        {/* Medicine Reminders < 1 hour */}
+        {medicineReminders.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Pill className="w-5 h-5 text-destructive" />
+              <h3 className="text-sm font-semibold text-destructive">Medicine Reminders Due Soon</h3>
+            </div>
+            {medicineReminders.map((reminder, index) => (
+              <Card key={index} className="border-destructive/30 bg-destructive/5">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground">{reminder.medicine.name}</p>
+                    <p className="text-sm text-muted-foreground">{reminder.medicine.dosage}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Clock className="w-4 h-4 text-destructive" />
+                      <span className="text-sm font-medium text-destructive">
+                        {reminder.minutesLeft === 0 ? "Now!" : `${reminder.minutesLeft} min left`}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => markAsTakenDashboard(reminder.medicine.id, reminder.time)}
+                    className="gap-2"
+                    data-testid={`button-dashboard-mark-taken-${reminder.medicine.id}-${reminder.time}`}
+                  >
+                    <Check className="w-4 h-4" />
+                    Mark Taken
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Next Appointment Section */}
         <div className="space-y-4">
