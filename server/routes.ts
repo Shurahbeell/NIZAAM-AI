@@ -460,7 +460,7 @@ router.patch("/api/screening-reminders/:id", async (req: Request, res: Response)
 
 // ==================== DISEASE CHATBOT ====================
 
-// Disease chatbot powered by Gemini
+// Disease chatbot powered by Gemini (using Replit AI Integrations)
 router.post("/api/disease/chat", async (req: Request, res: Response) => {
   try {
     const { disease, question, context } = req.body;
@@ -469,26 +469,36 @@ router.post("/api/disease/chat", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing disease or question" });
     }
 
-    // Import Gemini and create prompt
+    // Import Gemini with Replit AI Integrations configuration
     const { GoogleGenAI } = await import("@google/genai");
+    
+    // Use Replit's AI Integrations for Gemini access
     const client = new GoogleGenAI({
-      apiKey: process.env.GOOGLE_GENAI_API_KEY || ""
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "",
+      httpOptions: {
+        apiVersion: "",
+        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || ""
+      }
     });
 
     // Create a detailed prompt for disease information
-    const systemPrompt = `You are a knowledgeable health educator. When users ask about a disease, provide:
-- A clear, concise explanation of the disease
-- Key symptoms (organized by severity if applicable)
-- Critical/severity levels and what happens to the body at each stage
-- Disease stages (if applicable)
-- Risk factors
-- Treatment options
-- Prevention methods
+    const systemPrompt = `You are a knowledgeable health educator. When users ask about a disease, provide comprehensive information including:
+- Clear explanation of what the disease is
+- Key symptoms and how they present
+- Disease progression and stages (if applicable)
+- Severity levels and critical warning signs
+- Risk factors and who is most affected
+- How it's transmitted or caused
+- Detailed treatment options
+- Prevention methods and lifestyle changes
+- When to see a doctor (red flags)
+- Complications if untreated
+- Prognosis and long-term outlook
 
-Be factual, use simple language, and always remind users to consult healthcare professionals for diagnosis and treatment.`;
+Always use simple, clear language and end by reminding the user to consult healthcare professionals for diagnosis and treatment.`;
 
     const diseaseContext = context ? `
-Disease Information Available:
+Additional Disease Information Available:
 - Symptoms: ${context.symptoms?.join(", ")}
 - Risk Factors: ${context.riskFactors?.join(", ")}
 - Complications: ${context.complications?.join(", ")}
@@ -499,7 +509,9 @@ Disease Information Available:
 
     const userPrompt = `About ${disease}: ${question}${diseaseContext}`;
 
-    // Call Gemini API
+    console.log(`[Disease Chat] Processing question about ${disease}`);
+
+    // Call Gemini API with proper configuration
     const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
@@ -514,13 +526,25 @@ Disease Information Available:
       ]
     });
 
-    // Extract response text
-    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate response";
+    // Extract response text with better error handling
+    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!responseText) {
+      console.error("[Disease Chat] No response text from Gemini", { 
+        response: JSON.stringify(response) 
+      });
+      return res.status(500).json({ 
+        error: "Failed to generate response from AI. Please try again." 
+      });
+    }
 
+    console.log(`[Disease Chat] Successfully generated response for ${disease}`);
     res.json({ response: responseText });
   } catch (error: any) {
-    console.error("[Disease Chat] Error:", error);
-    res.status(500).json({ error: error.message || "Failed to process disease question" });
+    console.error("[Disease Chat] Error:", error.message || error);
+    res.status(500).json({ 
+      error: error.message || "Failed to process disease question" 
+    });
   }
 });
 
