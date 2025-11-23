@@ -4,20 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Send, Mic, Stethoscope, Globe, AlertTriangle, Info, Sparkles } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Send, Mic, Stethoscope, AlertTriangle, Info, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { AgentSession, AgentMessage } from "@shared/schema";
 import { useLanguage } from "@/lib/useLanguage";
+import { useLanguage as useLanguageHook } from "@/lib/useLanguage";
 
 export default function SymptomChat() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const { language: globalLanguage } = useLanguage();
+  const { language: globalLanguage } = useLanguageHook();
+  const [chatLanguage, setChatLanguage] = useState<"en" | "ur" | "ru">("en");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Create agent session on mount (only once)
@@ -29,7 +38,7 @@ export default function SymptomChat() {
         const response = await apiRequest("POST", "/api/agent/sessions", {
           userId: "demo-user",
           agent: "triage",
-          language: globalLanguage
+          language: chatLanguage
         });
         const session: AgentSession = await response.json();
         setSessionId(session.id);
@@ -42,7 +51,7 @@ export default function SymptomChat() {
       }
     };
     initSession();
-  }, [sessionId, toast, globalLanguage]);
+  }, [sessionId, toast, chatLanguage]);
 
   // Fetch conversation history
   const { data: messages = [], isLoading } = useQuery<AgentMessage[]>({
@@ -57,7 +66,7 @@ export default function SymptomChat() {
         sessionId,
         agentName: "triage",
         message: userMessage,
-        language: globalLanguage
+        language: chatLanguage
       });
       return response.json();
     },
@@ -89,10 +98,22 @@ export default function SymptomChat() {
     setMessage("");
   };
 
-  const handleLanguageToggle = () => {
+  const getLanguageLabel = (lang: "en" | "ur" | "ru") => {
+    switch (lang) {
+      case "en": return "English";
+      case "ur": return "اردو (Urdu)";
+      case "ru": return "رومن اردو (Roman Urdu)";
+      default: return "English";
+    }
+  };
+
+  const handleLanguageChange = (lang: "en" | "ur" | "ru") => {
+    setChatLanguage(lang);
+    // Reset session to start fresh conversation in new language
+    setSessionId(null);
     toast({
-      title: globalLanguage === "en" ? "لغت تبدیل کی" : "Language Changed",
-      description: globalLanguage === "en" ? "اردو میں منتقل کیا گیا" : "Switched to English"
+      title: "Language Changed",
+      description: `Switched to ${getLanguageLabel(lang)}`,
     });
   };
 
@@ -106,19 +127,28 @@ export default function SymptomChat() {
   };
 
   const getUrgencyLabel = (urgency: string) => {
-    if (globalLanguage !== "en") {
-      switch (urgency) {
-        case "emergency": return "Emergency";
-        case "bhu-visit": return "Doctor se milen";
-        case "self-care": return "Ghar par ilaj";
-        default: return urgency;
-      }
-    }
-    switch (urgency) {
-      case "emergency": return "Emergency";
-      case "bhu-visit": return "Visit Doctor";
-      case "self-care": return "Self-Care";
-      default: return urgency;
+    switch (chatLanguage) {
+      case "ur":
+        switch (urgency) {
+          case "emergency": return "🚨 ایمرجنسی";
+          case "bhu-visit": return "👨‍⚕️ ڈاکٹر سے ملیں";
+          case "self-care": return "🏠 گھر پر علاج";
+          default: return urgency;
+        }
+      case "ru":
+        switch (urgency) {
+          case "emergency": return "🚨 Emergency";
+          case "bhu-visit": return "👨‍⚕️ Doctor se milein";
+          case "self-care": return "🏠 Ghar par ilaj";
+          default: return urgency;
+        }
+      default:
+        switch (urgency) {
+          case "emergency": return "🚨 Emergency";
+          case "bhu-visit": return "👨‍⚕️ Visit Doctor";
+          case "self-care": return "🏠 Self-Care";
+          default: return urgency;
+        }
     }
   };
 
@@ -142,23 +172,24 @@ export default function SymptomChat() {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">
-                {globalLanguage !== "en" ? "Alamaat ka jaiza" : "Symptom Triage"}
+                {chatLanguage === "en" ? "Symptom Triage" : chatLanguage === "ur" ? "علامات کا جائزہ" : "Alamaat ka Jaiza"}
               </h1>
               <p className="text-xs text-white/80 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {globalLanguage !== "en" ? "AI se taaqatwar sehat ka jaiza" : "AI-powered health assessment"}
+                {chatLanguage === "en" ? "AI-powered health assessment" : chatLanguage === "ur" ? "AI سے چلنے والا صحت کا جائزہ" : "AI se taaqatwar sehat ka jaiza"}
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLanguageToggle}
-            data-testid="button-language-toggle"
-            className="text-white hover:bg-white/20 rounded-xl"
-          >
-            <Globe className="w-5 h-5" />
-          </Button>
+          <Select value={chatLanguage} onValueChange={(value) => handleLanguageChange(value as "en" | "ur" | "ru")}>
+            <SelectTrigger className="w-[200px] bg-white/20 border-white/30 text-white hover:bg-white/30 rounded-xl" data-testid="select-chat-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ur">اردو (Urdu)</SelectItem>
+              <SelectItem value="ru">رومن اردو (Roman Urdu)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </header>
 
@@ -171,16 +202,20 @@ export default function SymptomChat() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0 shadow-md">
                 <Info className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1" dir={chatLanguage === "ur" ? "rtl" : "ltr"}>
                 <h3 className="font-bold text-lg mb-2">
-                  {globalLanguage !== "en" 
-                    ? "Khush aamdeed!" 
-                    : "Welcome!"}
+                  {chatLanguage === "en" 
+                    ? "Welcome!" 
+                    : chatLanguage === "ur"
+                    ? "خوش آمدید!"
+                    : "Khush aamdeed!"}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {globalLanguage !== "en"
-                    ? "Main aapka AI triage assistant hoon. Main aapki alamaat ko samjhne aur munasib nigah dasht ki rahnumayee mein madad kar sakta hoon."
-                    : "I'm your AI Triage Assistant powered by Gemini. I can help you understand your symptoms and guide you to appropriate care."}
+                  {chatLanguage === "en"
+                    ? "I'm your AI Triage Assistant powered by Gemini. I can help you understand your symptoms and guide you to appropriate care."
+                    : chatLanguage === "ur"
+                    ? "میں آپ کا ای آئی ٹریج اسسٹنٹ ہوں جو Gemini سے چلتا ہے۔ میں آپ کی علامات کو سمجھنے اور آپ کو مناسب دیکھ بھال کی طرف رہنمائی کرنے میں مدد کر سکتا ہوں۔"
+                    : "Main aapka AI Triage Assistant hoon jo Gemini se chalta hai. Main aapki alamaat ko samjhne aur aapko munasib dekhbhal ke taraf rahnumayee karne mein madad kar sakta hoon."}
                 </p>
                 <div className="p-4 bg-destructive/10 rounded-xl border-2 border-destructive/20">
                   <div className="flex gap-3 items-start">
@@ -189,12 +224,14 @@ export default function SymptomChat() {
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-semibold text-destructive mb-1">
-                        {globalLanguage !== "en" ? "Ahem Note" : "Important Note"}
+                        {chatLanguage === "en" ? "Important Note" : chatLanguage === "ur" ? "اہم نوٹ" : "Ahem Note"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {globalLanguage !== "en"
-                          ? "Main doctor nahin hoon. Ye tibbi masla nahin hai — behad karam sahi takhnis ke liye doctor se rujoo karen."
-                          : "I am NOT a doctor. This is not medical advice — please consult a doctor for proper diagnosis."}
+                        {chatLanguage === "en"
+                          ? "I am NOT a doctor. This is not medical advice — please consult a doctor for proper diagnosis."
+                          : chatLanguage === "ur"
+                          ? "میں ڈاکٹر نہیں ہوں۔ یہ طبی مشورہ نہیں ہے — براہ کرم مناسب تشخیص کے لیے ڈاکٹر سے رجوع کریں۔"
+                          : "Main doctor nahin hoon. Ye tibbi maslah nahin hai — brahay e-karam munasib takhnis ke liye doctor se rujoo karen."}
                       </p>
                     </div>
                   </div>
@@ -280,11 +317,17 @@ export default function SymptomChat() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !sendMessageMutation.isPending && handleSend()}
-            placeholder={globalLanguage !== "en" ? "Apni alamaat bayan karen..." : "Describe your symptoms..."}
+            placeholder={
+              chatLanguage === "en" 
+                ? "Describe your symptoms..." 
+                : chatLanguage === "ur"
+                ? "اپنی علامات بیان کریں..."
+                : "Apni alamaat bayan karen..."
+            }
             className="flex-1 h-12 rounded-xl border-2 text-base shadow-md"
             disabled={!sessionId || sendMessageMutation.isPending}
             data-testid="input-message"
-            dir={globalLanguage === "ur" ? "rtl" : "ltr"}
+            dir={chatLanguage === "ur" ? "rtl" : "ltr"}
           />
           <Button 
             variant="ghost" 
@@ -307,9 +350,11 @@ export default function SymptomChat() {
         </div>
         <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1.5">
           <Sparkles className="w-3 h-3" />
-          {globalLanguage !== "en" 
-            ? "Gemini se taaqatwar • Thanvi alamaat ka andaza nahin" 
-            : "Powered by Gemini • Not a substitute for professional medical advice"}
+          {chatLanguage === "en"
+            ? "Powered by Gemini • Not a substitute for professional medical advice"
+            : chatLanguage === "ur"
+            ? "Gemini سے چلتا ہے • پیشہ ورانہ طبی مشورے کا متبادل نہیں"
+            : "Gemini se chalta hai • Peshawar rana tibbi mashware ka muhabadal nahin"}
         </p>
       </div>
     </div>

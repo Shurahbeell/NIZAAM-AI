@@ -48,7 +48,7 @@ export class TriageAgent implements Agent {
       const history = await storage.getSessionMessages(sessionId);
       
       // Perform triage analysis
-      const triageResult = await this.performTriage(processedMessage, history);
+      const triageResult = await this.performTriage(processedMessage, history, language);
       
       // Apply PII protection before storage
       const userMessageProcessed = piiProtection.processForStorage(message);
@@ -121,12 +121,24 @@ export class TriageAgent implements Agent {
    */
   private async performTriage(
     message: string,
-    history: any[]
+    history: any[],
+    language: string = "en"
   ): Promise<{
     content: string;
     urgency: string;
   }> {
+    // Map language codes to full language names
+    const languageMap: { [key: string]: string } = {
+      en: "English",
+      ur: "Urdu Script",
+      ru: "Roman Urdu (Romanized Urdu)"
+    };
+
+    const targetLanguage = languageMap[language] || "English";
+
     const systemPrompt = `You are an expert medical triage assistant for Pakistan's healthcare system. 
+
+**IMPORTANT: You MUST respond ONLY in ${targetLanguage}. Do not translate or provide any English text.** 
 
 Your role is to:
 1. Listen to the patient's symptoms
@@ -160,13 +172,15 @@ Your role is to:
 
     const userPrompt = `${conversationHistory ? `Conversation so far:\n${conversationHistory}\n\n` : ""}Patient's latest message: "${message}"
 
-Provide a helpful triage response. Include:
+Provide a helpful triage response IN ${targetLanguage}. Include:
 1. Your assessment of their symptoms
 2. Possible medical conditions that could cause these symptoms (2-4 suggestions)
 3. Suggested urgency level (SELF-CARE, BHU-VISIT, or EMERGENCY)
 4. Clear recommendations for what to do next
 
-Be conversational, empathetic, and specific. Emphasize that these are possibilities, not diagnoses. If it seems like an emergency, strongly encourage them to call 1122 immediately.`;
+Be conversational, empathetic, and specific. Emphasize that these are possibilities, not diagnoses. If it seems like an emergency, strongly encourage them to call 1122 immediately.
+
+CRITICAL: Respond ONLY in ${targetLanguage}. Do not mix languages.`;
 
     try {
       const response = await gemini.models.generateContent({
