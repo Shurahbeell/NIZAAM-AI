@@ -34,6 +34,47 @@ interface LHWHousehold {
   createdAt: string;
 }
 
+interface MenstrualHygieneStatus {
+  id: string;
+  householdId: string;
+  lastCycleDate: string | null;
+  usesSafeProducts: boolean;
+  notes: string | null;
+  lhwId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MenstrualPadRequest {
+  id: string;
+  householdId: string;
+  lhwId: string;
+  quantityRequested: number;
+  urgencyLevel: "low" | "medium" | "high";
+  status: "pending" | "approved" | "delivered";
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MenstrualEducationSession {
+  id: string;
+  householdId: string;
+  lhwId: string;
+  materialsProvided: string[];
+  topicsCovered: string[];
+  feedbackForm: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MenstrualDashboardStats {
+  householdsTracked: number;
+  householdsUsingUnsafeMaterials: number;
+  pendingPadRequests: number;
+  educationSessionsHeld: number;
+  padsDelivered: number;
+}
+
 // Hook: Get LHW Profile
 export const useLHWProfile = () => {
   return useQuery<LHWProfile>({
@@ -42,6 +83,99 @@ export const useLHWProfile = () => {
       const response = await apiRequest("GET", "/api/lhw/profile");
       if (!response.ok) throw new Error("Failed to fetch profile");
       return response.json();
+    },
+  });
+};
+
+// Menstrual Hygiene Hooks
+
+export const useMenstrualHygieneStatus = (householdId: string) => {
+  return useQuery<MenstrualHygieneStatus | null>({
+    queryKey: ["/api/lhw/menstrual/household-status", householdId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/lhw/menstrual/household-status?householdId=${householdId}`);
+      if (!response.ok) throw new Error("Failed to fetch menstrual status");
+      return response.json();
+    },
+  });
+};
+
+export const useMenstrualPadRequests = () => {
+  return useQuery<MenstrualPadRequest[]>({
+    queryKey: ["/api/lhw/menstrual/requests"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/lhw/menstrual/requests");
+      if (!response.ok) throw new Error("Failed to fetch pad requests");
+      return response.json();
+    },
+  });
+};
+
+export const useMenstrualEducationSessions = () => {
+  return useQuery<MenstrualEducationSession[]>({
+    queryKey: ["/api/lhw/menstrual/sessions"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/lhw/menstrual/sessions");
+      if (!response.ok) throw new Error("Failed to fetch education sessions");
+      return response.json();
+    },
+  });
+};
+
+export const useMenstrualDashboardStats = () => {
+  return useQuery<MenstrualDashboardStats>({
+    queryKey: ["/api/lhw/menstrual/dashboard-stats"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/lhw/menstrual/dashboard-stats");
+      if (!response.ok) throw new Error("Failed to fetch dashboard stats");
+      return response.json();
+    },
+  });
+};
+
+export const useUpdateMenstrualStatus = () => {
+  return useMutation({
+    mutationFn: async (data: { householdId: string; lastCycleDate?: string; usesSafeProducts: boolean; notes?: string }) => {
+      const response = await apiRequest("POST", "/api/lhw/menstrual/update-status", data);
+      if (!response.ok) throw new Error("Failed to update status");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/household-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/dashboard-stats"] });
+    },
+  });
+};
+
+export const useRequestPads = () => {
+  return useMutation({
+    mutationFn: async (data: { householdId: string; quantityRequested: number; urgencyLevel?: string }) => {
+      const response = await apiRequest("POST", "/api/lhw/menstrual/request-pads", data);
+      if (!response.ok) throw new Error("Failed to request pads");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/dashboard-stats"] });
+    },
+  });
+};
+
+export const useCreateEducationSession = () => {
+  return useMutation({
+    mutationFn: async (data: {
+      householdId: string;
+      materialsProvided?: string[];
+      topicsCovered?: string[];
+      feedbackForm?: any;
+    }) => {
+      const response = await apiRequest("POST", "/api/lhw/menstrual/create-education-session", data);
+      if (!response.ok) throw new Error("Failed to create education session");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lhw/menstrual/dashboard-stats"] });
     },
   });
 };

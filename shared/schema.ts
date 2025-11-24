@@ -469,6 +469,59 @@ export const insertLhwEducationSessionSchema = createInsertSchema(lhwEducationSe
   createdAt: true,
 });
 
+// Menstrual Hygiene Tables
+export const menstrualHygieneStatus = pgTable("menstrual_hygiene_status", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").notNull(),
+  lastCycleDate: timestamp("last_cycle_date"),
+  usesSafeProducts: boolean("uses_safe_products").default(false),
+  notes: text("notes"),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const menstrualPadRequests = pgTable("menstrual_pad_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").notNull(),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  quantityRequested: integer("quantity_requested").notNull(),
+  urgencyLevel: text("urgency_level").notNull().default("medium"), // low, medium, high
+  status: text("status").notNull().default("pending"), // pending, approved, delivered
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const menstrualEducationSessions = pgTable("menstrual_education_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").notNull(),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  materialsProvided: text("materials_provided").array(), // ["handout_cycles", "safe_products_demo", etc]
+  topicsCovered: text("topics_covered").array(), // ["infections", "cycle_tracking", "hygiene"]
+  feedbackForm: jsonb("feedback_form"), // {learned: bool, practiced: bool, shared: bool, etc}
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for Menstrual Hygiene
+export const insertMenstrualHygieneStatusSchema = createInsertSchema(menstrualHygieneStatus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMenstrualPadRequestSchema = createInsertSchema(menstrualPadRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMenstrualEducationSessionSchema = createInsertSchema(menstrualEducationSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type InsertLhwAssignment = z.infer<typeof insertLhwAssignmentSchema>;
 export type LhwAssignment = typeof lhwAssignments.$inferSelect;
@@ -480,3 +533,9 @@ export type InsertLhwInventory = z.infer<typeof insertLhwInventorySchema>;
 export type LhwInventory = typeof lhwInventory.$inferSelect;
 export type InsertLhwEducationSession = z.infer<typeof insertLhwEducationSessionSchema>;
 export type LhwEducationSession = typeof lhwEducationSessions.$inferSelect;
+export type InsertMenstrualHygieneStatus = z.infer<typeof insertMenstrualHygieneStatusSchema>;
+export type MenstrualHygieneStatus = typeof menstrualHygieneStatus.$inferSelect;
+export type InsertMenstrualPadRequest = z.infer<typeof insertMenstrualPadRequestSchema>;
+export type MenstrualPadRequest = typeof menstrualPadRequests.$inferSelect;
+export type InsertMenstrualEducationSession = z.infer<typeof insertMenstrualEducationSessionSchema>;
+export type MenstrualEducationSession = typeof menstrualEducationSessions.$inferSelect;

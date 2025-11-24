@@ -46,6 +46,10 @@ import LHWVaccinations from "@/pages/lhw/VaccinationTracker";
 import LHWEducation from "@/pages/lhw/EducationHub";
 import LHWInventory from "@/pages/lhw/Inventory";
 import LHWEmergencies from "@/pages/lhw/Emergencies";
+import MenstrualHygieneHub from "@/pages/lhw/MenstrualHygieneHub";
+import HouseholdMenstrualProfile from "@/pages/lhw/HouseholdMenstrualProfile";
+import MenstrualEducationForm from "@/pages/lhw/MenstrualEducationForm";
+import PadDistribution from "@/pages/lhw/PadDistribution";
 
 function Router() {
   return (
@@ -168,6 +172,26 @@ function Router() {
       <Route path="/lhw/emergencies">
         <RoleGuard requiredRole="lhw">
           <LHWEmergencies />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/menstrual-hub">
+        <RoleGuard requiredRole="lhw">
+          <MenstrualHygieneHub />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/menstrual-profile">
+        <RoleGuard requiredRole="lhw">
+          <HouseholdMenstrualProfile />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/menstrual-education">
+        <RoleGuard requiredRole="lhw">
+          <MenstrualEducationForm />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/pad-distribution">
+        <RoleGuard requiredRole="lhw">
+          <PadDistribution />
         </RoleGuard>
       </Route>
       <Route component={NotFound} />

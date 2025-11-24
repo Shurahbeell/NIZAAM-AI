@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, MapPin, Users, Syringe, BookOpen, Package, LogOut, Phone, MapPinIcon, Calendar } from "lucide-react";
+import { AlertTriangle, MapPin, Users, Syringe, BookOpen, Package, LogOut, Phone, MapPinIcon, Calendar, Heart } from "lucide-react";
 import { useLHWDashboard, useLHWHouseholds, useLHWProfile } from "@/lib/useLHWData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -252,8 +252,8 @@ export default function LHWDashboard() {
         )}
 
         {/* Navigation */}
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3">Modules</h3>
+        <Card className="p-4 mb-6">
+          <h3 className="text-sm font-semibold mb-3">Core Modules</h3>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
@@ -276,6 +276,22 @@ export default function LHWDashboard() {
               Inventory
             </Button>
           </div>
+        </Card>
+
+        {/* Menstrual Hygiene Module */}
+        <Card className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 border-pink-200 dark:border-pink-800">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Heart className="w-4 h-4 text-rose-600" />
+            Menstrual Hygiene Support
+          </h3>
+          <Button
+            className="w-full"
+            onClick={() => setLocation("/lhw/menstrual-hub")}
+            data-testid="button-menstrual-hub"
+          >
+            <Heart className="w-4 h-4 mr-2" />
+            Open Menstrual Hygiene Hub
+          </Button>
         </Card>
       </div>
     </div>
