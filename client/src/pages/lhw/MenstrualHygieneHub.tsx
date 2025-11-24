@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Users, Activity, BookOpen, Package, LogOut } from "lucide-react";
 import { useMenstrualDashboardStats, useMenstrualPadRequests, useLHWHouseholds } from "@/lib/useLHWData";
+import { Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/lib/auth";
 import { useLocation } from "wouter";
@@ -127,6 +128,15 @@ export default function MenstrualHygieneHub() {
           </Button>
           <Button
             className="w-full"
+            onClick={() => setLocation("/lhw/menstrual-advisor")}
+            variant="secondary"
+            data-testid="button-ai-advisor"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Advisor
+          </Button>
+          <Button
+            className="w-full col-span-2"
             onClick={() => setLocation("/lhw/dashboard")}
             variant="outline"
             data-testid="button-back"

@@ -50,6 +50,7 @@ import MenstrualHygieneHub from "@/pages/lhw/MenstrualHygieneHub";
 import HouseholdMenstrualProfile from "@/pages/lhw/HouseholdMenstrualProfile";
 import MenstrualEducationForm from "@/pages/lhw/MenstrualEducationForm";
 import PadDistribution from "@/pages/lhw/PadDistribution";
+import MenstrualHealthAdvisor from "@/pages/lhw/MenstrualHealthAdvisor";
 
 function Router() {
   return (
@@ -192,6 +193,11 @@ function Router() {
       <Route path="/lhw/pad-distribution">
         <RoleGuard requiredRole="lhw">
           <PadDistribution />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/menstrual-advisor">
+        <RoleGuard requiredRole="lhw">
+          <MenstrualHealthAdvisor />
         </RoleGuard>
       </Route>
       <Route component={NotFound} />
