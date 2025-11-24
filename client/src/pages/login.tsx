@@ -234,6 +234,18 @@ export default function Login() {
                     </p>
                   </div>
                 </div>
+                <div className="flex items-start gap-2 p-2 bg-white/50 rounded-lg">
+                  <Shield className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Admin Dashboard</p>
+                    <p className="text-muted-foreground">
+                      <strong>admin_user</strong> / <strong>Admin123!</strong>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Key: <strong>admin-key-1122</strong>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
