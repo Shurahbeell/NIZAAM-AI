@@ -223,6 +223,15 @@ export default function Login() {
                     </p>
                   </div>
                 </div>
+                <div className="flex items-start gap-2 p-2 bg-white/50 rounded-lg">
+                  <Heart className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Lady Health Worker (LHW)</p>
+                    <p className="text-muted-foreground">
+                      <strong>lhw_test</strong> / <strong>LHW123!</strong>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

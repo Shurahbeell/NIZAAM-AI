@@ -59,7 +59,7 @@ async function seed() {
 
     // 3. Create Doctors
     console.log("👨‍⚕️ Creating doctors...");
-    await db
+    const doctorsCreated = await db
       .insert(doctors)
       .values([
         {
@@ -223,6 +223,25 @@ async function seed() {
 
     console.log("✅ Frontliner profile created");
 
+    // 8.5. Create LHW User (Lady Health Worker)
+    console.log("👩‍⚕️ Creating LHW user...");
+    const lhwPassword = await bcrypt.hash("LHW123!", SALT_ROUNDS);
+    const lhwUser = await db
+      .insert(users)
+      .values({
+        username: "lhw_test",
+        password: lhwPassword,
+        role: "lhw",
+        fullName: "Fatima Bibi",
+        phone: "+92-300-7777777",
+        cnic: "54321-0987654-3",
+        address: "LHW Center, Lahore",
+        age: 32,
+      })
+      .returning();
+
+    console.log("✅ LHW created:", lhwUser[0].id);
+
     // 9. Create a test appointment (patient booked)
     console.log("📅 Creating test appointment...");
     const appointmentDate = new Date();
@@ -232,7 +251,7 @@ async function seed() {
     await db.insert(appointments).values({
       patientId: patient[0].id,
       hospitalId: hospital[0].id,
-      doctorId: doctor1[0].id,
+      doctorId: doctorsCreated[0].id,
       appointmentDate: appointmentDate,
       status: "pending",
       patientName: patient[0].fullName || "Ali Ahmed Khan",
@@ -248,6 +267,7 @@ async function seed() {
     console.log("  Patient: ali_diabetes_patient / Patient123!");
     console.log("  Hospital: hospital_staff_1 / HospitalStaff123!");
     console.log("  Frontliner: rescue_1122_worker / Frontliner123!");
+    console.log("  LHW: lhw_test / LHW123!");
     console.log("\n🔑 Hospital ID:", hospital[0].id);
     console.log("👤 Patient ID:", patient[0].id);
     console.log("🚑 Frontliner User ID:", frontlinerUser[0].id);
