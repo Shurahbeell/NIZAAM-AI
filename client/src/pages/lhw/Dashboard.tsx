@@ -9,10 +9,13 @@ import { useLHWDashboard, useLHWHouseholds, useLHWProfile } from "@/lib/useLHWDa
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRef, useState, useEffect } from "react";
+import { useLHWLanguage } from "@/lib/useLHWLanguage";
+import { LHWLanguageToggle } from "@/components/lhw-language-toggle";
 
 export default function LHWDashboard() {
   const { user, logout } = useAuthStore();
   const [, setLocation] = useLocation();
+  const { t } = useLHWLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
 
@@ -55,25 +58,25 @@ export default function LHWDashboard() {
 
   const stats = [
     {
-      label: "Assigned Households",
+      label: t("lhw.assigned_households"),
       value: dashboard?.assignedHouseholds || 0,
       icon: Users,
       color: "text-blue-600",
     },
     {
-      label: "Pending Visits",
+      label: t("lhw.pending_visits"),
       value: dashboard?.pendingVisits || 0,
       icon: MapPin,
       color: "text-amber-600",
     },
     {
-      label: "Overdue Vaccinations",
+      label: t("lhw.overdue_vaccinations"),
       value: dashboard?.overdueVaccinations || 0,
       icon: Syringe,
       color: "text-red-600",
     },
     {
-      label: "Emergency Alerts",
+      label: t("lhw.emergency_alerts"),
       value: dashboard?.emergencyAlerts || 0,
       icon: AlertTriangle,
       color: "text-destructive",
@@ -87,21 +90,24 @@ export default function LHWDashboard() {
         <div className="p-4 max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-white">LHW Dashboard</h1>
+              <h1 className="text-lg font-bold text-white">{t("lhw.dashboard")}</h1>
               <p className="text-xs text-white/80">{user?.fullName}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logout();
-                setLocation("/login");
-              }}
-              className="text-white hover:bg-white/20"
-              data-testid="button-logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-2">
+              <LHWLanguageToggle />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  logout();
+                  setLocation("/login");
+                }}
+                className="text-white hover:bg-white/20"
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>

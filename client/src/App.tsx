@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageContext, useLanguageProvider } from "@/lib/useLanguage";
+import { LHWLanguageProvider } from "@/lib/useLHWLanguage";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/onboarding";
 import Login from "@/pages/login";
@@ -152,62 +153,86 @@ function Router() {
       <Route path="/user-manual" component={UserManual} />
       <Route path="/lhw/dashboard">
         <RoleGuard requiredRole="lhw">
-          <LHWDashboard />
+          <LHWLanguageProvider>
+            <LHWDashboard />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/households">
         <RoleGuard requiredRole="lhw">
-          <LHWHouseholds />
+          <LHWLanguageProvider>
+            <LHWHouseholds />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/visit-form">
         <RoleGuard requiredRole="lhw">
-          <LHWVisitForm />
+          <LHWLanguageProvider>
+            <LHWVisitForm />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/vaccinations">
         <RoleGuard requiredRole="lhw">
-          <LHWVaccinations />
+          <LHWLanguageProvider>
+            <LHWVaccinations />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/education">
         <RoleGuard requiredRole="lhw">
-          <LHWEducation />
+          <LHWLanguageProvider>
+            <LHWEducation />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/inventory">
         <RoleGuard requiredRole="lhw">
-          <LHWInventory />
+          <LHWLanguageProvider>
+            <LHWInventory />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/emergencies">
         <RoleGuard requiredRole="lhw">
-          <LHWEmergencies />
+          <LHWLanguageProvider>
+            <LHWEmergencies />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/menstrual-hub">
         <RoleGuard requiredRole="lhw">
-          <MenstrualHygieneHub />
+          <LHWLanguageProvider>
+            <MenstrualHygieneHub />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/menstrual-profile">
         <RoleGuard requiredRole="lhw">
-          <HouseholdMenstrualProfile />
+          <LHWLanguageProvider>
+            <HouseholdMenstrualProfile />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/menstrual-education">
         <RoleGuard requiredRole="lhw">
-          <MenstrualEducationForm />
+          <LHWLanguageProvider>
+            <MenstrualEducationForm />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/pad-distribution">
         <RoleGuard requiredRole="lhw">
-          <PadDistribution />
+          <LHWLanguageProvider>
+            <PadDistribution />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/lhw/menstrual-advisor">
         <RoleGuard requiredRole="lhw">
-          <MenstrualHealthAdvisor />
+          <LHWLanguageProvider>
+            <MenstrualHealthAdvisor />
+          </LHWLanguageProvider>
         </RoleGuard>
       </Route>
       <Route path="/donations" component={DonationsPage} />

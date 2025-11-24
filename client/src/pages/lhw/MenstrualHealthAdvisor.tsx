@@ -10,6 +10,8 @@ import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/useLanguage";
+import { useLHWLanguage } from "@/lib/useLHWLanguage";
+import { LHWLanguageToggle } from "@/components/lhw-language-toggle";
 
 interface ChatMessage {
   id: string;
@@ -21,17 +23,16 @@ interface ChatMessage {
 export default function MenstrualHealthAdvisor() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { language, setLanguage } = useLanguage();
+  const { language: appLanguage } = useLanguage();
+  const { language: lhwLanguage, t } = useLHWLanguage();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       type: "ai",
       content:
-        language === "ur"
+        lhwLanguage === "ur"
           ? "السلام علیکم! میں آپ کے ماہانہ صحت کے بارے میں سوالات کا جواب دینے میں آپ کی مدد کرنے کے لیے یہاں ہوں۔ ماہانہ سائیکل، محفوظ مصنوعات، صفائی، اور صحت سے متعلق کوئی بھی سوال پوچھیں۔"
-          : language === "ru"
-            ? "As-salam-alaikum! Main aapke mahine ke sehhat ke baare mein sawalat ka jawab dene mein aapki madad karne ke liye yahan hoon. Mahine ke cycle, mehfooz mausuat, safai, aur sehat se mutaliq koi bhi sawal poochein."
-            : "Hello! I'm your AI Menstrual Health Advisor. I'm here to provide information about menstrual health, safe products, hygiene practices, cycle tracking, and general wellness. Feel free to ask any questions about menstrual health education.",
+          : "Hello! I'm your AI Menstrual Health Advisor. I'm here to provide information about menstrual health, safe products, hygiene practices, cycle tracking, and general wellness. Feel free to ask any questions about menstrual health education.",
       timestamp: new Date(),
     },
   ]);
@@ -66,7 +67,7 @@ export default function MenstrualHealthAdvisor() {
       const response = await apiRequest("POST", "/api/agent/menstrual-chat", {
         message: chatInput,
         topic,
-        language: language === "ur" ? "ur" : language === "ru" ? "ru" : "en",
+        language: lhwLanguage === "ur" ? "ur" : "en",
       });
 
       if (!response.ok) {
@@ -95,34 +96,37 @@ export default function MenstrualHealthAdvisor() {
   };
 
   const topics = [
-    { value: "general", label: "General Health" },
-    { value: "products", label: "Safe Products" },
-    { value: "hygiene", label: "Hygiene & Sanitation" },
-    { value: "tracking", label: "Cycle Tracking" },
-    { value: "infections", label: "Infection Prevention" },
-    { value: "adolescent", label: "Adolescent Health" },
+    { value: "general", label: lhwLanguage === "ur" ? "عام" : "General" },
+    { value: "products", label: lhwLanguage === "ur" ? "محفوظ مصنوعات" : "Products" },
+    { value: "hygiene", label: lhwLanguage === "ur" ? "صفائی" : "Hygiene" },
+    { value: "tracking", label: lhwLanguage === "ur" ? "ٹریکنگ" : "Tracking" },
+    { value: "infections", label: lhwLanguage === "ur" ? "انفیکشنز" : "Infections" },
+    { value: "adolescent", label: lhwLanguage === "ur" ? "نوجوان" : "Adolescent" },
   ];
 
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/lhw/menstrual-hub")} data-testid="button-back">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Heart className="w-6 h-6 text-rose-600" />
-              AI Menstrual Health Advisor
-            </h1>
-            <p className="text-sm text-muted-foreground">Powered by Gemini AI</p>
+        <div className="flex items-center justify-between gap-2 mb-6">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setLocation("/lhw/menstrual-hub")} data-testid="button-back">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Heart className="w-6 h-6 text-rose-600" />
+                {t("lhw.menstrual_health_advisor")}
+              </h1>
+              <p className="text-sm text-muted-foreground">Powered by Gemini AI</p>
+            </div>
           </div>
+          <LHWLanguageToggle />
         </div>
 
         {/* Topic Selection */}
         <Card className="p-4 mb-4">
-          <label className="text-sm font-medium mb-2 block">Select Topic</label>
+          <label className="text-sm font-medium mb-2 block">{t("lhw.topic")}</label>
           <Select value={topic} onValueChange={setTopic}>
             <SelectTrigger data-testid="select-topic">
               <SelectValue />
@@ -141,7 +145,7 @@ export default function MenstrualHealthAdvisor() {
         <Alert className="mb-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-900 dark:text-amber-300">
-            This AI advisor provides general health information. For serious concerns or persistent issues, please consult a healthcare professional.
+            {lhwLanguage === "ur" ? "یہ ای آئی مشیر عام صحت کی معلومات فراہم کرتا ہے۔ سنگین مسائل کے لیے براہ کرم ڈاکٹر سے رجوع کریں۔" : "This AI advisor provides general health information. For serious concerns or persistent issues, please consult a healthcare professional."}
           </AlertDescription>
         </Alert>
 
@@ -175,7 +179,7 @@ export default function MenstrualHealthAdvisor() {
           {/* Input Area */}
           <div className="flex gap-2">
             <Input
-              placeholder="Ask about menstrual health..."
+              placeholder={t("lhw.ask_question")}
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyPress={(e) => {
@@ -199,7 +203,7 @@ export default function MenstrualHealthAdvisor() {
 
         {/* Suggested Questions */}
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Suggested Questions</p>
+          <p className="text-sm font-medium mb-3">{lhwLanguage === "ur" ? "تجویز شدہ سوالات" : "Suggested Questions"}</p>
           <div className="space-y-2">
             <Button
               variant="outline"

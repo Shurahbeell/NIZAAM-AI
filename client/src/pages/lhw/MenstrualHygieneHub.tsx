@@ -8,41 +8,44 @@ import { Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/lib/auth";
 import { useLocation } from "wouter";
+import { useLHWLanguage } from "@/lib/useLHWLanguage";
+import { LHWLanguageToggle } from "@/components/lhw-language-toggle";
 
 export default function MenstrualHygieneHub() {
   const { logout } = useAuthStore();
   const [, setLocation] = useLocation();
+  const { language, t } = useLHWLanguage();
   const { data: stats, isLoading: statsLoading } = useMenstrualDashboardStats();
   const { data: requests, isLoading: requestsLoading } = useMenstrualPadRequests();
   const { data: households } = useLHWHouseholds();
 
   const statCards = [
     {
-      label: "Households Tracked",
+      label: t("lhw.households_tracked"),
       value: stats?.householdsTracked || 0,
       icon: Users,
       color: "text-blue-600",
     },
     {
-      label: "Using Unsafe Materials",
+      label: t("lhw.using_unsafe_materials"),
       value: stats?.householdsUsingUnsafeMaterials || 0,
       icon: AlertTriangle,
       color: "text-red-600",
     },
     {
-      label: "Pending Pad Requests",
+      label: t("lhw.pending_pad_requests"),
       value: stats?.pendingPadRequests || 0,
       icon: Package,
       color: "text-amber-600",
     },
     {
-      label: "Education Sessions",
+      label: t("lhw.education_sessions"),
       value: stats?.educationSessionsHeld || 0,
       icon: BookOpen,
       color: "text-green-600",
     },
     {
-      label: "Pads Delivered",
+      label: t("lhw.pads_delivered"),
       value: stats?.padsDelivered || 0,
       icon: Activity,
       color: "text-purple-600",
@@ -56,10 +59,11 @@ export default function MenstrualHygieneHub() {
         <div className="p-4 max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-white">Menstrual Hygiene Support</h1>
-              <p className="text-xs text-white/80">LHW Management Module</p>
+              <h1 className="text-lg font-bold text-white">{t("lhw.menstrual_support")}</h1>
+              <p className="text-xs text-white/80">{t("lhw.management_module")}</p>
             </div>
             <div className="flex gap-2">
+              <LHWLanguageToggle />
               <Button
                 variant="ghost"
                 size="sm"
@@ -68,7 +72,7 @@ export default function MenstrualHygieneHub() {
                 data-testid="button-back-lhw-dashboard"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Back
+                {t("lhw.back")}
               </Button>
               <Button
                 variant="ghost"
