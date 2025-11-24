@@ -286,6 +286,53 @@ router.delete("/users/:id", requireAuth, requireAdmin, async (req: Request, res:
   }
 });
 
+// Register LHW (admin only)
+const registerLHWSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(4),
+  fullName: z.string().min(3),
+  phone: z.string().min(10),
+  area: z.string().min(3),
+});
+
+router.post("/register/lhw", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const data = registerLHWSchema.parse(req.body);
+
+    const existing = await storage.getUserByUsername(data.username);
+    if (existing) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const user = await storage.createUser({
+      username: data.username,
+      password: hashedPassword,
+      role: "lhw",
+      fullName: data.fullName,
+      phone: data.phone,
+    });
+
+    const token = generateToken({
+      userId: user.id,
+      username: user.username,
+      role: "lhw",
+    });
+
+    res.json({
+      token,
+      user: { id: user.id, username: user.username, role: "lhw" },
+      message: "LHW registered successfully",
+    });
+  } catch (error: any) {
+    console.error("[Admin] Register LHW error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+    res.status(500).json({ error: "Registration failed" });
+  }
+});
+
 // Get all hospitals (public - used by appointments booking)
 router.get("/hospitals", async (req: Request, res: Response) => {
   try {

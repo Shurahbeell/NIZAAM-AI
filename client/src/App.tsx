@@ -144,6 +144,11 @@ function Router() {
           <AdminDashboard />
         </RoleGuard>
       </Route>
+      <Route path="/admin/donations-dashboard">
+        <RoleGuard requiredRole="admin">
+          <DonationsDashboardPage />
+        </RoleGuard>
+      </Route>
       <Route path="/user-manual" component={UserManual} />
       <Route path="/lhw/dashboard">
         <RoleGuard requiredRole="lhw">

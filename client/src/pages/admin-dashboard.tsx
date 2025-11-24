@@ -6,13 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Trash2, LogOut, Plus, Users, Hospital, Ambulance, Map } from "lucide-react";
+import { Trash2, LogOut, Plus, Users, Hospital, Ambulance, Map, Heart } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"users" | "register-hospital" | "register-frontliner">("users");
+  const [tab, setTab] = useState<"users" | "register-hospital" | "register-frontliner" | "register-lhw" | "donations">("users");
   const [showHospitalMap, setShowHospitalMap] = useState(false);
   const [showFrontlinerCurrentMap, setShowFrontlinerCurrentMap] = useState(false);
   const [showFrontlinerBaseMap, setShowFrontlinerBaseMap] = useState(false);
@@ -21,6 +21,9 @@ export default function AdminDashboard() {
   });
   const [frontlinerForm, setFrontlinerForm] = useState({
     username: "", password: "", fullName: "", phone: "", vehicleType: "Ambulance", currentLatitude: "", currentLongitude: "", baseLatitude: "", baseLongitude: "",
+  });
+  const [lhwForm, setLhwForm] = useState({
+    username: "", password: "", fullName: "", phone: "", area: "",
   });
 
   // Fetch users
@@ -73,6 +76,22 @@ export default function AdminDashboard() {
     },
   });
 
+  // Register LHW mutation
+  const registerLHWMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/register/lhw", lhwForm);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "LHW registered successfully" });
+      setLhwForm({ username: "", password: "", fullName: "", phone: "", area: "" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLocation("/admin-login");
@@ -91,7 +110,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-6 flex-wrap">
           <Button variant={tab === "users" ? "default" : "outline"} onClick={() => setTab("users")} data-testid="tab-users">
             <Users className="w-4 h-4 mr-2" />
             Manage Users
@@ -103,6 +122,14 @@ export default function AdminDashboard() {
           <Button variant={tab === "register-frontliner" ? "default" : "outline"} onClick={() => setTab("register-frontliner")} data-testid="tab-register-frontliner">
             <Ambulance className="w-4 h-4 mr-2" />
             Register Frontliner
+          </Button>
+          <Button variant={tab === "register-lhw" ? "default" : "outline"} onClick={() => setTab("register-lhw")} data-testid="tab-register-lhw">
+            <Users className="w-4 h-4 mr-2" />
+            Register LHW
+          </Button>
+          <Button variant={tab === "donations" ? "default" : "outline"} onClick={() => setTab("donations")} data-testid="tab-donations">
+            <Heart className="w-4 h-4 mr-2" />
+            Donations & Supplies
           </Button>
         </div>
 
@@ -362,6 +389,69 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </Card>
+        )}
+
+        {/* Register LHW Tab */}
+        {tab === "register-lhw" && (
+          <Card className="p-6 max-w-md">
+            <h2 className="text-xl font-bold mb-4">Register New LHW</h2>
+            <div className="space-y-4">
+              <Input
+                placeholder="LHW Username"
+                value={lhwForm.username}
+                onChange={(e) => setLhwForm({ ...lhwForm, username: e.target.value })}
+                data-testid="input-lhw-username"
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={lhwForm.password}
+                onChange={(e) => setLhwForm({ ...lhwForm, password: e.target.value })}
+                data-testid="input-lhw-password"
+              />
+              <Input
+                placeholder="Full Name"
+                value={lhwForm.fullName}
+                onChange={(e) => setLhwForm({ ...lhwForm, fullName: e.target.value })}
+                data-testid="input-lhw-name"
+              />
+              <Input
+                placeholder="Phone"
+                value={lhwForm.phone}
+                onChange={(e) => setLhwForm({ ...lhwForm, phone: e.target.value })}
+                data-testid="input-lhw-phone"
+              />
+              <Input
+                placeholder="Area/Region"
+                value={lhwForm.area}
+                onChange={(e) => setLhwForm({ ...lhwForm, area: e.target.value })}
+                data-testid="input-lhw-area"
+              />
+              <Button
+                onClick={() => registerLHWMutation.mutate()}
+                disabled={registerLHWMutation.isPending}
+                className="w-full"
+                data-testid="button-register-lhw"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Register LHW
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Donations & Supplies Tab */}
+        {tab === "donations" && (
+          <div>
+            <p className="text-muted-foreground mb-4">View detailed donation and supply request information</p>
+            <Button
+              onClick={() => setLocation("/admin/donations-dashboard")}
+              className="w-full"
+              data-testid="button-view-donations-details"
+            >
+              View Detailed Dashboard
+            </Button>
+          </div>
         )}
       </div>
     </div>
