@@ -52,6 +52,8 @@ export default function Login() {
         setLocation("/hospital-dashboard");
       } else if (data.user.role === "frontliner") {
         setLocation("/frontliner-dashboard");
+      } else if (data.user.role === "lhw") {
+        setLocation("/lhw/dashboard");
       } else {
         setLocation("/dashboard");
       }
