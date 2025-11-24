@@ -31,11 +31,12 @@ export default function LHWSupplyRequestPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: SupplyRequestData) => {
-      return apiRequest({
-        endpoint: "/api/donations/supply-request",
-        method: "POST",
-        body: data,
-      });
+      const response = await apiRequest(
+        "POST",
+        "/api/donations/supply-request",
+        data
+      );
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -44,10 +45,10 @@ export default function LHWSupplyRequestPage() {
       });
       form.reset();
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to submit supply request",
+        description: error?.message || "Failed to submit supply request",
         variant: "destructive",
       });
     },
