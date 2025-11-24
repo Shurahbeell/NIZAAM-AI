@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardCard from "@/components/DashboardCard";
 import AppointmentCard from "@/components/AppointmentCard";
-import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX, Check, Clock } from "lucide-react";
+import { Stethoscope, Building2, Calendar, MapPin, ClipboardList, User, Bell, Pill, BookOpen, Activity, Heart, AlertCircle, Folder, Grid3x3, HelpCircle, CalendarX, Check, Clock, HandHeart } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -211,6 +211,12 @@ export default function Dashboard() {
       description: t('dashboardModules.medicinesDesc'),
       icon: Pill,
       path: "/medicines"
+    },
+    {
+      title: "Donations & Community",
+      description: "Support health initiatives and community health programs",
+      icon: HandHeart,
+      path: "/donations"
     },
     {
       title: t('dashboardModules.userManual'),
