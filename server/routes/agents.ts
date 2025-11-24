@@ -2,6 +2,7 @@ import { Router, type Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { requireAuth } from "../middleware/auth";
+import { gemini } from "../mcp";
 import { insertAgentSessionSchema } from "@shared/schema";
 
 const router = Router();
@@ -184,47 +185,33 @@ router.post("/menstrual-chat", requireAuth, async (req: Request, res: Response) 
       ru: "Roman Urdu",
     };
 
-    // Generate response using OpenAI API (since Gemini integration might not be fully set up)
-    const apiKey = process.env.OPENAI_API_KEY;
+    // Generate response using Gemini 2.5 Flash
+    const systemPrompt = `You are a caring and knowledgeable Menstrual Health Advisor for Lady Health Workers (LHWs) in Pakistan. Focus on: ${topicDescriptions[topic] || "menstrual health"}. Respond in ${languageMap[language] || "English"}. Be warm, supportive, and culturally sensitive. Provide evidence-based information about menstrual health, hygiene, safe products, and wellness. Always recommend consulting healthcare professionals for serious concerns.`;
 
-    if (!apiKey) {
-      // Return mock response if no API key available
-      return res.json({
+    try {
+      const response = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemPrompt}\n\nUser message: ${message}`,
+              },
+            ],
+          },
+        ],
+      });
+
+      const responseText = response.text?.trim() || "No response generated";
+      res.json({ response: responseText });
+    } catch (error: any) {
+      console.error("[Agents] Gemini API error:", error);
+      // Fallback response if API fails
+      res.json({
         response: `I'm the Menstrual Health Advisor here to help with information about ${topicDescriptions[topic] || "menstrual health"}. For serious concerns, please consult a healthcare professional.`,
       });
     }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are a caring and knowledgeable Menstrual Health Advisor for Lady Health Workers (LHWs) in Pakistan. Focus on: ${topicDescriptions[topic] || "menstrual health"}. Respond in ${languageMap[language] || "English"}. Be warm, supportive, and culturally sensitive. Provide evidence-based information about menstrual health, hygiene, safe products, and wellness. Always recommend consulting healthcare professionals for serious concerns.`,
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-        max_tokens: 500,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Failed to get response from AI");
-    }
-
-    const responseText = data.choices[0]?.message?.content || "No response generated";
-
-    res.json({ response: responseText });
   } catch (error: any) {
     console.error("[Agents] Menstrual chat error:", error);
     res.status(500).json({
