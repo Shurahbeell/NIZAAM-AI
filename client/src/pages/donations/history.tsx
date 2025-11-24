@@ -1,8 +1,10 @@
 import { useAuthStore } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Heart } from "lucide-react";
+import { Heart, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface Donation {
   id: string;
@@ -15,6 +17,7 @@ interface Donation {
 
 export default function DonationHistoryPage() {
   const user = useAuthStore((state) => state.user);
+  const [, setLocation] = useLocation();
 
   const { data: donations, isLoading } = useQuery<Donation[]>({
     queryKey: ["/api/donations/user", user?.id],
@@ -24,6 +27,17 @@ export default function DonationHistoryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => setLocation("/donations")}
+          className="mb-2"
+          data-testid="button-back-donations"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
             <Heart className="w-8 h-8 text-primary" />
