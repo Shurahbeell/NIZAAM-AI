@@ -456,9 +456,12 @@ export default function FrontlinerDashboard() {
         </Card>
       ) : (
         <Tabs defaultValue="new" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="new" data-testid="tab-new-cases">
-              New ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "new" || c.status === "assigned").length})
+              New ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "new").length})
+            </TabsTrigger>
+            <TabsTrigger value="assigned" data-testid="tab-assigned-cases">
+              Assigned ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "assigned").length})
             </TabsTrigger>
             <TabsTrigger value="ack" data-testid="tab-acknowledged-cases">
               Acknowledged ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "ack").length})
@@ -474,11 +477,22 @@ export default function FrontlinerDashboard() {
           <TabsContent value="new">
             <TabCasesContent
               cases={cases}
-              statuses={["new", "assigned"]}
+              statuses={["new"]}
               frontlinerData={frontlinerData}
               handleAction={handleAction}
               updateStatusMutation={updateStatusMutation}
               emptyMessage="No new cases"
+            />
+          </TabsContent>
+
+          <TabsContent value="assigned">
+            <TabCasesContent
+              cases={cases}
+              statuses={["assigned"]}
+              frontlinerData={frontlinerData}
+              handleAction={handleAction}
+              updateStatusMutation={updateStatusMutation}
+              emptyMessage="No assigned cases"
             />
           </TabsContent>
 
