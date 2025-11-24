@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Users, Activity, BookOpen, Package, LogOut } from "lucide-react";
+import { AlertTriangle, Users, Activity, BookOpen, Package, LogOut, ArrowLeft } from "lucide-react";
 import { useMenstrualDashboardStats, useMenstrualPadRequests, useLHWHouseholds } from "@/lib/useLHWData";
 import { Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,18 +59,30 @@ export default function MenstrualHygieneHub() {
               <h1 className="text-lg font-bold text-white">Menstrual Hygiene Support</h1>
               <p className="text-xs text-white/80">LHW Management Module</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logout();
-                setLocation("/login");
-              }}
-              className="text-white hover:bg-white/20"
-              data-testid="button-logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/lhw/dashboard")}
+                className="text-white hover:bg-white/20"
+                data-testid="button-back-lhw-dashboard"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  logout();
+                  setLocation("/login");
+                }}
+                className="text-white hover:bg-white/20"
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
