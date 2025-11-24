@@ -1,5 +1,8 @@
 import { db } from "./db";
-import { users, hospitals, doctors, frontliners, appointments, medicalHistory, medicines } from "@shared/schema";
+import { 
+  users, hospitals, doctors, frontliners, appointments, medicalHistory, medicines,
+  lhwAssignments, menstrualHygieneStatus, menstrualPadRequests, menstrualEducationSessions 
+} from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -14,11 +17,16 @@ async function seed() {
     await db.delete(medicines);
     await db.delete(medicalHistory);
     await db.delete(appointments);
+    await db.delete(menstrualEducationSessions).catch(() => {});
+    await db.delete(menstrualPadRequests).catch(() => {});
+    await db.delete(menstrualHygieneStatus).catch(() => {});
+    await db.delete(lhwAssignments).catch(() => {});
     await db.delete(frontliners);
     await db.delete(doctors);
     await db.delete(users).where(eq(users.role, 'patient')).catch(() => {});
     await db.delete(users).where(eq(users.role, 'hospital')).catch(() => {});
     await db.delete(users).where(eq(users.role, 'frontliner')).catch(() => {});
+    await db.delete(users).where(eq(users.role, 'lhw')).catch(() => {});
     await db.delete(hospitals);
 
     // 1. Create Hospital with details
@@ -242,7 +250,140 @@ async function seed() {
 
     console.log("✅ LHW created:", lhwUser[0].id);
 
-    // 9. Create a test appointment (patient booked)
+    // 9. Create LHW Assignments (Households)
+    console.log("🏘️  Creating LHW household assignments...");
+    const assignments = await db
+      .insert(lhwAssignments)
+      .values([
+        {
+          lhwId: lhwUser[0].id,
+          householdId: "HH-001",
+          householdName: "Ahmed Family",
+          latitude: "31.5497",
+          longitude: "74.3436",
+          populationServed: 5,
+        },
+        {
+          lhwId: lhwUser[0].id,
+          householdId: "HH-002",
+          householdName: "Khan Residence",
+          latitude: "31.5500",
+          longitude: "74.3440",
+          populationServed: 6,
+        },
+        {
+          lhwId: lhwUser[0].id,
+          householdId: "HH-003",
+          householdName: "Bibi Community",
+          latitude: "31.5505",
+          longitude: "74.3445",
+          populationServed: 8,
+        },
+      ])
+      .returning();
+
+    console.log("✅ LHW assignments created:", assignments.length);
+
+    // 10. Create Menstrual Hygiene Status Records
+    console.log("👩‍⚕️ Creating menstrual hygiene status records...");
+    await db.insert(menstrualHygieneStatus).values([
+      {
+        householdId: "HH-001",
+        lhwId: lhwUser[0].id,
+        lastCycleDate: new Date("2025-11-10"),
+        usesSafeProducts: true,
+        notes: "Uses sanitary napkins, good hygiene practices",
+      },
+      {
+        householdId: "HH-002",
+        lhwId: lhwUser[0].id,
+        lastCycleDate: new Date("2025-11-12"),
+        usesSafeProducts: false,
+        notes: "Needs education on safe menstrual hygiene products",
+      },
+      {
+        householdId: "HH-003",
+        lhwId: lhwUser[0].id,
+        lastCycleDate: new Date("2025-11-08"),
+        usesSafeProducts: true,
+        notes: "Regular cycle tracking, aware of hygiene",
+      },
+    ]);
+
+    console.log("✅ Menstrual hygiene status created");
+
+    // 11. Create Menstrual Pad Requests
+    console.log("📦 Creating menstrual pad requests...");
+    await db.insert(menstrualPadRequests).values([
+      {
+        householdId: "HH-001",
+        lhwId: lhwUser[0].id,
+        quantityRequested: 20,
+        urgencyLevel: "medium",
+        status: "pending",
+      },
+      {
+        householdId: "HH-002",
+        lhwId: lhwUser[0].id,
+        quantityRequested: 30,
+        urgencyLevel: "high",
+        status: "approved",
+      },
+      {
+        householdId: "HH-003",
+        lhwId: lhwUser[0].id,
+        quantityRequested: 15,
+        urgencyLevel: "low",
+        status: "delivered",
+      },
+    ]);
+
+    console.log("✅ Menstrual pad requests created");
+
+    // 12. Create Menstrual Education Sessions
+    console.log("📚 Creating menstrual education sessions...");
+    await db.insert(menstrualEducationSessions).values([
+      {
+        householdId: "HH-001",
+        lhwId: lhwUser[0].id,
+        materialsProvided: ["handout_cycles", "safe_products_demo", "hygiene_kit"],
+        topicsCovered: ["infections", "cycle_tracking", "hygiene"],
+        feedbackForm: {
+          learned: true,
+          practiced: true,
+          shared: false,
+          confidence: "high",
+        },
+      },
+      {
+        householdId: "HH-002",
+        lhwId: lhwUser[0].id,
+        materialsProvided: ["handout_cycles", "menstrual_calendar"],
+        topicsCovered: ["cycle_tracking", "common_myths"],
+        feedbackForm: {
+          learned: true,
+          practiced: false,
+          shared: true,
+          confidence: "medium",
+        },
+      },
+      {
+        householdId: "HH-003",
+        lhwId: lhwUser[0].id,
+        materialsProvided: ["safe_products_demo", "disposal_guide", "hygiene_kit"],
+        topicsCovered: ["infections", "safe_disposal", "hygiene"],
+        feedbackForm: {
+          learned: true,
+          practiced: true,
+          shared: true,
+          confidence: "high",
+        },
+      },
+    ]);
+
+    console.log("✅ Menstrual education sessions created");
+
+    // 13. Create a test appointment (patient booked)
     console.log("📅 Creating test appointment...");
     const appointmentDate = new Date();
     appointmentDate.setDate(appointmentDate.getDate() + 7); // Next week
