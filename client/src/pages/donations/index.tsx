@@ -61,14 +61,24 @@ export default function DonationsPage() {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Your donation directly supports healthcare initiatives, supplies, and awareness programs in underserved communities.
           </p>
-          <Button
-            size="lg"
-            onClick={() => setLocation("/donations/donate")}
-            data-testid="button-donate-now"
-          >
-            <Heart className="w-4 h-4 mr-2" />
-            Donate Now
-          </Button>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Button
+              size="lg"
+              onClick={() => setLocation("/donations/donate")}
+              data-testid="button-donate-now"
+            >
+              <Heart className="w-4 h-4 mr-2" />
+              Donate Now
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setLocation("/donations/history")}
+              data-testid="button-view-history"
+            >
+              View Donation History
+            </Button>
+          </div>
         </div>
 
         {/* Donation Causes Grid */}
