@@ -14,6 +14,7 @@ import dispatchRoutes from "./routes/dispatch";
 import adminRoutes from "./routes/admin";
 import lhwRoutes from "./routes/lhw";
 import menstrualRoutes from "./routes/menstrual";
+import donationsRoutes from "./routes/donations";
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use((req, res, next) => {
   app.use("/api/admin", adminRoutes);
   app.use("/api/lhw", lhwRoutes);
   app.use("/api/lhw/menstrual", menstrualRoutes);
+  app.use("/api/donations", donationsRoutes);
   
   const server = await registerRoutes(app);
 

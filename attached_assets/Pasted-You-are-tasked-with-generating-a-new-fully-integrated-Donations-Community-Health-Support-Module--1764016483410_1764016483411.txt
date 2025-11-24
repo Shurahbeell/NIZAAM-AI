@@ -1,0 +1,265 @@
+You are tasked with generating a new fully integrated “Donations & Community Health Support Module” inside my existing project.  
+Use this project archive as the source codebase: /mnt/data/MobileFlowAuth (12).zip
+
+IMPORTANT:
+- Use EXACT same architecture, coding structure, naming patterns, conventions, folder hierarchy, database style, API patterns, and UI patterns as found in the archive.
+- Everything must be database-driven. NO hard-coded account numbers, purposes, supply values, regions, or texts anywhere.
+- Integrate the module with existing agents: Follow-Up Agent, Knowledge Agent, Triage Agent, and with the LHW, MCP/Admin, and User/Patient flows already in the project.
+
+=====================================================
+MODULE NAME: Donation & Community Support Module
+=====================================================
+
+PURPOSE:
+Create a general-purpose donation platform for funding:
+- health services (vaccinations, medicines, camps)
+- awareness & seminars
+- supplies (pads, PPE, kits)
+- LHW field operations and emergency funds
+- any future health-related program defined by admins (DB-driven)
+
+It must allow:
+- Any user/patient to donate
+- LHWs to request supplies and funding
+- MCP/Admin to manage donation accounts, approve allocations, and schedule sponsored events
+- Full transparency & allocation tracking
+- Offline-friendly LHW interactions where applicable
+
+=====================================================
+1) DATABASE SCHEMA (create new migrations/models)
+=====================================================
+Create Drizzle / migration files matching project conventions for the following tables:
+
+donation_causes
+- id (pk)
+- title (string)
+- description (text)
+- icon_url (string, nullable)
+- active (boolean)
+- created_at, updated_at
+
+donation_accounts
+- id (pk)
+- account_title (string)
+- bank_name (string, nullable)
+- account_number (string, nullable)
+- iban (string, nullable)
+- jazzcash_number (string, nullable)
+- easypaisa_number (string, nullable)
+- qr_media_url (string, nullable)
+- is_active (boolean)
+- created_at, updated_at
+
+donations
+- id (pk)
+- user_id (fk nullable)  // allow anonymous donors
+- cause_id (fk donation_causes)
+- amount (decimal)
+- payment_method (string)
+- receipt_number (string, nullable)
+- created_at
+
+supply_requests
+- id (pk)
+- lhw_id (fk -> frontliners/users)
+- supply_type (enum: pad, vaccine, medicine, contraceptive, teaching_material, other)
+- quantity (int)
+- priority_level (enum: low, medium, high)
+- reason (text)
+- status (enum: pending, approved, declined, fulfilled)
+- created_at, updated_at
+
+donation_allocations
+- id (pk)
+- donation_id (fk)
+- allocated_to_type (enum: lhw, clinic, seminar, general_fund)
+- allocated_to_id (string)
+- item_type (string)
+- quantity_or_amount (decimal/int)
+- verified_by_lhw (boolean)
+- verification_media_url (nullable)
+- allocated_at
+
+community_events (seminars)
+- id (pk)
+- title
+- description
+- location
+- date
+- cause_id (fk)
+- expected_attendance
+- sponsoring_donation_id (nullable)
+- created_by (admin_id)
+- status (scheduled, completed, cancelled)
+- created_at, updated_at
+
+supplies (unified supply catalog)
+- id
+- name
+- category
+- unit
+- quantity_available
+- region_id
+- updated_at
+
+All tables must include timestamps and follow naming, types, and migration conventions used in the repo.
+
+=====================================================
+2) BACKEND: API ENDPOINTS & MODULE LOCATION
+=====================================================
+Create a new backend module under the project's API/module pattern (e.g., /backend/modules/donations or src/server/api/donations depending on repo layout). Implement controllers/services/repositories consistent with other modules.
+
+Required endpoints (auth & role checks consistent with project):
+DONATION CAUSES
+- GET /api/donations/causes       // list active causes (public)
+- POST /api/donations/causes      // admin create cause
+- PUT /api/donations/causes/:id   // admin update
+- DELETE /api/donations/causes/:id // soft-delete/archive
+
+DONATION ACCOUNTS
+- GET /api/donations/accounts     // public list active accounts (DB-driven)
+- POST /api/donations/accounts    // admin add account
+- PUT /api/donations/accounts/:id // admin update
+- DELETE /api/donations/accounts/:id // admin deactivate
+
+DONATIONS (USER)
+- POST /api/donations/create      // create donation record (logs donor intent & receipt)
+  Body: { user_id?, cause_id, amount, payment_method, receipt_number? }
+- GET /api/donations/user/:id     // user donation history
+- GET /api/donations/all          // admin view of donations (filters: cause, region, date)
+
+SUPPLY REQUESTS (LHW)
+- POST /api/donations/supply-request   // LHW submit request (stores in supply_requests)
+- GET /api/donations/supply-request/lhw/:lhwId  // LHW history
+- GET /api/donations/supply-requests   // admin list
+- PUT /api/donations/supply-request/:id // admin approve/decline/fulfill
+
+DONATION ALLOCATIONS
+- POST /api/donations/allocate  // admin allocates donation to LHW/clinic/seminar
+- GET /api/donations/allocations // admin/allocation logs
+- POST /api/donations/verify-allocation // LHW verification with media
+
+COMMUNITY EVENTS / SEMINARS
+- POST /api/donations/seminars
+- GET /api/donations/seminars
+- GET /api/donations/seminars/:id
+- PUT /api/donations/seminars/:id
+
+All endpoints must:
+- Validate authentication token and role (admin, lhw, user) per existing middleware.
+- Use the same response shapes and error handling used elsewhere.
+- Emit MCP/Agent events where appropriate (see agent integration section).
+- Accept and store media references (photos/receipts) using existing upload/storage conventions.
+
+=====================================================
+3) FRONTEND: UI PAGES & PLACEMENT (Follow project UI system)
+=====================================================
+Add a new frontend module under the repo’s frontend modules area (e.g., /frontend/src/modules/donations or /src/pages/donations). Reuse existing components (Card, DataTable, Modal, Form, Toasts, Map).
+
+User/Patient-facing:
+- /donations/index (Donation Home)
+  - Fetch donation_causes and donation_accounts
+  - Show dynamic causes grid, donation instructions from DB
+  - "Donate Now" CTA
+- /donations/donate (Donation Form)
+  - Select cause, amount, payment method, upload receipt/enter receipt number
+  - Submit creates POST /api/donations/create
+- /donations/history (User donation history)
+
+LHW-facing (integrate into LHW dashboard):
+- /lhw/donations/request (Supply Request Form)
+  - Fields: supply_type, quantity, priority, reason
+  - Offline-first: queue request if offline, sync when online
+- /lhw/donations/requests (LHW history & status)
+
+Admin/MCP-facing:
+- /admin/donations/dashboard
+  - Summary (total donated per cause/region, pending allocations)
+  - Filters by cause/region/date
+- /admin/donations/accounts (Manage donation accounts)
+  - Add/Update/Deactivate accounts (account fields come from DB)
+- /admin/donations/requests (Manage LHW supply requests)
+  - Approve / Decline / Fulfill / Allocate funds or supplies
+- /admin/donations/allocations (Track allocations & verification)
+
+UI Requirements:
+- No hardcoded strings for dynamic content (fetch texts, reasons, purposes from DB)
+- Multilingual-ready (use existing i18n approach)
+- Mobile-first, accessible, reusing Shadcn/UI + Radix + Tailwind tokens from project
+- Use existing modal, form, table components
+- Use TanStack Query for data fetching, caching, and mutation patterns consistent with the codebase
+
+Offline behavior for LHW pages:
+- Use/extend existing offlineQueue pattern (src/lib/offlineQueue.ts or equivalent)
+- Queue supply requests, allocation verifications, and media uploads when offline
+- Retry / sync when back online
+- Provide local UI indicators for queued items and sync status
+
+=====================================================
+4) AGENT & INTEGRATION HOOKS
+=====================================================
+Integrate with existing agents by emitting events or calling MCP endpoints in the same manner those modules use:
+
+- Follow-Up Agent:
+  - When a supply_request is approved → create follow-up reminders for LHW to confirm receipt or schedule distribution
+  - When donations are allocated to a region → notify assigned LHWs
+
+- Knowledge Agent:
+  - Aggregate donations, allocations, and seminar reports to produce "impact" and "need" metrics
+  - Expose endpoint for admin dashboards to query aggregated needs per region
+
+- Triage Agent:
+  - If an LHW flags a critical health need in a supply_request or seminar_report → trigger triage workflow and optionally create an urgent donation cause for emergency funds
+
+Implement small integration modules/files under agent folders consistent with repo patterns (e.g., backend/modules/knowledge/integrations/donations.js).
+
+=====================================================
+5) ADMIN PANEL & WORKFLOW
+=====================================================
+Admin features:
+- Add/Manage donation_causes and donation_accounts (CRUD)
+- View/Export donation logs and allocation history
+- Approve/allocate LHW supply requests
+- Create/approve community_events (seminars) and mark sponsoring_donation_id
+- Verify allocations via LHW media uploads (photo/receipt)
+
+Donor-facing:
+- After donor submits POST /api/donations/create, show instructions (from DB account info) and a donation receipt page
+- Option for donors to be anonymous (user_id optional)
+
+=====================================================
+6) SECURITY, DATA & STORAGE
+=====================================================
+- All sensitive account fields must be stored in DB and never hard-coded in frontend code. Frontend must fetch via GET /api/donations/accounts.
+- Media uploads (receipt images, verification photos) must use existing upload/storage solution (S3 or local) and store references in DB.
+- Validate and sanitize all inputs; apply role-based access controls for admin endpoints.
+- Audit logs for allocations and verifications (who approved, when).
+
+=====================================================
+7) MIGRATIONS & TESTS
+=====================================================
+- Provide migration scripts to create the tables above using the project’s migration tooling.
+- Add basic unit tests for:
+  - GET /api/donations/causes returns causes
+  - POST /api/donations/create creates a donation record
+  - POST /api/donations/supply-request persists LHW request (with offline queue simulation if possible)
+- Provide an integration test script that simulates: LHW supply request → admin approve & allocate donation → LHW verify allocation
+
+=====================================================
+8) ACCEPTANCE CRITERIA
+=====================================================
+- Module compiles and runs within the existing project.
+- All dynamic values are fetched from DB; no hard-coded account/purpose info.
+- Users can create donations; admin can allocate funds; LHW can request supplies and verify receipt.
+- Agent integration events are emitted in the same pattern as other modules.
+- Offline LHW requests queue & sync works.
+
+=====================================================
+9) PROJECT ZIP LOCATION
+=====================================================
+Use the project archive located at: /mnt/data/MobileFlowAuth (12).zip
+Modify the repo in place and place new files under the repo structure.
+
+=====================================================
+END OF PROMPT
+=====================================================

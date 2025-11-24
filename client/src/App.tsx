@@ -51,6 +51,11 @@ import HouseholdMenstrualProfile from "@/pages/lhw/HouseholdMenstrualProfile";
 import MenstrualEducationForm from "@/pages/lhw/MenstrualEducationForm";
 import PadDistribution from "@/pages/lhw/PadDistribution";
 import MenstrualHealthAdvisor from "@/pages/lhw/MenstrualHealthAdvisor";
+import DonationsPage from "@/pages/donations/index";
+import DonatePage from "@/pages/donations/donate";
+import DonationHistoryPage from "@/pages/donations/history";
+import LHWSupplyRequestPage from "@/pages/lhw/donations-request";
+import DonationsDashboardPage from "@/pages/admin/donations-dashboard";
 
 function Router() {
   return (
@@ -198,6 +203,23 @@ function Router() {
       <Route path="/lhw/menstrual-advisor">
         <RoleGuard requiredRole="lhw">
           <MenstrualHealthAdvisor />
+        </RoleGuard>
+      </Route>
+      <Route path="/donations" component={DonationsPage} />
+      <Route path="/donations/donate" component={DonatePage} />
+      <Route path="/donations/history">
+        <RoleGuard requiredRole="patient">
+          <DonationHistoryPage />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/donations-request">
+        <RoleGuard requiredRole="lhw">
+          <LHWSupplyRequestPage />
+        </RoleGuard>
+      </Route>
+      <Route path="/admin/donations">
+        <RoleGuard requiredRole="admin">
+          <DonationsDashboardPage />
         </RoleGuard>
       </Route>
       <Route component={NotFound} />

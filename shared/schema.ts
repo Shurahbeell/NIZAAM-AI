@@ -539,3 +539,143 @@ export type InsertMenstrualPadRequest = z.infer<typeof insertMenstrualPadRequest
 export type MenstrualPadRequest = typeof menstrualPadRequests.$inferSelect;
 export type InsertMenstrualEducationSession = z.infer<typeof insertMenstrualEducationSessionSchema>;
 export type MenstrualEducationSession = typeof menstrualEducationSessions.$inferSelect;
+
+// Donations & Community Health Support Tables
+export const donationCauses = pgTable("donation_causes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  iconUrl: text("icon_url"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const donationAccounts = pgTable("donation_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountTitle: text("account_title").notNull(),
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  iban: text("iban"),
+  jazzcashNumber: text("jazzcash_number"),
+  easypaisaNumber: text("easypaisa_number"),
+  qrMediaUrl: text("qr_media_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const donations = pgTable("donations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // nullable for anonymous donors
+  causeId: varchar("cause_id").notNull().references(() => donationCauses.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(), // in smallest currency unit (cents/paisa)
+  paymentMethod: text("payment_method").notNull(), // bank_transfer, jazzcash, easypaisa, cash, etc
+  receiptNumber: text("receipt_number"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const supplyRequests = pgTable("supply_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  supplyType: text("supply_type").notNull(), // pad, vaccine, medicine, contraceptive, teaching_material, other
+  quantity: integer("quantity").notNull(),
+  priorityLevel: text("priority_level").notNull().default("medium"), // low, medium, high
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"), // pending, approved, declined, fulfilled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const donationAllocations = pgTable("donation_allocations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  donationId: varchar("donation_id").notNull().references(() => donations.id, { onDelete: "cascade" }),
+  allocatedToType: text("allocated_to_type").notNull(), // lhw, clinic, seminar, general_fund
+  allocatedToId: varchar("allocated_to_id"),
+  itemType: text("item_type"),
+  quantityOrAmount: integer("quantity_or_amount"),
+  verifiedByLhw: boolean("verified_by_lhw").default(false),
+  verificationMediaUrl: text("verification_media_url"),
+  allocatedAt: timestamp("allocated_at").defaultNow(),
+});
+
+export const communityEvents = pgTable("community_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  location: text("location").notNull(),
+  eventDate: timestamp("event_date").notNull(),
+  causeId: varchar("cause_id").references(() => donationCauses.id, { onDelete: "set null" }),
+  expectedAttendance: integer("expected_attendance"),
+  sponsoringDonationId: varchar("sponsoring_donation_id").references(() => donations.id, { onDelete: "set null" }),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  status: text("status").notNull().default("scheduled"), // scheduled, completed, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supplies = pgTable("supplies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  unit: text("unit").notNull(),
+  quantityAvailable: integer("quantity_available").notNull(),
+  regionId: varchar("region_id"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for Donations
+export const insertDonationCauseSchema = createInsertSchema(donationCauses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDonationAccountSchema = createInsertSchema(donationAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDonationSchema = createInsertSchema(donations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupplyRequestSchema = createInsertSchema(supplyRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDonationAllocationSchema = createInsertSchema(donationAllocations).omit({
+  id: true,
+  allocatedAt: true,
+});
+
+export const insertCommunityEventSchema = createInsertSchema(communityEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplySchema = createInsertSchema(supplies).omit({
+  id: true,
+  updatedAt: true,
+});
+
+// Type exports for Donations
+export type InsertDonationCause = z.infer<typeof insertDonationCauseSchema>;
+export type DonationCause = typeof donationCauses.$inferSelect;
+export type InsertDonationAccount = z.infer<typeof insertDonationAccountSchema>;
+export type DonationAccount = typeof donationAccounts.$inferSelect;
+export type InsertDonation = z.infer<typeof insertDonationSchema>;
+export type Donation = typeof donations.$inferSelect;
+export type InsertSupplyRequest = z.infer<typeof insertSupplyRequestSchema>;
+export type SupplyRequest = typeof supplyRequests.$inferSelect;
+export type InsertDonationAllocation = z.infer<typeof insertDonationAllocationSchema>;
+export type DonationAllocation = typeof donationAllocations.$inferSelect;
+export type InsertCommunityEvent = z.infer<typeof insertCommunityEventSchema>;
+export type CommunityEvent = typeof communityEvents.$inferSelect;
+export type InsertSupply = z.infer<typeof insertSupplySchema>;
+export type Supply = typeof supplies.$inferSelect;

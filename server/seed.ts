@@ -2,7 +2,8 @@ import { db } from "./db";
 import { 
   users, hospitals, doctors, frontliners, appointments, medicalHistory, medicines,
   lhwAssignments, lhwReports, lhwVaccinations, lhwInventory, lhwEducationSessions,
-  menstrualHygieneStatus, menstrualPadRequests, menstrualEducationSessions as menstrualEducationSess
+  menstrualHygieneStatus, menstrualPadRequests, menstrualEducationSessions as menstrualEducationSess,
+  donationCauses, donationAccounts, donations, supplyRequests
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -18,6 +19,8 @@ async function seed() {
     await db.delete(medicines);
     await db.delete(medicalHistory);
     await db.delete(appointments);
+    await db.delete(donations).catch(() => {});
+    await db.delete(supplyRequests).catch(() => {});
     await db.delete(menstrualEducationSess).catch(() => {});
     await db.delete(menstrualPadRequests).catch(() => {});
     await db.delete(menstrualHygieneStatus).catch(() => {});
@@ -32,6 +35,8 @@ async function seed() {
     await db.delete(users).where(eq(users.role, 'hospital')).catch(() => {});
     await db.delete(users).where(eq(users.role, 'frontliner')).catch(() => {});
     await db.delete(users).where(eq(users.role, 'lhw')).catch(() => {});
+    await db.delete(donationAccounts).catch(() => {});
+    await db.delete(donationCauses).catch(() => {});
     await db.delete(hospitals);
 
     // 1. Create Hospital with details
@@ -629,7 +634,115 @@ async function seed() {
 
     console.log("✅ LHW education sessions created");
 
-    // 17. Create a test appointment (patient booked)
+    // 18. Create Donation Causes
+    console.log("💝 Creating donation causes...");
+    const causes = await db.insert(donationCauses).values([
+      {
+        title: "Vaccination Programs",
+        description: "Support immunization camps and vaccine distribution in underserved communities",
+        active: true,
+      },
+      {
+        title: "Menstrual Hygiene Support",
+        description: "Fund sanitary pad distribution and hygiene awareness programs",
+        active: true,
+      },
+      {
+        title: "Emergency Health Funds",
+        description: "Rapid response to health emergencies and disaster relief",
+        active: true,
+      },
+      {
+        title: "LHW Field Operations",
+        description: "Support Lady Health Workers with supplies and operational costs",
+        active: true,
+      },
+    ]).returning();
+
+    console.log("✅ Donation causes created");
+
+    // 19. Create Donation Accounts
+    console.log("🏦 Creating donation accounts...");
+    await db.insert(donationAccounts).values([
+      {
+        accountTitle: "Primary Donation Account",
+        bankName: "Habib Bank Limited",
+        accountNumber: "1234567890",
+        iban: "PK36ABOC0000001234567890",
+        isActive: true,
+      },
+      {
+        accountTitle: "JazzCash Donations",
+        jazzcashNumber: "03001234567",
+        isActive: true,
+      },
+      {
+        accountTitle: "EasyPaisa Donations",
+        easypaisaNumber: "03009876543",
+        isActive: true,
+      },
+    ]);
+
+    console.log("✅ Donation accounts created");
+
+    // 20. Create Sample Donations
+    console.log("💰 Creating sample donations...");
+    const sampleDonations = await db.insert(donations).values([
+      {
+        userId: patient[0].id,
+        causeId: causes[0].id,
+        amount: 50000,
+        paymentMethod: "bank_transfer",
+        receiptNumber: "RCP-001",
+      },
+      {
+        causeId: causes[1].id,
+        amount: 25000,
+        paymentMethod: "jazzcash",
+      },
+      {
+        userId: patient[0].id,
+        causeId: causes[2].id,
+        amount: 100000,
+        paymentMethod: "bank_transfer",
+        receiptNumber: "RCP-002",
+      },
+    ]).returning();
+
+    console.log("✅ Sample donations created");
+
+    // 21. Create Sample Supply Requests
+    console.log("📋 Creating sample supply requests...");
+    await db.insert(supplyRequests).values([
+      {
+        lhwId: lhwUser[0].id,
+        supplyType: "pad",
+        quantity: 500,
+        priorityLevel: "high",
+        reason: "Distribution campaign for underserved villages",
+        status: "pending",
+      },
+      {
+        lhwId: lhwUser[0].id,
+        supplyType: "vaccine",
+        quantity: 200,
+        priorityLevel: "medium",
+        reason: "Routine immunization clinic",
+        status: "approved",
+      },
+      {
+        lhwId: lhwUser[0].id,
+        supplyType: "medicine",
+        quantity: 50,
+        priorityLevel: "low",
+        reason: "Inventory replenishment",
+        status: "fulfilled",
+      },
+    ]);
+
+    console.log("✅ Supply requests created");
+
+    // 22. Create a test appointment (patient booked)
     console.log("📅 Creating test appointment...");
     const appointmentDate = new Date();
     appointmentDate.setDate(appointmentDate.getDate() + 7); // Next week
