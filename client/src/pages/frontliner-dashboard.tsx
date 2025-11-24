@@ -456,18 +456,12 @@ export default function FrontlinerDashboard() {
         </Card>
       ) : (
         <Tabs defaultValue="new" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="new" data-testid="tab-new-cases">
               New ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "new").length})
             </TabsTrigger>
-            <TabsTrigger value="assigned" data-testid="tab-assigned-cases">
-              Assigned ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "assigned").length})
-            </TabsTrigger>
-            <TabsTrigger value="ack" data-testid="tab-acknowledged-cases">
-              Acknowledged ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "ack").length})
-            </TabsTrigger>
-            <TabsTrigger value="in_progress" data-testid="tab-in-progress-cases">
-              In Progress ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "in_progress").length})
+            <TabsTrigger value="active" data-testid="tab-active-cases">
+              Active ({cases.filter((c: EmergencyCaseWithPatient) => ["assigned", "ack", "in_progress"].includes(c.status)).length})
             </TabsTrigger>
             <TabsTrigger value="completed" data-testid="tab-completed-cases">
               Completed ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "completed").length})
@@ -485,36 +479,14 @@ export default function FrontlinerDashboard() {
             />
           </TabsContent>
 
-          <TabsContent value="assigned">
+          <TabsContent value="active">
             <TabCasesContent
               cases={cases}
-              statuses={["assigned"]}
+              statuses={["assigned", "ack", "in_progress"]}
               frontlinerData={frontlinerData}
               handleAction={handleAction}
               updateStatusMutation={updateStatusMutation}
-              emptyMessage="No assigned cases"
-            />
-          </TabsContent>
-
-          <TabsContent value="ack">
-            <TabCasesContent
-              cases={cases}
-              statuses={["ack"]}
-              frontlinerData={frontlinerData}
-              handleAction={handleAction}
-              updateStatusMutation={updateStatusMutation}
-              emptyMessage="No acknowledged cases"
-            />
-          </TabsContent>
-
-          <TabsContent value="in_progress">
-            <TabCasesContent
-              cases={cases}
-              statuses={["in_progress"]}
-              frontlinerData={frontlinerData}
-              handleAction={handleAction}
-              updateStatusMutation={updateStatusMutation}
-              emptyMessage="No in-progress cases"
+              emptyMessage="No active cases"
             />
           </TabsContent>
 

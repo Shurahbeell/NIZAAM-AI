@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertTriangle, MapPin, Phone, User, Heart, Building2, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuthStore } from "@/lib/auth";
 
 interface EmergencyData {
@@ -113,6 +113,9 @@ export default function Emergency() {
         setAssignment(data.assignedTo);
         console.log(`[Emergency] Routed to ${data.assignedTo.type}: ${data.assignedTo.name}`);
       }
+
+      // Invalidate frontliner cases cache so new cases appear immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/frontliners"] });
 
       // If we reach here, the request was successful
       setTimeout(() => {
