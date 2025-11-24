@@ -39,6 +39,13 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import LanguageSelector from "@/components/LanguageSelector";
 import UserManual from "@/pages/user-manual";
 import DiseaseChatbot from "@/pages/disease-chatbot";
+import LHWDashboard from "@/pages/lhw/Dashboard";
+import LHWHouseholds from "@/pages/lhw/Households";
+import LHWVisitForm from "@/pages/lhw/VisitForm";
+import LHWVaccinations from "@/pages/lhw/VaccinationTracker";
+import LHWEducation from "@/pages/lhw/EducationHub";
+import LHWInventory from "@/pages/lhw/Inventory";
+import LHWEmergencies from "@/pages/lhw/Emergencies";
 
 function Router() {
   return (
@@ -128,6 +135,41 @@ function Router() {
         </RoleGuard>
       </Route>
       <Route path="/user-manual" component={UserManual} />
+      <Route path="/lhw/dashboard">
+        <RoleGuard requiredRole="lhw">
+          <LHWDashboard />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/households">
+        <RoleGuard requiredRole="lhw">
+          <LHWHouseholds />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/visit-form">
+        <RoleGuard requiredRole="lhw">
+          <LHWVisitForm />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/vaccinations">
+        <RoleGuard requiredRole="lhw">
+          <LHWVaccinations />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/education">
+        <RoleGuard requiredRole="lhw">
+          <LHWEducation />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/inventory">
+        <RoleGuard requiredRole="lhw">
+          <LHWInventory />
+        </RoleGuard>
+      </Route>
+      <Route path="/lhw/emergencies">
+        <RoleGuard requiredRole="lhw">
+          <LHWEmergencies />
+        </RoleGuard>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

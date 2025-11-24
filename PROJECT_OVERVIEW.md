@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-**NIZAAM-AI** is a comprehensive hybrid healthcare management system designed to address Pakistan's fragmented primary health infrastructure. It features a **6-agent AI architecture powered by Gemini 2.5 Flash**, integrated emergency tracking with Rescue 1122, women's health services, appointment scheduling, pharmacy finder, disease/medicine libraries with AI chatbot, and complete trilingual support (English, Urdu script, Roman Urdu) with proper RTL/LTR handling.
+**NIZAAM-AI** is a comprehensive hybrid healthcare management system designed to address Pakistan's fragmented primary health infrastructure. It features a **6-agent AI architecture powered by Gemini 2.5 Flash**, integrated emergency tracking with Rescue 1122, women's health services, appointment scheduling, facility finder, disease/medicine libraries with AI chatbot, and complete trilingual support (English, Urdu script, Roman Urdu) with proper RTL/LTR handling.
 
 The system represents a "digital health front-line" that can operate through intelligent, cooperative AI agents delivering equitable care from Karachi's clinics to Balochistan's Basic Health Units (BHUs).
 

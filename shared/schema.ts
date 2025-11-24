@@ -7,7 +7,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("patient"), // "patient", "hospital", "frontliner", "admin"
+  role: text("role").notNull().default("patient"), // "patient", "hospital", "frontliner", "admin", "lhw"
   isAdmin: boolean("is_admin").default(false),
   hospitalId: varchar("hospital_id"), // null for patients
   // Profile fields
@@ -385,3 +385,98 @@ export type InsertMedicalHistory = z.infer<typeof insertMedicalHistorySchema>;
 export type MedicalHistory = typeof medicalHistory.$inferSelect;
 export type InsertMedicines = z.infer<typeof insertMedicinesSchema>;
 export type Medicines = typeof medicines.$inferSelect;
+
+// LHW (Lady Health Worker) Tables
+export const lhwAssignments = pgTable("lhw_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: varchar("household_id").notNull(),
+  householdName: text("household_name"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
+  populationServed: integer("population_served").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const lhwReports = pgTable("lhw_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  patientId: varchar("patient_id"),
+  visitType: text("visit_type").notNull(), // "maternal", "child", "chronic", "vaccination"
+  notes: text("notes"),
+  vitals: jsonb("vitals"), // {weight, height, bp, temp, etc}
+  nextVisitDate: timestamp("next_visit_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const lhwVaccinations = pgTable("lhw_vaccinations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  childId: varchar("child_id").notNull(),
+  lhwId: varchar("lhw_id").references(() => users.id, { onDelete: "cascade" }),
+  vaccine: text("vaccine").notNull(), // "BCG", "DPT", "Polio", etc
+  dueDate: timestamp("due_date").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "completed", "overdue", "missed"
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const lhwInventory = pgTable("lhw_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(), // "vaccine", "medicine", "supplies"
+  itemName: text("item_name").notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  minThreshold: integer("min_threshold").default(10),
+  reorderStatus: text("reorder_status").default("in_stock"), // "in_stock", "low", "out_of_stock"
+  lastRestockedAt: timestamp("last_restocked_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lhwEducationSessions = pgTable("lhw_education_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lhwId: varchar("lhw_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  topic: text("topic").notNull(), // "maternal-health", "child-nutrition", "family-planning", etc
+  audienceSize: integer("audience_size"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for LHW
+export const insertLhwAssignmentSchema = createInsertSchema(lhwAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLhwReportSchema = createInsertSchema(lhwReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLhwVaccinationSchema = createInsertSchema(lhwVaccinations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLhwInventorySchema = createInsertSchema(lhwInventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLhwEducationSessionSchema = createInsertSchema(lhwEducationSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type InsertLhwAssignment = z.infer<typeof insertLhwAssignmentSchema>;
+export type LhwAssignment = typeof lhwAssignments.$inferSelect;
+export type InsertLhwReport = z.infer<typeof insertLhwReportSchema>;
+export type LhwReport = typeof lhwReports.$inferSelect;
+export type InsertLhwVaccination = z.infer<typeof insertLhwVaccinationSchema>;
+export type LhwVaccination = typeof lhwVaccinations.$inferSelect;
+export type InsertLhwInventory = z.infer<typeof insertLhwInventorySchema>;
+export type LhwInventory = typeof lhwInventory.$inferSelect;
+export type InsertLhwEducationSession = z.infer<typeof insertLhwEducationSessionSchema>;
+export type LhwEducationSession = typeof lhwEducationSessions.$inferSelect;

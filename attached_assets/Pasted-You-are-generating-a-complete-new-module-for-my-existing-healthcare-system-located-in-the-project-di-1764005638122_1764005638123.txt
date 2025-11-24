@@ -1,0 +1,198 @@
+You are generating a complete new module for my existing healthcare system located in the project directory I uploaded.
+
+The project stack is:
+- React 18 + TypeScript
+- Wouter for routing
+- TanStack Query v5
+- Shadcn/UI + Radix
+- Tailwind CSS
+- Drizzle ORM (MySQL)
+- MCP Multi-Agent Server (Follow-Up Agent, Triage Agent, Knowledge Agent, Emergency Agent)
+- Role-based multi-tenant architecture
+- Emergency system already implemented
+- Facility Finder (Google Places)
+- Women’s Health & follow-up modules
+- Frontliner Dashboard
+- Backend and frontend already integrated with consistent folder structure
+
+I want you to generate **a full new role module: LHW (Lady Health Worker)** integrated with the existing system exactly following the architecture and conventions already inside the project.
+
+### ➤ 1. Add New Role
+
+Add a new role `"lhw"` everywhere the project defines roles:
+- auth logic
+- role guards
+- route gating
+- user creation paths if needed
+- session metadata
+
+### ➤ 2. Create Complete Frontend Route Module
+
+Create a new route subtree: `/lhw/*`
+
+Add pages under:
+`src/pages/lhw/`
+- Dashboard.tsx
+- Households.tsx
+- VisitForm.tsx
+- VaccinationTracker.tsx
+- EducationHub.tsx
+- Inventory.tsx
+- Emergencies.tsx
+
+All pages must match the app's:
+- shadcn UI styling
+- Tailwind tokens
+- layout components
+- card/table structure
+- mobile-first design
+- use TanStack Query hooks
+- use the same fetch helpers & API patterns
+- use same skeleton loaders
+- use the existing map components for household map view
+
+Dashboard must show:
+- assigned households
+- pending visits
+- overdue vaccinations or screenings
+- emergency alerts
+- map of households
+
+VisitForm should allow:
+- maternal visit logs
+- child growth logs
+- chronic disease notes
+- text, checkbox, and minimal input interface
+
+VaccinationTracker:
+- shows due, upcoming, overdue vaccines
+- allows marking completed
+- triggers Follow-Up Agent via API
+
+EducationHub:
+- shows educational material from Knowledge Agent
+- log awareness sessions
+
+Emergencies page:
+- send emergency case to Triage Agent
+- show timeline/history
+
+Inventory page:
+- track vaccine/medicine stock
+- request restock
+
+### ➤ 3. Implement Offline Mode
+
+Add an offline queue system under:
+`src/lib/offlineQueue.ts`
+
+Features:
+- store visit logs, vaccination updates, education sessions, emergencies
+- queue items when offline
+- auto-sync when online
+- integrate with TanStack Query invalidate logic
+
+### ➤ 4. Add Database Tables (Drizzle ORM)
+
+Under `src/db/schema/` create:
+
+1. lhw_assignments.ts
+id
+lhwId (FK users)
+householdId
+createdAt
+
+markdown
+Copy code
+
+2. lhw_reports.ts
+id
+lhwId
+patientId
+visitType
+notes
+vitals (JSON)
+nextVisit
+createdAt
+
+markdown
+Copy code
+
+3. lhw_vaccinations.ts
+id
+childId
+lhwId
+vaccine
+dueDate
+status
+completedAt
+
+diff
+Copy code
+
+Use the same naming, conventions, metadata, and timestamps as other tables.
+
+### ➤ 5. Create Backend Endpoints Matching Existing Style
+
+Under `src/server/api/` create:
+
+GET /api/lhw/dashboard  
+GET /api/lhw/households  
+POST /api/lhw/visit-log  
+POST /api/lhw/vaccination  
+POST /api/lhw/education-session  
+POST /api/lhw/emergency  
+POST /api/lhw/sync  
+GET/POST /api/lhw/inventory  
+
+Each endpoint must:
+- verify session role = "lhw"
+- use drizzle queries
+- return data in the same format as existing frontliner API
+- integrate with MCP Agents
+
+### ➤ 6. Agent Integrations
+
+Add MCP hooks:
+
+Follow-Up Agent:
+- send reminders to LHW for missed vaccinations or maternal visits
+
+Triage Agent:
+- handle emergency reports from /api/lhw/emergency
+- assign nearest hospital
+- notify hospital + frontliner chain
+
+Knowledge Agent:
+- provide health education content
+- log education sessions submitted by LHW
+
+### ➤ 7. UI/UX Requirements
+
+- match existing design guidelines in design_guidelines.md
+- calm clinical theme, accessible UI
+- minimal input (checkboxes, short text)
+- multilingual-ready
+- mobile-optimized
+- reuse existing components like Cards, DataTable, Badge, Alert, Skeleton, Pagination
+- QR-code support for verifying vaccinations or medicine issuance
+
+### ➤ 8. What to Generate
+
+Generate all:
+- React components
+- UI pages
+- Type definitions
+- Drizzle schemas
+- API handlers
+- hooks (useLHWData, useLHWVisit, etc.)
+- MCP event handlers
+- Offline queue system
+- routes in router.tsx
+- database migrations if needed
+
+Ensure:
+- Everything compiles
+- File paths follow exact project norms
+- Consistent with existing app modules
+- Fully functional LHW module integrated into the system
