@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { 
   users, hospitals, doctors, frontliners, appointments, medicalHistory, medicines,
-  lhwAssignments, menstrualHygieneStatus, menstrualPadRequests, menstrualEducationSessions 
+  lhwAssignments, lhwReports, lhwVaccinations, lhwInventory, lhwEducationSessions,
+  menstrualHygieneStatus, menstrualPadRequests, menstrualEducationSessions as menstrualEducationSess
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -17,9 +18,13 @@ async function seed() {
     await db.delete(medicines);
     await db.delete(medicalHistory);
     await db.delete(appointments);
-    await db.delete(menstrualEducationSessions).catch(() => {});
+    await db.delete(menstrualEducationSess).catch(() => {});
     await db.delete(menstrualPadRequests).catch(() => {});
     await db.delete(menstrualHygieneStatus).catch(() => {});
+    await db.delete(lhwEducationSessions).catch(() => {});
+    await db.delete(lhwVaccinations).catch(() => {});
+    await db.delete(lhwInventory).catch(() => {});
+    await db.delete(lhwReports).catch(() => {});
     await db.delete(lhwAssignments).catch(() => {});
     await db.delete(frontliners);
     await db.delete(doctors);
@@ -342,7 +347,7 @@ async function seed() {
 
     // 12. Create Menstrual Education Sessions
     console.log("📚 Creating menstrual education sessions...");
-    await db.insert(menstrualEducationSessions).values([
+    await db.insert(menstrualEducationSess).values([
       {
         householdId: "HH-001",
         lhwId: lhwUser[0].id,
@@ -383,7 +388,248 @@ async function seed() {
 
     console.log("✅ Menstrual education sessions created");
 
-    // 13. Create a test appointment (patient booked)
+    // 13. Create LHW Reports (Health Visits)
+    console.log("📋 Creating LHW health visit reports...");
+    const nextVisitDate = new Date();
+    nextVisitDate.setDate(nextVisitDate.getDate() + 14);
+    
+    await db.insert(lhwReports).values([
+      {
+        lhwId: lhwUser[0].id,
+        patientId: patient[0].id,
+        visitType: "maternal",
+        notes: "Antenatal checkup completed. BP normal, no complications.",
+        vitals: {
+          weight: 68.5,
+          bloodPressure: "120/80",
+          temperature: 98.6,
+        },
+        nextVisitDate: nextVisitDate,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        patientId: "CHILD-001",
+        visitType: "child",
+        notes: "Growth monitoring done. Child weight appropriate for age.",
+        vitals: {
+          weight: 15.2,
+          height: 82,
+          temperature: 98.4,
+        },
+        nextVisitDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+      },
+      {
+        lhwId: lhwUser[0].id,
+        patientId: "CHRONIC-001",
+        visitType: "chronic",
+        notes: "Diabetes management follow-up. Patient compliant with medication.",
+        vitals: {
+          weight: 75,
+          bloodPressure: "125/82",
+          temperature: 98.5,
+        },
+        nextVisitDate: new Date(new Date().setDate(new Date().getDate() + 21)),
+      },
+      {
+        lhwId: lhwUser[0].id,
+        visitType: "vaccination",
+        notes: "Routine immunization clinic completed. 12 children vaccinated.",
+        vitals: { clinicParticipants: 12 },
+        nextVisitDate: new Date(new Date().setDate(new Date().getDate() + 28)),
+      },
+    ]);
+
+    console.log("✅ LHW health visit reports created");
+
+    // 14. Create Vaccination Records
+    console.log("💉 Creating vaccination records...");
+    const today = new Date();
+    const dueDate1 = new Date(today);
+    dueDate1.setDate(dueDate1.getDate() + 5);
+    const dueDate2 = new Date(today);
+    dueDate2.setDate(dueDate2.getDate() - 10);
+    const dueDate3 = new Date(today);
+    dueDate3.setDate(dueDate3.getDate() + 30);
+
+    await db.insert(lhwVaccinations).values([
+      {
+        childId: "CHILD-001",
+        lhwId: lhwUser[0].id,
+        vaccine: "BCG",
+        dueDate: new Date(new Date().setDate(new Date().getDate() - 45)),
+        status: "completed",
+        completedAt: new Date(new Date().setDate(new Date().getDate() - 40)),
+      },
+      {
+        childId: "CHILD-001",
+        lhwId: lhwUser[0].id,
+        vaccine: "DPT",
+        dueDate: dueDate1,
+        status: "pending",
+      },
+      {
+        childId: "CHILD-002",
+        lhwId: lhwUser[0].id,
+        vaccine: "Polio",
+        dueDate: dueDate2,
+        status: "overdue",
+      },
+      {
+        childId: "CHILD-002",
+        lhwId: lhwUser[0].id,
+        vaccine: "Hepatitis B",
+        dueDate: dueDate3,
+        status: "pending",
+      },
+      {
+        childId: "CHILD-003",
+        lhwId: lhwUser[0].id,
+        vaccine: "Measles",
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 15)),
+        status: "pending",
+      },
+    ]);
+
+    console.log("✅ Vaccination records created");
+
+    // 15. Create LHW Inventory
+    console.log("📦 Creating LHW inventory...");
+    const lastWeek = new Date(new Date().setDate(new Date().getDate() - 7));
+    
+    await db.insert(lhwInventory).values([
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "vaccine",
+        itemName: "BCG Vaccine",
+        quantity: 45,
+        minThreshold: 20,
+        reorderStatus: "in_stock",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "vaccine",
+        itemName: "DPT Vaccine",
+        quantity: 8,
+        minThreshold: 15,
+        reorderStatus: "low",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "vaccine",
+        itemName: "Polio Vaccine",
+        quantity: 0,
+        minThreshold: 15,
+        reorderStatus: "out_of_stock",
+        lastRestockedAt: new Date(new Date().setDate(new Date().getDate() - 30)),
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "medicine",
+        itemName: "Iron Supplements",
+        quantity: 120,
+        minThreshold: 50,
+        reorderStatus: "in_stock",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "medicine",
+        itemName: "Paracetamol Syrup",
+        quantity: 18,
+        minThreshold: 30,
+        reorderStatus: "low",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "supplies",
+        itemName: "Antiseptic Swabs",
+        quantity: 200,
+        minThreshold: 100,
+        reorderStatus: "in_stock",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "supplies",
+        itemName: "Syringes (10ml)",
+        quantity: 35,
+        minThreshold: 50,
+        reorderStatus: "low",
+        lastRestockedAt: lastWeek,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        itemType: "supplies",
+        itemName: "Examination Gloves",
+        quantity: 500,
+        minThreshold: 200,
+        reorderStatus: "in_stock",
+        lastRestockedAt: lastWeek,
+      },
+    ]);
+
+    console.log("✅ LHW inventory created");
+
+    // 16. Create LHW Education Sessions (Past and Future)
+    console.log("📚 Creating LHW education sessions (awareness & planned)...");
+    const pastSession = new Date();
+    pastSession.setDate(pastSession.getDate() - 7);
+    
+    const futureSession1 = new Date();
+    futureSession1.setDate(futureSession1.getDate() + 5);
+    
+    const futureSession2 = new Date();
+    futureSession2.setDate(futureSession2.getDate() + 12);
+    
+    const futureSession3 = new Date();
+    futureSession3.setDate(futureSession3.getDate() + 20);
+
+    // Create education sessions with notes that include session dates for future planning
+    await db.insert(lhwEducationSessions).values([
+      {
+        lhwId: lhwUser[0].id,
+        topic: "maternal-health",
+        audienceSize: 15,
+        notes: `PAST SESSION (${pastSession.toLocaleDateString()}): Taught antenatal care, nutrition, and warning signs during pregnancy. Distributed information pamphlets.`,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        topic: "child-nutrition",
+        audienceSize: 20,
+        notes: `PAST SESSION (${new Date(new Date().setDate(new Date().getDate() - 14)).toLocaleDateString()}): Covered infant feeding, complementary foods, and nutrition for children 6-24 months.`,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        topic: "family-planning",
+        audienceSize: 12,
+        notes: `UPCOMING SESSION (${futureSession1.toLocaleDateString()}): Family planning methods, benefits, and addressing myths. Interactive Q&A session planned.`,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        topic: "menstrual-health",
+        audienceSize: 18,
+        notes: `UPCOMING SESSION (${futureSession2.toLocaleDateString()}): Comprehensive menstrual hygiene education, safe products, disposal methods, and addressing stigma.`,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        topic: "disease-prevention",
+        audienceSize: 25,
+        notes: `UPCOMING SESSION (${futureSession3.toLocaleDateString()}): Prevention of communicable diseases, hygiene practices, vaccination importance, and seasonal health risks.`,
+      },
+      {
+        lhwId: lhwUser[0].id,
+        topic: "immunization-awareness",
+        audienceSize: 30,
+        notes: `UPCOMING SESSION (${new Date(new Date().setDate(new Date().getDate() + 28)).toLocaleDateString()}): Complete immunization schedule, vaccine benefits, side effects, and addressing vaccine hesitancy.`,
+      },
+    ]);
+
+    console.log("✅ LHW education sessions created");
+
+    // 17. Create a test appointment (patient booked)
     console.log("📅 Creating test appointment...");
     const appointmentDate = new Date();
     appointmentDate.setDate(appointmentDate.getDate() + 7); // Next week
