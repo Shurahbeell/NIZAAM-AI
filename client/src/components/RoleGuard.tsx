@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/lib/auth";
 
 interface RoleGuardProps {
-  requiredRole: "patient" | "hospital" | "frontliner" | "admin";
+  requiredRole: "patient" | "hospital" | "frontliner" | "admin" | "lhw";
   children: React.ReactNode;
 }
 
@@ -25,6 +25,8 @@ export default function RoleGuard({ requiredRole, children }: RoleGuardProps) {
         setLocation("/frontliner-dashboard");
       } else if (user.role === "admin") {
         setLocation("/admin-dashboard");
+      } else if (user.role === "lhw") {
+        setLocation("/lhw/dashboard");
       } else {
         setLocation("/dashboard");
       }
