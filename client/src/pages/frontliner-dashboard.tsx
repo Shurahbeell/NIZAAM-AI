@@ -217,6 +217,7 @@ function TabCasesContent({
   handleAction,
   updateStatusMutation,
   emptyMessage,
+  limit = 3,
 }: {
   cases: EmergencyCaseWithPatient[];
   statuses: string[];
@@ -224,8 +225,12 @@ function TabCasesContent({
   handleAction: (caseId: string, status: string) => void;
   updateStatusMutation: any;
   emptyMessage: string;
+  limit?: number;
 }) {
-  const filteredCases = cases.filter((c) => statuses.includes(c.status));
+  const filteredCases = cases
+    .filter((c) => statuses.includes(c.status))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit);
 
   if (filteredCases.length === 0) {
     return (
@@ -455,38 +460,25 @@ export default function FrontlinerDashboard() {
           </div>
         </Card>
       ) : (
-        <Tabs defaultValue="new" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="new" data-testid="tab-new-cases">
-              New ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "new").length})
-            </TabsTrigger>
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="active" data-testid="tab-active-cases">
-              Active ({cases.filter((c: EmergencyCaseWithPatient) => ["assigned", "ack", "in_progress"].includes(c.status)).length})
+              Active ({cases.filter((c: EmergencyCaseWithPatient) => ["new", "assigned", "ack", "in_progress"].includes(c.status)).length})
             </TabsTrigger>
             <TabsTrigger value="completed" data-testid="tab-completed-cases">
               Completed ({cases.filter((c: EmergencyCaseWithPatient) => c.status === "completed").length})
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="new">
-            <TabCasesContent
-              cases={cases}
-              statuses={["new"]}
-              frontlinerData={frontlinerData}
-              handleAction={handleAction}
-              updateStatusMutation={updateStatusMutation}
-              emptyMessage="No new cases"
-            />
-          </TabsContent>
-
           <TabsContent value="active">
             <TabCasesContent
               cases={cases}
-              statuses={["assigned", "ack", "in_progress"]}
+              statuses={["new", "assigned", "ack", "in_progress"]}
               frontlinerData={frontlinerData}
               handleAction={handleAction}
               updateStatusMutation={updateStatusMutation}
               emptyMessage="No active cases"
+              limit={3}
             />
           </TabsContent>
 
@@ -498,6 +490,7 @@ export default function FrontlinerDashboard() {
               handleAction={handleAction}
               updateStatusMutation={updateStatusMutation}
               emptyMessage="No completed cases"
+              limit={3}
             />
           </TabsContent>
         </Tabs>

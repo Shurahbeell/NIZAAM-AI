@@ -763,6 +763,24 @@ export class DrizzleStorage implements IStorage {
 
   async getOpenCasesForFrontliner(frontlinerId: string): Promise<any[]> {
     const { emergencies } = await import("@shared/schema");
+    
+    // First, clean up old cases - keep only last 3
+    const allCases = await db
+      .select({ id: emergencyCases.id })
+      .from(emergencyCases)
+      .where(
+        and(
+          eq(emergencyCases.assignedToType, "frontliner"),
+          eq(emergencyCases.assignedToId, frontlinerId)
+        )
+      )
+      .orderBy(desc(emergencyCases.createdAt));
+    
+    if (allCases.length > 3) {
+      const casesToDelete = allCases.slice(3).map(c => c.id);
+      await db.delete(emergencyCases).where(inArray(emergencyCases.id, casesToDelete));
+    }
+    
     const results = await db
       .select({
         id: emergencyCases.id,
