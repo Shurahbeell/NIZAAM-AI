@@ -1,41 +1,58 @@
 import { Router, type Request, Response } from "express";
 import { db } from "../db";
+import { requireAuth, requireRole } from "../middleware/auth";
 import { 
   lhwAssignments, 
   lhwReports, 
   lhwVaccinations, 
   lhwInventory,
   lhwEducationSessions,
-  emergencyCases
+  emergencyCases,
+  users
 } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 
-interface AuthRequest extends Request {
-  user?: { id: string; role: string };
-}
-
 const router = Router();
 
-// Verify LHW role
-const lhwRoleCheck = (req: AuthRequest, res: Response, next: any) => {
-  if (req.user?.role !== "lhw") {
-    return res.status(403).json({ error: "LHW access only" });
-  }
-  next();
-};
+// GET /api/lhw/profile
+router.get("/profile", requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
-// Mock auth middleware for now
-const authMiddleware = (req: AuthRequest, res: Response, next: any) => {
-  // This would typically validate JWT token from headers
-  // For now, we'll use a mock implementation
-  req.user = { id: "test-lhw-id", role: "lhw" };
-  next();
-};
+    const lhwUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.user.userId));
+
+    if (!lhwUser.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const profile = lhwUser[0];
+    res.json({
+      id: profile.id,
+      username: profile.username,
+      fullName: profile.fullName,
+      phone: profile.phone,
+      address: profile.address,
+      cnic: profile.cnic,
+      age: profile.age,
+      role: profile.role,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
 
 // GET /api/lhw/dashboard
-router.get("/dashboard", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.get("/dashboard", requireAuth, async (req: Request, res: Response) => {
   try {
-    const lhwId = req.user.id;
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    const lhwId = req.user.userId;
 
     const households = await db
       .select()
@@ -74,12 +91,15 @@ router.get("/dashboard", authMiddleware, lhwRoleCheck, async (req: AuthRequest, 
 });
 
 // GET /api/lhw/households
-router.get("/households", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.get("/households", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const households = await db
       .select()
       .from(lhwAssignments)
-      .where(eq(lhwAssignments.lhwId, req.user.id));
+      .where(eq(lhwAssignments.lhwId, req.user.userId));
 
     res.json(households);
   } catch (error) {
@@ -88,12 +108,15 @@ router.get("/households", authMiddleware, lhwRoleCheck, async (req: AuthRequest,
 });
 
 // POST /api/lhw/visit-log
-router.post("/visit-log", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/visit-log", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { visitType, notes, vitals, nextVisitDate } = req.body;
 
     const report = await db.insert(lhwReports).values({
-      lhwId: req.user.id,
+      lhwId: req.user.userId,
       visitType,
       notes,
       vitals,
@@ -107,12 +130,15 @@ router.post("/visit-log", authMiddleware, lhwRoleCheck, async (req: AuthRequest,
 });
 
 // GET /api/lhw/vaccinations
-router.get("/vaccinations", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.get("/vaccinations", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const vaccinations = await db
       .select()
       .from(lhwVaccinations)
-      .where(eq(lhwVaccinations.lhwId, req.user.id));
+      .where(eq(lhwVaccinations.lhwId, req.user.userId));
 
     res.json(vaccinations);
   } catch (error) {
@@ -121,7 +147,7 @@ router.get("/vaccinations", authMiddleware, lhwRoleCheck, async (req: AuthReques
 });
 
 // POST /api/lhw/vaccination
-router.post("/vaccination", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/vaccination", requireAuth, async (req: Request, res: Response) => {
   try {
     const { vaccinationId, status, completedAt } = req.body;
 
@@ -140,12 +166,15 @@ router.post("/vaccination", authMiddleware, lhwRoleCheck, async (req: AuthReques
 });
 
 // POST /api/lhw/education-session
-router.post("/education-session", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/education-session", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { topic, audienceSize, notes } = req.body;
 
     await db.insert(lhwEducationSessions).values({
-      lhwId: req.user.id,
+      lhwId: req.user.userId,
       topic,
       audienceSize,
       notes,
@@ -158,12 +187,15 @@ router.post("/education-session", authMiddleware, lhwRoleCheck, async (req: Auth
 });
 
 // POST /api/lhw/emergency
-router.post("/emergency", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/emergency", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { patientName, patientPhone, symptoms, severity } = req.body;
 
     const emergencyCase = await db.insert(emergencyCases).values({
-      patientId: req.user.id,
+      patientId: req.user.userId,
       originLat: "0",
       originLng: "0",
       status: "new",
@@ -178,12 +210,15 @@ router.post("/emergency", authMiddleware, lhwRoleCheck, async (req: AuthRequest,
 });
 
 // GET /api/lhw/inventory
-router.get("/inventory", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.get("/inventory", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const inventory = await db
       .select()
       .from(lhwInventory)
-      .where(eq(lhwInventory.lhwId, req.user.id));
+      .where(eq(lhwInventory.lhwId, req.user.userId));
 
     res.json(inventory);
   } catch (error) {
@@ -192,7 +227,7 @@ router.get("/inventory", authMiddleware, lhwRoleCheck, async (req: AuthRequest, 
 });
 
 // POST /api/lhw/inventory
-router.post("/inventory", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/inventory", requireAuth, async (req: Request, res: Response) => {
   try {
     const { itemId, quantity } = req.body;
 
@@ -208,15 +243,18 @@ router.post("/inventory", authMiddleware, lhwRoleCheck, async (req: AuthRequest,
 });
 
 // POST /api/lhw/sync (offline queue sync)
-router.post("/sync", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res: Response) => {
+router.post("/sync", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { type, payload } = req.body;
 
     // Route to appropriate handler based on type
     switch (type) {
       case "visit":
         await db.insert(lhwReports).values({
-          lhwId: req.user.id,
+          lhwId: req.user.userId,
           ...payload,
         });
         break;
@@ -228,13 +266,13 @@ router.post("/sync", authMiddleware, lhwRoleCheck, async (req: AuthRequest, res:
         break;
       case "education":
         await db.insert(lhwEducationSessions).values({
-          lhwId: req.user.id,
+          lhwId: req.user.userId,
           ...payload,
         });
         break;
       case "emergency":
         await db.insert(emergencyCases).values({
-          patientId: req.user.id,
+          patientId: req.user.userId,
           ...payload,
         });
         break;

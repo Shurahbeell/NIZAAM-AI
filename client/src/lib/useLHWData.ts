@@ -5,6 +5,17 @@ import { offlineQueue } from "./offlineQueue";
 import { useAuthStore } from "./auth";
 
 // Types
+interface LHWProfile {
+  id: string;
+  username: string;
+  fullName: string | null;
+  phone: string | null;
+  address: string | null;
+  cnic: string | null;
+  age: number | null;
+  role: string;
+}
+
 interface LHWDashboard {
   assignedHouseholds: number;
   pendingVisits: number;
@@ -22,6 +33,18 @@ interface LHWHousehold {
   populationServed: number;
   createdAt: string;
 }
+
+// Hook: Get LHW Profile
+export const useLHWProfile = () => {
+  return useQuery<LHWProfile>({
+    queryKey: ["/api/lhw/profile"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/lhw/profile");
+      if (!response.ok) throw new Error("Failed to fetch profile");
+      return response.json();
+    },
+  });
+};
 
 // Hook: Get LHW Dashboard
 export const useLHWDashboard = () => {
