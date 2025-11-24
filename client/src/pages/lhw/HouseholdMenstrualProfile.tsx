@@ -105,7 +105,7 @@ export default function HouseholdMenstrualProfile() {
 
         {/* Household Selection */}
         <Card className="p-4 mb-6">
-          <FormLabel className="mb-2 block">Select Household</FormLabel>
+          <label className="text-sm font-medium mb-2 block">Select Household</label>
           {householdsLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (

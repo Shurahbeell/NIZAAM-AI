@@ -122,22 +122,20 @@ export default function MenstrualEducationForm() {
                     <FormLabel>Materials Provided</FormLabel>
                     <div className="space-y-2">
                       {MATERIALS.map((material) => (
-                        <FormItem key={material.id} className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value.includes(material.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  field.onChange([...field.value, material.id]);
-                                } else {
-                                  field.onChange(field.value.filter((id) => id !== material.id));
-                                }
-                              }}
-                              data-testid={`checkbox-material-${material.id}`}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">{material.label}</FormLabel>
-                        </FormItem>
+                        <div key={material.id} className="flex flex-row items-start space-x-3 space-y-0">
+                          <Checkbox
+                            checked={field.value.includes(material.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...field.value, material.id]);
+                              } else {
+                                field.onChange(field.value.filter((id) => id !== material.id));
+                              }
+                            }}
+                            data-testid={`checkbox-material-${material.id}`}
+                          />
+                          <label className="font-normal text-sm cursor-pointer">{material.label}</label>
+                        </div>
                       ))}
                     </div>
                     <FormMessage />
@@ -154,22 +152,20 @@ export default function MenstrualEducationForm() {
                     <FormLabel>Topics Covered *</FormLabel>
                     <div className="space-y-2">
                       {TOPICS.map((topic) => (
-                        <FormItem key={topic.id} className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value.includes(topic.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  field.onChange([...field.value, topic.id]);
-                                } else {
-                                  field.onChange(field.value.filter((id) => id !== topic.id));
-                                }
-                              }}
-                              data-testid={`checkbox-topic-${topic.id}`}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">{topic.label}</FormLabel>
-                        </FormItem>
+                        <div key={topic.id} className="flex flex-row items-start space-x-3 space-y-0">
+                          <Checkbox
+                            checked={field.value.includes(topic.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...field.value, topic.id]);
+                              } else {
+                                field.onChange(field.value.filter((id) => id !== topic.id));
+                              }
+                            }}
+                            data-testid={`checkbox-topic-${topic.id}`}
+                          />
+                          <label className="font-normal text-sm cursor-pointer">{topic.label}</label>
+                        </div>
                       ))}
                     </div>
                     <FormMessage />
