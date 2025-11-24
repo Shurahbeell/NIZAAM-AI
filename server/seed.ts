@@ -260,7 +260,26 @@ async function seed() {
 
     console.log("✅ LHW created:", lhwUser[0].id);
 
-    // 9. Create LHW Assignments (Households)
+    // 9. Create Admin User
+    console.log("👨‍💼 Creating admin user...");
+    const adminPassword = await bcrypt.hash("Admin123!", SALT_ROUNDS);
+    const adminUser = await db
+      .insert(users)
+      .values({
+        username: "admin_user",
+        password: adminPassword,
+        role: "admin",
+        fullName: "Admin Manager",
+        phone: "+92-300-8888888",
+        cnic: "11111-1111111-1",
+        address: "Admin Office, Lahore",
+        age: 40,
+      })
+      .returning();
+
+    console.log("✅ Admin created:", adminUser[0].id);
+
+    // 10. Create LHW Assignments (Households)
     console.log("🏘️  Creating LHW household assignments...");
     const assignments = await db
       .insert(lhwAssignments)
@@ -294,7 +313,7 @@ async function seed() {
 
     console.log("✅ LHW assignments created:", assignments.length);
 
-    // 10. Create Menstrual Hygiene Status Records
+    // 11. Create Menstrual Hygiene Status Records
     console.log("👩‍⚕️ Creating menstrual hygiene status records...");
     await db.insert(menstrualHygieneStatus).values([
       {
@@ -742,7 +761,7 @@ async function seed() {
 
     console.log("✅ Supply requests created");
 
-    // 22. Create a test appointment (patient booked)
+    // 23. Create a test appointment (patient booked)
     console.log("📅 Creating test appointment...");
     const appointmentDate = new Date();
     appointmentDate.setDate(appointmentDate.getDate() + 7); // Next week
@@ -768,6 +787,7 @@ async function seed() {
     console.log("  Hospital: hospital_staff_1 / HospitalStaff123!");
     console.log("  Frontliner: rescue_1122_worker / Frontliner123!");
     console.log("  LHW: lhw_test / LHW123!");
+    console.log("  Admin: admin_user / Admin123!");
     console.log("\n🔑 Hospital ID:", hospital[0].id);
     console.log("👤 Patient ID:", patient[0].id);
     console.log("🚑 Frontliner User ID:", frontlinerUser[0].id);
