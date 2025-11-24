@@ -762,25 +762,6 @@ export class DrizzleStorage implements IStorage {
   }
 
   async getOpenCasesForFrontliner(frontlinerId: string): Promise<any[]> {
-    const { emergencies } = await import("@shared/schema");
-    
-    // First, clean up old cases - keep only last 3
-    const allCases = await db
-      .select({ id: emergencyCases.id })
-      .from(emergencyCases)
-      .where(
-        and(
-          eq(emergencyCases.assignedToType, "frontliner"),
-          eq(emergencyCases.assignedToId, frontlinerId)
-        )
-      )
-      .orderBy(desc(emergencyCases.createdAt));
-    
-    if (allCases.length > 3) {
-      const casesToDelete = allCases.slice(3).map(c => c.id);
-      await db.delete(emergencyCases).where(inArray(emergencyCases.id, casesToDelete));
-    }
-    
     const results = await db
       .select({
         id: emergencyCases.id,
@@ -792,18 +773,14 @@ export class DrizzleStorage implements IStorage {
         priority: emergencyCases.priority,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
-        emergencyType: emergencies.emergencyType,
-        symptoms: emergencies.symptoms,
-        notes: emergencies.notes,
       })
       .from(emergencyCases)
       .leftJoin(users, eq(emergencyCases.patientId, users.id))
-      .leftJoin(emergencies, eq(emergencyCases.patientId, emergencies.patientId))
       .where(
         and(
           eq(emergencyCases.assignedToType, "frontliner"),
           eq(emergencyCases.assignedToId, frontlinerId),
-          inArray(emergencyCases.status, ["new", "assigned", "ack", "in_progress", "completed"])
+          eq(emergencyCases.status, "assigned")
         )
       )
       .orderBy(desc(emergencyCases.createdAt));
@@ -815,7 +792,6 @@ export class DrizzleStorage implements IStorage {
   }
 
   async getIncomingEmergencies(hospitalId: string): Promise<any[]> {
-    const { emergencies } = await import("@shared/schema");
     const results = await db
       .select({
         id: emergencyCases.id,
@@ -829,13 +805,9 @@ export class DrizzleStorage implements IStorage {
         acknowledgedAt: emergencyCases.acknowledgedAt,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
-        emergencyType: emergencies.emergencyType,
-        symptoms: emergencies.symptoms,
-        notes: emergencies.notes,
       })
       .from(emergencyCases)
       .leftJoin(users, eq(emergencyCases.patientId, users.id))
-      .leftJoin(emergencies, eq(emergencyCases.patientId, emergencies.patientId))
       .where(
         and(
           eq(emergencyCases.assignedToType, "hospital"),

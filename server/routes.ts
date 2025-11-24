@@ -357,18 +357,10 @@ router.get("/api/hospital/:hospitalId/appointments", async (req: Request, res: R
 
 // ==================== EMERGENCY ROUTES ====================
 
-// Get all emergencies (optionally filter by patientId)
-router.get("/api/emergencies", async (req: Request, res: Response) => {
+// Get all emergencies
+router.get("/api/emergencies", async (_req: Request, res: Response) => {
   const emergencies = await storage.getAllEmergencies();
-  const { patientId } = req.query;
-  
-  if (patientId) {
-    // Filter by patient ID
-    const filtered = emergencies.filter((e: any) => e.patientId === patientId);
-    return res.json({ emergencies: filtered });
-  }
-  
-  res.json({ emergencies });
+  res.json(emergencies);
 });
 
 // Get emergency by ID

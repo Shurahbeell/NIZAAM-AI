@@ -85,7 +85,7 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
         patientId: req.user!.userId,
         originLat: lat || "0",
         originLng: lng || "0",
-        status: "new",
+        status: "assigned",
         priority: priorityNumber,
         assignedToType: assignment.type,
         assignedToId: assignment.id,

@@ -21,8 +21,6 @@ interface IncomingEmergency {
   createdAt: string;
   updatedAt: string;
   notes?: string | null;
-  emergencyType?: string;
-  symptoms?: string;
 }
 
 // For display purposes
@@ -199,22 +197,6 @@ export default function HospitalEmergencies() {
                           <Clock className="w-4 h-4" />
                           {new Date(emergency.createdAt).toLocaleString()}
                         </div>
-                        
-                        {(emergency.emergencyType || emergency.symptoms) && (
-                          <div className="mt-3 p-3 bg-red-50/50 dark:bg-red-950/20 rounded-md border border-red-200/50 dark:border-red-800/50">
-                            {emergency.emergencyType && (
-                              <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
-                                Type: {emergency.emergencyType}
-                              </p>
-                            )}
-                            {emergency.symptoms && (
-                              <p className="text-sm text-red-900 dark:text-red-200">
-                                Symptoms: {emergency.symptoms}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
                         {emergency.notes && (
                           <div className="mt-3 p-3 bg-white/50 rounded-md border border-border/50">
                             <p className="text-xs font-semibold text-foreground mb-1">Patient's Description:</p>
@@ -284,22 +266,6 @@ export default function HospitalEmergencies() {
                           <Clock className="w-4 h-4" />
                           Acknowledged: {new Date(emergency.acknowledgedAt!).toLocaleString()}
                         </div>
-                        
-                        {(emergency.emergencyType || emergency.symptoms) && (
-                          <div className="mt-3 p-3 bg-red-50/50 dark:bg-red-950/20 rounded-md border border-red-200/50 dark:border-red-800/50">
-                            {emergency.emergencyType && (
-                              <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
-                                Type: {emergency.emergencyType}
-                              </p>
-                            )}
-                            {emergency.symptoms && (
-                              <p className="text-sm text-red-900 dark:text-red-200">
-                                Symptoms: {emergency.symptoms}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
                         {emergency.notes && (
                           <div className="mt-3 p-3 bg-white/50 rounded-md border border-border/50">
                             <p className="text-xs font-semibold text-foreground mb-1">Patient's Description:</p>
