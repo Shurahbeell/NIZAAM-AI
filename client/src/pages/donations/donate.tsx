@@ -51,14 +51,15 @@ export default function DonatePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: DonationFormData) => {
-      return apiRequest({
-        endpoint: "/api/donations/create",
-        method: "POST",
-        body: {
+      const response = await apiRequest(
+        "POST",
+        "/api/donations/create",
+        {
           ...data,
           userId: user?.id,
-        },
-      });
+        }
+      );
+      return response.json();
     },
     onSuccess: () => {
       setSubmitted(true);
@@ -68,7 +69,7 @@ export default function DonatePage() {
       console.error("Donation error:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.error || "Failed to process donation",
+        description: error?.message || "Failed to process donation",
         variant: "destructive",
       });
     },
