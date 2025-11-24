@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { CheckCircle2, Heart } from "lucide-react";
+import { CheckCircle2, Heart, ArrowLeft } from "lucide-react";
+import { useAuthStore } from "@/lib/auth";
 
 const donationSchema = z.object({
   causeId: z.string().min(1, "Please select a cause"),
@@ -32,6 +33,7 @@ interface DonationCause {
 export default function DonatePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuthStore();
   const [submitted, setSubmitted] = useState(false);
 
   const { data: causes } = useQuery<DonationCause[]>({
@@ -52,17 +54,21 @@ export default function DonatePage() {
       return apiRequest({
         endpoint: "/api/donations/create",
         method: "POST",
-        body: data,
+        body: {
+          ...data,
+          userId: user?.id,
+        },
       });
     },
     onSuccess: () => {
       setSubmitted(true);
       setTimeout(() => setLocation("/donations/history"), 2000);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Donation error:", error);
       toast({
         title: "Error",
-        description: "Failed to process donation",
+        description: error?.response?.data?.error || "Failed to process donation",
         variant: "destructive",
       });
     },
@@ -94,6 +100,15 @@ export default function DonatePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 p-6">
       <div className="max-w-2xl mx-auto">
+        <Button
+          variant="ghost"
+          onClick={() => setLocation("/donations")}
+          className="mb-4"
+          data-testid="button-back-donations"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
         <div className="space-y-2 mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
             <Heart className="w-8 h-8 text-primary" />

@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, TrendingUp } from "lucide-react";
+import { Heart, TrendingUp, ArrowLeft } from "lucide-react";
+import { useAuthStore } from "@/lib/auth";
 
 interface DonationCause {
   id: string;
@@ -25,6 +26,7 @@ interface DonationAccount {
 
 export default function DonationsPage() {
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
 
   const { data: causes, isLoading: causesLoading } = useQuery<DonationCause[]>({
     queryKey: ["/api/donations/causes"],
@@ -37,6 +39,19 @@ export default function DonationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Back Button */}
+        {user && (
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/dashboard")}
+            className="mb-2"
+            data-testid="button-back-dashboard"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        )}
+
         {/* Hero Section */}
         <div className="text-center space-y-4 py-8">
           <div className="flex justify-center">

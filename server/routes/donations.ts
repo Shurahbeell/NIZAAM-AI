@@ -139,10 +139,20 @@ router.delete("/accounts/:id", requireAuth, requireRole("admin"), async (req: Re
 // POST /api/donations/create - Create donation record
 router.post("/create", async (req: Request, res: Response) => {
   try {
-    const data = insertDonationSchema.parse(req.body);
+    const { causeId, amount, paymentMethod, receiptNumber, userId } = req.body;
+    
+    const data = insertDonationSchema.parse({
+      causeId,
+      amount,
+      paymentMethod,
+      receiptNumber,
+      userId,
+    });
+    
     const donation = await db.insert(donations).values(data).returning();
     res.json(donation[0]);
   } catch (error: any) {
+    console.error("Donation creation error:", error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Invalid input", details: error.errors });
     }
