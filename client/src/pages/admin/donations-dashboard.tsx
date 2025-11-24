@@ -135,7 +135,7 @@ export default function DonationsDashboardPage() {
                       <td className="py-3 font-semibold text-primary">PKR {donation.amount.toLocaleString()}</td>
                       <td className="py-3">{donation.paymentMethod.replace(/_/g, " ")}</td>
                       <td className="py-3">{donation.receiptNumber || "-"}</td>
-                      <td className="py-3 text-xs text-muted-foreground">{donation.userId.slice(0, 8)}</td>
+                      <td className="py-3 text-xs text-muted-foreground">{donation.userId ? donation.userId.slice(0, 8) : "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -165,7 +165,7 @@ export default function DonationsDashboardPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h4 className="font-semibold capitalize">{request.supplyType.replace(/_/g, " ")}</h4>
-                      <p className="text-sm text-muted-foreground">LHW: {request.lhwId.slice(0, 8)}</p>
+                      <p className="text-sm text-muted-foreground">LHW: {request.lhwId ? request.lhwId.slice(0, 8) : "-"}</p>
                     </div>
                     <div className="flex gap-2">
                       <Badge variant={getPriorityColor(request.priorityLevel)}>
