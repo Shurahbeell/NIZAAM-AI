@@ -334,10 +334,13 @@ export class DrizzleStorage implements IStorage {
   }
 
   async getEmergenciesByHospital(hospitalId: string): Promise<Emergency[]> {
+    // Get emergencies for this hospital (both assigned and LHW-reported)
     return await db
       .select()
       .from(emergencies)
-      .where(eq(emergencies.assignedHospitalId, hospitalId))
+      .where(
+        sql`${emergencies.assignedHospitalId} = ${hospitalId} OR ${emergencies.reportedByLhwId} IS NOT NULL`
+      )
       .orderBy(desc(emergencies.createdAt));
   }
 

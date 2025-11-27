@@ -29,6 +29,7 @@ interface IncomingEmergency {
 interface Emergency extends IncomingEmergency {
   emergencyType?: string;
   symptoms?: string;
+  reportedByLhwId?: string | null;
 }
 
 export default function HospitalEmergencies() {
@@ -38,14 +39,39 @@ export default function HospitalEmergencies() {
   const hospitalId = user?.hospitalId || "";
 
   // Fetch incoming emergencies for this hospital with polling
-  const { data = [], isLoading } = useQuery<IncomingEmergency[]>({
+  const { data = [], isLoading } = useQuery<any[]>({
     queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
     enabled: !!hospitalId,
     refetchInterval: 3000 // Poll every 3 seconds
   });
   
-  // Ensure data is always an array
-  const emergencies = Array.isArray(data) ? data : [];
+  // Fetch emergencies from main emergencies table (includes LHW reports)
+  const { data: emergenciesData = [] } = useQuery<Emergency[]>({
+    queryKey: [`/api/emergencies`],
+    enabled: !!hospitalId,
+    refetchInterval: 3000 // Poll every 3 seconds
+  });
+
+  // Transform emergency_cases to match Emergency interface and combine with main emergencies
+  const emergencyCases = Array.isArray(data) ? data.map((ec: any) => ({
+    id: ec.id,
+    patientId: ec.patientId,
+    patientName: ec.patientName || "Unknown",
+    originLat: ec.originLat,
+    originLng: ec.originLng,
+    status: ec.status,
+    priority: ec.priority,
+    acknowledgedByHospitalId: null,
+    acknowledgedAt: null,
+    createdAt: ec.createdAt,
+    notes: ec.notes
+  })) : [];
+
+  // Combine both sources and filter LHW emergencies
+  const emergencies = [
+    ...emergencyCases,
+    ...emergenciesData.filter(e => e.reportedByLhwId)
+  ];
 
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
