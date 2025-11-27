@@ -85,6 +85,9 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
     // Only allow specific fields from request body - derive patientId from token
     const { patientName, patientPhone, location, emergencyType, priority, symptoms, notes, lat, lng } = req.body;
 
+    // Check if this is an LHW reporting an emergency
+    const isLhwReport = req.user!.role === "lhw";
+    
     const data = insertEmergencySchema.parse({
       patientName,
       patientPhone,
@@ -95,6 +98,7 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
       notes,
       patientId: req.user!.userId, // Always use authenticated user's ID
       status: "active",
+      reportedByLhwId: isLhwReport ? req.user!.userId : undefined,
     });
 
     const emergency = await storage.createEmergency(data);

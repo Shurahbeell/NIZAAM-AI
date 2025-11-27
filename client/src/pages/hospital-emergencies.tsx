@@ -114,7 +114,12 @@ export default function HospitalEmergencies() {
     return emergencies.filter(e => e.acknowledgedByHospitalId);
   };
 
+  const filterLhwEmergencies = () => {
+    return emergencies.filter(e => e.reportedByLhwId);
+  };
+
   const incomingCount = filterIncoming().length;
+  const lhwCount = filterLhwEmergencies().length;
   const criticalCount = emergencies.filter(e => e.priority <= 1 && !e.acknowledgedByHospitalId).length;
 
   return (
@@ -171,9 +176,12 @@ export default function HospitalEmergencies() {
         )}
 
         <Tabs defaultValue="incoming" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="incoming" data-testid="tab-incoming">
               Incoming ({filterIncoming().length})
+            </TabsTrigger>
+            <TabsTrigger value="lhw" data-testid="tab-lhw">
+              LHW Emergency ({lhwCount})
             </TabsTrigger>
             <TabsTrigger value="acknowledged" data-testid="tab-acknowledged">
               Acknowledged ({filterAcknowledged().length})
@@ -248,6 +256,74 @@ export default function HospitalEmergencies() {
                 <CardContent className="p-8 text-center">
                   <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-muted-foreground">No incoming emergencies</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="lhw" className="space-y-3">
+            {filterLhwEmergencies().map((emergency) => (
+              <Card
+                key={emergency.id}
+                className={getPriorityBg(emergency.priority)}
+                data-testid={`emergency-card-lhw-${emergency.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground">{emergency.patientName || "Unknown Patient"}</h3>
+                            <Badge variant={getPriorityColor(emergency.priority)} className="uppercase text-xs">
+                              {getPriorityLabel(emergency.priority)}
+                            </Badge>
+                          </div>
+                          <Badge variant="secondary" className="capitalize">
+                            Reported by LHW
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="w-4 h-4" />
+                          {emergency.location || "No location provided"}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          {new Date(emergency.createdAt).toLocaleString()}
+                        </div>
+                        {emergency.notes && (
+                          <div className="mt-3 p-3 bg-white/50 rounded-md border border-border/50">
+                            <p className="text-xs font-semibold text-foreground mb-1">Description:</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{emergency.notes}</p>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => acknowledgeEmergency(emergency.id)}
+                          data-testid={`button-acknowledge-lhw-${emergency.id}`}
+                          disabled={acknowledgeMutation.isPending}
+                        >
+                          {acknowledgeMutation.isPending ? "Acknowledging..." : "Acknowledge"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {filterLhwEmergencies().length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">No LHW emergency reports</p>
                 </CardContent>
               </Card>
             )}

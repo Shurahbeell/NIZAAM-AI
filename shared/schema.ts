@@ -87,6 +87,7 @@ export const emergencies = pgTable("emergencies", {
   notes: text("notes"),
   acknowledgedByHospitalId: varchar("acknowledged_by_hospital_id"), // Hospital ID that acknowledged the notification
   acknowledgedAt: timestamp("acknowledged_at"), // When hospital staff acknowledged the notification
+  reportedByLhwId: varchar("reported_by_lhw_id"), // LHW user ID if emergency was reported by LHW
   createdAt: timestamp("created_at").defaultNow(),
 });
 
