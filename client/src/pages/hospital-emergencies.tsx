@@ -45,14 +45,14 @@ export default function HospitalEmergencies() {
     refetchInterval: 3000 // Poll every 3 seconds
   });
   
-  // Fetch emergencies from main emergencies table (includes LHW reports)
-  const { data: emergenciesData = [] } = useQuery<Emergency[]>({
+  // Fetch all emergencies from main emergencies table (includes LHW reports)
+  const { data: allEmergencies = [] } = useQuery<Emergency[]>({
     queryKey: [`/api/emergencies`],
     enabled: !!hospitalId,
     refetchInterval: 3000 // Poll every 3 seconds
   });
 
-  // Transform emergency_cases to match Emergency interface and combine with main emergencies
+  // Transform emergency_cases to match Emergency interface
   const emergencyCases = Array.isArray(data) ? data.map((ec: any) => ({
     id: ec.id,
     patientId: ec.patientId,
@@ -67,10 +67,15 @@ export default function HospitalEmergencies() {
     notes: ec.notes
   })) : [];
 
-  // Combine both sources and filter LHW emergencies
+  // Only get LHW emergencies from allEmergencies and add to cases
+  const lhwEmergencies = Array.isArray(allEmergencies) 
+    ? allEmergencies.filter(e => e.reportedByLhwId)
+    : [];
+
+  // Combine: regular cases + LHW reports
   const emergencies = [
     ...emergencyCases,
-    ...emergenciesData.filter(e => e.reportedByLhwId)
+    ...lhwEmergencies
   ];
 
   // Acknowledge emergency case notification mutation

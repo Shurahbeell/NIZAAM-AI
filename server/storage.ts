@@ -338,9 +338,6 @@ export class DrizzleStorage implements IStorage {
     return await db
       .select()
       .from(emergencies)
-      .where(
-        sql`${emergencies.assignedHospitalId} = ${hospitalId} OR ${emergencies.reportedByLhwId} IS NOT NULL`
-      )
       .orderBy(desc(emergencies.createdAt));
   }
 
