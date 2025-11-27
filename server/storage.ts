@@ -842,6 +842,34 @@ export class DrizzleStorage implements IStorage {
     return results;
   }
 
+  async getAllHospitalEmergencies(hospitalId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: emergencyCases.id,
+        patientId: emergencyCases.patientId,
+        patientName: users.fullName,
+        originLat: emergencyCases.originLat,
+        originLng: emergencyCases.originLng,
+        status: emergencyCases.status,
+        priority: emergencyCases.priority,
+        acknowledgedByHospitalId: emergencyCases.acknowledgedByHospitalId,
+        acknowledgedAt: emergencyCases.acknowledgedAt,
+        createdAt: emergencyCases.createdAt,
+        updatedAt: emergencyCases.updatedAt,
+      })
+      .from(emergencyCases)
+      .leftJoin(users, eq(emergencyCases.patientId, users.id))
+      .where(
+        and(
+          eq(emergencyCases.assignedToType, "hospital"),
+          eq(emergencyCases.assignedToId, hospitalId),
+          inArray(emergencyCases.status, ["assigned", "ack", "in_progress"])
+        )
+      )
+      .orderBy(desc(emergencyCases.createdAt));
+    return results;
+  }
+
   async acknowledgeEmergencyCase(id: string, hospitalId: string): Promise<EmergencyCase | undefined> {
     const result = await db
       .update(emergencyCases)

@@ -272,6 +272,24 @@ router.get("/cases/incoming/:hospitalId", requireAuth, requireRole("hospital"), 
   }
 });
 
+// Get all emergency cases for hospital (both incoming and acknowledged)
+router.get("/cases/all/:hospitalId", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.params;
+    
+    // Authorization: ensure user is from the requested hospital
+    if (req.user!.hospitalId && req.user!.hospitalId !== hospitalId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const allCases = await storage.getAllHospitalEmergencies(hospitalId);
+    res.json(allCases);
+  } catch (error: any) {
+    console.error("[Emergencies] Get all cases error:", error);
+    res.status(500).json({ error: "Failed to fetch emergency cases" });
+  }
+});
+
 // Acknowledge emergency case
 router.patch("/cases/:id/acknowledge", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
   try {

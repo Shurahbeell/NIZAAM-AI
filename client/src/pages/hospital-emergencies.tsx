@@ -38,9 +38,9 @@ export default function HospitalEmergencies() {
   const { toast } = useToast();
   const hospitalId = user?.hospitalId || "";
 
-  // Fetch incoming emergencies for this hospital with polling
+  // Fetch all emergencies for this hospital (both incoming and acknowledged) with polling
   const { data = [], isLoading } = useQuery<any[]>({
-    queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
+    queryKey: [`/api/emergencies/cases/all/${hospitalId}`],
     enabled: !!hospitalId,
     refetchInterval: 3000 // Poll every 3 seconds
   });
@@ -94,7 +94,7 @@ export default function HospitalEmergencies() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Emergency acknowledged" });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/all/${hospitalId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
@@ -122,7 +122,7 @@ export default function HospitalEmergencies() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Emergency marked as completed" });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/all/${hospitalId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
