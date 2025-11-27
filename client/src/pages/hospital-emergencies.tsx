@@ -61,8 +61,8 @@ export default function HospitalEmergencies() {
     originLng: ec.originLng,
     status: ec.status,
     priority: ec.priority,
-    acknowledgedByHospitalId: null,
-    acknowledgedAt: null,
+    acknowledgedByHospitalId: ec.acknowledgedByHospitalId,
+    acknowledgedAt: ec.acknowledgedAt,
     createdAt: ec.createdAt,
     notes: ec.notes
   })) : [];
@@ -72,11 +72,22 @@ export default function HospitalEmergencies() {
     ? allEmergencies.filter(e => e.reportedByLhwId)
     : [];
 
-  // Combine: regular cases + LHW reports
-  const emergencies = [
-    ...emergencyCases,
-    ...lhwEmergencies
-  ];
+  // Combine: regular cases + LHW reports, deduplicate by ID
+  const emergencyMap = new Map();
+  
+  // Add patient SOS emergencies first
+  emergencyCases.forEach(ec => {
+    emergencyMap.set(ec.id, ec);
+  });
+  
+  // Add LHW emergencies (skip if already exists)
+  lhwEmergencies.forEach(lhw => {
+    if (!emergencyMap.has(lhw.id)) {
+      emergencyMap.set(lhw.id, lhw);
+    }
+  });
+  
+  const emergencies = Array.from(emergencyMap.values());
 
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
