@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 
 interface StatCard {
   title: string;
@@ -32,25 +33,30 @@ export default function HospitalDashboard() {
     refetchInterval: 3000,
   });
 
+  // Fetch real appointments for this hospital
+  const { data: dbAppointments = [] } = useQuery<any[]>({
+    queryKey: [`/api/hospital/${user?.hospitalId}/appointments`],
+    enabled: !!user?.hospitalId,
+    refetchInterval: 5000
+  });
+
   const activeEmergencies = emergencies.filter((e: any) => e.status === "active").length;
   const incomingCount = incomingEmergencies.length;
 
+  // Map database appointments to display format - show only 3 most recent
+  const recentAppointments = dbAppointments.slice(0, 3).map((apt: any) => ({
+    id: apt.id,
+    patient: apt.patientName,
+    doctor: apt.doctorId || "Doctor",
+    time: new Date(apt.appointmentDate).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    status: (apt.status || "pending") as "pending" | "approved" | "completed" | "cancelled"
+  }));
+
   const stats: StatCard[] = [
-    { title: "Today's Appointments", value: "24", change: "+12%", icon: Calendar, trend: "up" },
+    { title: "Today's Appointments", value: String(dbAppointments.length), change: "+12%", icon: Calendar, trend: "up" },
     { title: "Pending Prescriptions", value: "8", change: "-5%", icon: FileText, trend: "down" },
     { title: "Total Patients (Week)", value: "156", change: "+8%", icon: Users, trend: "up" },
     { title: "Active Doctors", value: "12", change: "0%", icon: Stethoscope, trend: "neutral" },
-  ];
-
-  const recentAppointments = [
-    { id: "1", patient: "Ahmed Ali", doctor: "Dr. Sarah Khan", time: "10:00 AM", status: "pending" as const },
-    { id: "2", patient: "Fatima Hassan", doctor: "Dr. Ali Raza", time: "11:30 AM", status: "approved" as const },
-    { id: "3", patient: "Muhammad Bilal", doctor: "Dr. Sarah Khan", time: "2:00 PM", status: "pending" as const },
-  ];
-
-  const urgentAlerts = [
-    { id: "1", type: "emergency", message: "Emergency patient in waiting", time: "5 mins ago" },
-    { id: "2", type: "appointment", message: "New appointment request", time: "15 mins ago" },
   ];
 
   return (
@@ -143,24 +149,6 @@ export default function HospitalDashboard() {
           </Card>
         )}
 
-        {/* Urgent Alerts */}
-        {urgentAlerts.length > 0 && (
-          <Card className="border-destructive/20 bg-gradient-to-br from-white to-destructive/5 shadow-lg">
-            <CardContent className="p-4 space-y-3">
-              {urgentAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-start gap-3 p-3 bg-white/50 rounded-xl">
-                  <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-4 h-4 text-destructive" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{alert.time}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 gap-4">
