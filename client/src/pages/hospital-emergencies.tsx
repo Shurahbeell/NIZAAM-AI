@@ -5,9 +5,10 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLanguage } from "@/lib/useLanguage";
 import { useAuthStore } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface IncomingEmergency {
   id: string;
@@ -33,6 +34,7 @@ interface Emergency extends IncomingEmergency {
 export default function HospitalEmergencies() {
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
+  const { toast } = useToast();
   const hospitalId = user?.hospitalId || "";
 
   // Fetch incoming emergencies for this hospital with polling
@@ -48,16 +50,15 @@ export default function HospitalEmergencies() {
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/emergencies/cases/${id}/acknowledge`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hospitalId })
-      });
-      if (!response.ok) throw new Error("Failed to acknowledge emergency");
+      const response = await apiRequest("PATCH", `/api/emergencies/cases/${id}/acknowledge`, { hospitalId });
       return response.json();
     },
     onSuccess: () => {
+      toast({ title: "Success", description: "Emergency acknowledged" });
       queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to acknowledge emergency", variant: "destructive" });
     }
   });
 
