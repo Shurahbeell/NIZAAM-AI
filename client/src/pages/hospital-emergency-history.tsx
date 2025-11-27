@@ -147,10 +147,10 @@ export default function HospitalEmergencyHistory() {
                           <Clock className="w-4 h-4" />
                           Reported: {new Date(emergency.createdAt).toLocaleString()}
                         </div>
-                        {emergency.originLat && emergency.originLng && (
+                        {emergency.originLat && emergency.originLng && !emergency.reportedByLhwId && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="w-4 h-4" />
-                            Coordinates: {parseFloat(emergency.originLat).toFixed(4)}, {parseFloat(emergency.originLng).toFixed(4)}
+                            Coordinates: {typeof emergency.originLat === 'string' ? parseFloat(emergency.originLat).toFixed(4) : emergency.originLat.toFixed(4)}, {typeof emergency.originLng === 'string' ? parseFloat(emergency.originLng).toFixed(4) : emergency.originLng.toFixed(4)}
                           </div>
                         )}
                         {emergency.notes && (

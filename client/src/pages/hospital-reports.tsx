@@ -1,13 +1,53 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, TrendingUp, Users, FileText, Activity } from "lucide-react";
+import { ArrowLeft, TrendingUp, Users, FileText, Activity, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/useLanguage";
+import { useAuthStore } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HospitalReports() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
+  const hospitalId = user?.hospitalId;
+
+  // Fetch hospital emergencies and LHW emergencies
+  const { data: hospitalEmergencies = [] } = useQuery<any[]>({
+    queryKey: [`/api/emergencies/cases/all/${hospitalId}`],
+    enabled: !!hospitalId,
+  });
+
+  const { data: allEmergencies = [] } = useQuery<any[]>({
+    queryKey: ["/api/emergencies"],
+    enabled: !!hospitalId,
+  });
+
+  // Calculate emergency statistics
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgoStart = new Date(todayStart);
+  weekAgoStart.setDate(weekAgoStart.getDate() - 7);
+
+  const completedSOSToday = hospitalEmergencies.filter(
+    (e: any) => e.status === "completed" && new Date(e.updatedAt) >= todayStart
+  ).length;
+
+  const completedSOSWeek = hospitalEmergencies.filter(
+    (e: any) => e.status === "completed" && new Date(e.updatedAt) >= weekAgoStart
+  ).length;
+
+  const completedLHWToday = allEmergencies.filter(
+    (e: any) => e.reportedByLhwId && e.status === "resolved" && new Date(e.updatedAt) >= todayStart
+  ).length;
+
+  const completedLHWWeek = allEmergencies.filter(
+    (e: any) => e.reportedByLhwId && e.status === "resolved" && new Date(e.updatedAt) >= weekAgoStart
+  ).length;
+
+  const totalEmergenciesToday = completedSOSToday + completedLHWToday;
+  const totalEmergenciesWeek = completedSOSWeek + completedLHWWeek;
 
   const dailyStats = {
     patients: 42,
@@ -103,6 +143,17 @@ export default function HospitalReports() {
                   <p className="text-2xl font-bold">PKR {dailyStats.revenue.toLocaleString()}</p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <p className="text-xs text-muted-foreground">Emergencies</p>
+                  </div>
+                  <p className="text-2xl font-bold">{totalEmergenciesToday}</p>
+                  <p className="text-xs text-muted-foreground mt-1">SOS: {completedSOSToday} | LHW: {completedLHWToday}</p>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -145,6 +196,17 @@ export default function HospitalReports() {
                     <p className="text-xs text-muted-foreground">Revenue</p>
                   </div>
                   <p className="text-2xl font-bold">PKR {weeklyStats.revenue.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <p className="text-xs text-muted-foreground">Emergencies</p>
+                  </div>
+                  <p className="text-2xl font-bold">{totalEmergenciesWeek}</p>
+                  <p className="text-xs text-muted-foreground mt-1">SOS: {completedSOSWeek} | LHW: {completedLHWWeek}</p>
                 </CardContent>
               </Card>
             </div>
