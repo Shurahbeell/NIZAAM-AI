@@ -1,16 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, Stethoscope, Edit2, Trash2, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuthStore } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Doctor {
   id: string;
+  hospitalId: string;
   name: string;
   specialization: string;
   qualification: string;
@@ -34,9 +39,11 @@ const specializations = [
 
 export default function HospitalDoctors() {
   const [, setLocation] = useLocation();
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const { user } = useAuthStore();
+  const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
+  const hospitalId = user?.hospitalId || "";
   
   const [formData, setFormData] = useState({
     name: "",
@@ -46,61 +53,97 @@ export default function HospitalDoctors() {
     availability: "Mon-Fri: 9AM-5PM"
   });
 
-  useEffect(() => {
-    const stored = localStorage.getItem("hospitalDoctors");
-    if (stored) {
-      setDoctors(JSON.parse(stored));
-    } else {
-      // Demo data
-      const demoData: Doctor[] = [
-        {
-          id: "1",
-          name: "Dr. Sarah Khan",
-          specialization: "Cardiologist",
-          qualification: "MBBS, MD",
-          consultationFee: 2000,
-          availability: "Mon-Fri: 9AM-5PM",
-          isAvailable: true
-        },
-        {
-          id: "2",
-          name: "Dr. Ali Raza",
-          specialization: "Pediatrician",
-          qualification: "MBBS, FCPS",
-          consultationFee: 1500,
-          availability: "Mon-Sat: 10AM-6PM",
-          isAvailable: true
-        }
-      ];
-      setDoctors(demoData);
-      localStorage.setItem("hospitalDoctors", JSON.stringify(demoData));
+  // Fetch doctors for hospital
+  const { data: doctors = [], refetch } = useQuery<Doctor[]>({
+    queryKey: [`/api/hospital/${hospitalId}/doctors`],
+    enabled: !!hospitalId
+  });
+
+  // Create doctor mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/hospital/${hospitalId}/doctors`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Doctor added successfully" });
+      queryClient.invalidateQueries({ queryKey: [`/api/hospital/${hospitalId}/doctors`] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to add doctor", variant: "destructive" });
     }
-  }, []);
+  });
+
+  // Update doctor mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PATCH", `/api/hospital/${hospitalId}/doctors/${editingDoctor!.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Doctor updated successfully" });
+      queryClient.invalidateQueries({ queryKey: [`/api/hospital/${hospitalId}/doctors`] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update doctor", variant: "destructive" });
+    }
+  });
+
+  // Delete doctor mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/hospital/${hospitalId}/doctors/${id}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Doctor deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: [`/api/hospital/${hospitalId}/doctors`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete doctor", variant: "destructive" });
+    }
+  });
+
+  // Toggle availability mutation
+  const toggleMutation = useMutation({
+    mutationFn: async (doctor: Doctor) => {
+      const response = await apiRequest("PATCH", `/api/hospital/${hospitalId}/doctors/${doctor.id}`, {
+        isAvailable: !doctor.isAvailable
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/hospital/${hospitalId}/doctors`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to toggle availability", variant: "destructive" });
+    }
+  });
 
   const saveDoctor = () => {
-    if (!formData.name || !formData.specialization || !formData.consultationFee) return;
+    if (!formData.name || !formData.specialization || !formData.consultationFee) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
 
-    const doctor: Doctor = {
-      id: editingDoctor?.id || Date.now().toString(),
+    const data = {
       name: formData.name,
       specialization: formData.specialization,
       qualification: formData.qualification,
       consultationFee: parseInt(formData.consultationFee),
-      availability: formData.availability,
-      isAvailable: true
+      availability: formData.availability
     };
 
-    let updated: Doctor[];
     if (editingDoctor) {
-      updated = doctors.map(d => d.id === editingDoctor.id ? doctor : d);
+      updateMutation.mutate(data);
     } else {
-      updated = [...doctors, doctor];
+      createMutation.mutate(data);
     }
+  };
 
-    setDoctors(updated);
-    localStorage.setItem("hospitalDoctors", JSON.stringify(updated));
-    
-    // Reset form
+  const resetForm = () => {
     setFormData({
       name: "",
       specialization: "",
@@ -110,20 +153,6 @@ export default function HospitalDoctors() {
     });
     setEditingDoctor(null);
     setIsAddOpen(false);
-  };
-
-  const deleteDoctor = (id: string) => {
-    const updated = doctors.filter(d => d.id !== id);
-    setDoctors(updated);
-    localStorage.setItem("hospitalDoctors", JSON.stringify(updated));
-  };
-
-  const toggleAvailability = (id: string) => {
-    const updated = doctors.map(d => 
-      d.id === id ? { ...d, isAvailable: !d.isAvailable } : d
-    );
-    setDoctors(updated);
-    localStorage.setItem("hospitalDoctors", JSON.stringify(updated));
   };
 
   const openEdit = (doctor: Doctor) => {
@@ -156,7 +185,7 @@ export default function HospitalDoctors() {
           </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" onClick={() => { setEditingDoctor(null); setFormData({ name: "", specialization: "", qualification: "", consultationFee: "", availability: "Mon-Fri: 9AM-5PM" }); }} data-testid="button-add-doctor">
+              <Button size="sm" onClick={() => resetForm()} data-testid="button-add-doctor">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -225,8 +254,13 @@ export default function HospitalDoctors() {
                   />
                 </div>
 
-                <Button onClick={saveDoctor} className="w-full" data-testid="button-save-doctor">
-                  {editingDoctor ? "Update Doctor" : "Add Doctor"}
+                <Button 
+                  onClick={saveDoctor} 
+                  className="w-full" 
+                  data-testid="button-save-doctor"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : (editingDoctor ? "Update Doctor" : "Add Doctor")}
                 </Button>
               </div>
             </DialogContent>
@@ -261,8 +295,9 @@ export default function HospitalDoctors() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteDoctor(doctor.id)}
+                        onClick={() => deleteMutation.mutate(doctor.id)}
                         data-testid={`button-delete-${doctor.id}`}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -278,8 +313,9 @@ export default function HospitalDoctors() {
                     <Button
                       variant={doctor.isAvailable ? "default" : "outline"}
                       size="sm"
-                      onClick={() => toggleAvailability(doctor.id)}
+                      onClick={() => toggleMutation.mutate(doctor)}
                       data-testid={`button-toggle-${doctor.id}`}
+                      disabled={toggleMutation.isPending}
                     >
                       {doctor.isAvailable ? "Available" : "Unavailable"}
                     </Button>

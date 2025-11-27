@@ -76,6 +76,9 @@ export interface IStorage {
   // Doctor methods
   getDoctorsByHospital(hospitalId: string): Promise<Doctor[]>;
   getDoctorById(id: string): Promise<Doctor | undefined>;
+  createDoctor(doctor: InsertDoctor): Promise<Doctor>;
+  updateDoctor(id: string, updates: Partial<Doctor>): Promise<Doctor | undefined>;
+  deleteDoctor(id: string): Promise<void>;
 
   // Appointment methods
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
@@ -253,6 +256,24 @@ export class DrizzleStorage implements IStorage {
   async getDoctorById(id: string): Promise<Doctor | undefined> {
     const result = await db.select().from(doctors).where(eq(doctors.id, id));
     return result[0];
+  }
+
+  async createDoctor(doctor: InsertDoctor): Promise<Doctor> {
+    const result = await db.insert(doctors).values(doctor).returning();
+    return result[0];
+  }
+
+  async updateDoctor(id: string, updates: Partial<Doctor>): Promise<Doctor | undefined> {
+    const result = await db
+      .update(doctors)
+      .set(updates)
+      .where(eq(doctors.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDoctor(id: string): Promise<void> {
+    await db.delete(doctors).where(eq(doctors.id, id));
   }
 
   // ==================== APPOINTMENT METHODS ====================
