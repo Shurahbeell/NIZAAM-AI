@@ -1010,12 +1010,9 @@ router.delete("/api/hospital/:hospitalId/doctors/:doctorId", async (req: Request
 // ==================== MEDICAL HISTORY ROUTES ====================
 
 // Get user's medical history
-router.get("/api/medical-history", async (req: Request, res: Response) => {
+router.get("/api/medical-history/user/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const { userId } = req.params;
     const history = await storage.getUserMedicalHistory(userId);
     res.json(history);
   } catch (error: any) {
@@ -1024,12 +1021,9 @@ router.get("/api/medical-history", async (req: Request, res: Response) => {
 });
 
 // Create medical history record
-router.post("/api/medical-history", async (req: Request, res: Response) => {
+router.post("/api/medical-history/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const { userId } = req.params;
     const { condition, diagnosisDate, status, notes } = req.body;
     if (!condition) {
       return res.status(400).json({ error: "Condition is required" });
@@ -1048,13 +1042,9 @@ router.post("/api/medical-history", async (req: Request, res: Response) => {
 });
 
 // Update medical history record
-router.patch("/api/medical-history/:id", async (req: Request, res: Response) => {
+router.patch("/api/medical-history/:id/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { id } = req.params;
+    const { id, userId } = req.params;
     const existing = await storage.getMedicalHistoryById(id);
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ error: "Record not found" });
@@ -1067,13 +1057,9 @@ router.patch("/api/medical-history/:id", async (req: Request, res: Response) => 
 });
 
 // Delete medical history record
-router.delete("/api/medical-history/:id", async (req: Request, res: Response) => {
+router.delete("/api/medical-history/:id/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { id } = req.params;
+    const { id, userId } = req.params;
     const existing = await storage.getMedicalHistoryById(id);
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ error: "Record not found" });
@@ -1088,12 +1074,9 @@ router.delete("/api/medical-history/:id", async (req: Request, res: Response) =>
 // ==================== MEDICINES ROUTES ====================
 
 // Get user's medicines
-router.get("/api/medicines", async (req: Request, res: Response) => {
+router.get("/api/medicines/user/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const { userId } = req.params;
     const medicines_data = await storage.getUserMedicines(userId);
     res.json(medicines_data);
   } catch (error: any) {
@@ -1102,12 +1085,9 @@ router.get("/api/medicines", async (req: Request, res: Response) => {
 });
 
 // Create medicine record
-router.post("/api/medicines", async (req: Request, res: Response) => {
+router.post("/api/medicines/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const { userId } = req.params;
     const { name, dosage, frequency, reason, startDate, endDate, isActive, sideEffects } = req.body;
     if (!name || !dosage || !frequency || !reason) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -1130,13 +1110,9 @@ router.post("/api/medicines", async (req: Request, res: Response) => {
 });
 
 // Update medicine record
-router.patch("/api/medicines/:id", async (req: Request, res: Response) => {
+router.patch("/api/medicines/:id/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { id } = req.params;
+    const { id, userId } = req.params;
     const existing = await storage.getMedicineById(id);
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ error: "Record not found" });
@@ -1149,13 +1125,9 @@ router.patch("/api/medicines/:id", async (req: Request, res: Response) => {
 });
 
 // Delete medicine record
-router.delete("/api/medicines/:id", async (req: Request, res: Response) => {
+router.delete("/api/medicines/:id/:userId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { id } = req.params;
+    const { id, userId } = req.params;
     const existing = await storage.getMedicineById(id);
     if (!existing || existing.userId !== userId) {
       return res.status(404).json({ error: "Record not found" });

@@ -21,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { MedicalHistory, Medicines } from "@shared/schema";
 
 export default function MedicalProfile() {
-  const { t } = { t: (key: string) => key };
   const { toast } = useToast();
   const { user } = useAuthStore();
   const [, setLocation] = useLocation();
@@ -33,23 +32,29 @@ export default function MedicalProfile() {
   const [newMedicationFrequency, setNewMedicationFrequency] = useState("");
   const [newMedicationReason, setNewMedicationReason] = useState("");
 
+  if (!user?.id) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
   // Fetch medical history
-  const { data: medicalHistory = [] } = useQuery<MedicalHistory[]>({
-    queryKey: ["/api/medical-history"],
-    enabled: !!user,
+  const { data: medicalHistory = [], isLoading: historyLoading } = useQuery<MedicalHistory[]>({
+    queryKey: [`/api/medical-history/user/${user.id}`],
   });
 
   // Fetch medicines
-  const { data: medicines = [] } = useQuery<Medicines[]>({
-    queryKey: ["/api/medicines"],
-    enabled: !!user,
+  const { data: medicines = [], isLoading: medicinesLoading } = useQuery<Medicines[]>({
+    queryKey: [`/api/medicines/user/${user.id}`],
   });
 
   // Create medical history mutation
   const createMedicalHistoryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/medical-history", data),
+    mutationFn: (data: any) => apiRequest("POST", `/api/medical-history/${user.id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/medical-history"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/medical-history/user/${user.id}`] });
       setNewCondition("");
       toast({ title: "Success", description: "Medical history added" });
     },
@@ -60,9 +65,9 @@ export default function MedicalProfile() {
 
   // Create medicine mutation
   const createMedicineMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/medicines", data),
+    mutationFn: (data: any) => apiRequest("POST", `/api/medicines/${user.id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/medicines/user/${user.id}`] });
       setNewMedication("");
       setNewMedicationDosage("");
       setNewMedicationFrequency("");
@@ -76,9 +81,9 @@ export default function MedicalProfile() {
 
   // Delete medical history mutation
   const deleteMedicalHistoryMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/medical-history/${id}`),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/medical-history/${id}/${user.id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/medical-history"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/medical-history/user/${user.id}`] });
       toast({ title: "Success", description: "Medical history deleted" });
     },
     onError: (error: any) => {
@@ -88,9 +93,9 @@ export default function MedicalProfile() {
 
   // Delete medicine mutation
   const deleteMedicineMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/medicines/${id}`),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/medicines/${id}/${user.id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/medicines/user/${user.id}`] });
       toast({ title: "Success", description: "Medicine deleted" });
     },
     onError: (error: any) => {
@@ -118,6 +123,8 @@ export default function MedicalProfile() {
       });
     }
   };
+
+  const isLoading = historyLoading || medicinesLoading;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -199,6 +206,7 @@ export default function MedicalProfile() {
                     <button
                       onClick={() => deleteMedicalHistoryMutation.mutate(item.id)}
                       data-testid={`button-remove-disease-${item.id}`}
+                      className="ml-1"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -215,7 +223,7 @@ export default function MedicalProfile() {
                   onKeyPress={(e) => e.key === "Enter" && handleAddCondition()}
                   data-testid="input-new-disease"
                 />
-                <Button onClick={handleAddCondition} size="icon" data-testid="button-add-disease">
+                <Button onClick={handleAddCondition} size="icon" data-testid="button-add-disease" disabled={createMedicalHistoryMutation.isPending}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -237,7 +245,7 @@ export default function MedicalProfile() {
             <div className="space-y-2">
               {medicines.map((med) => (
                 <div key={med.id} className="p-3 border rounded-lg flex justify-between items-start" data-testid={`card-medicine-${med.id}`}>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-foreground">{med.name}</p>
                     <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                     <p className="text-xs text-muted-foreground">{med.reason}</p>
