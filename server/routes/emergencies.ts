@@ -326,6 +326,22 @@ router.patch("/:id/acknowledge", requireAuth, requireRole("hospital"), async (re
   }
 });
 
+// Complete emergency (for LHW emergencies)
+router.patch("/:id/complete", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const emergency = await storage.updateEmergencyStatus(req.params.id, "resolved");
+
+    if (!emergency) {
+      return res.status(404).json({ error: "Emergency not found" });
+    }
+
+    res.json(emergency);
+  } catch (error: any) {
+    console.error("[Emergencies] Complete error:", error);
+    res.status(500).json({ error: "Failed to complete emergency" });
+  }
+});
+
 // Complete emergency case
 router.patch("/cases/:id/complete", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
   try {

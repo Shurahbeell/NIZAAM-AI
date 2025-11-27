@@ -108,21 +108,30 @@ export default function HospitalEmergencies() {
 
   // Complete emergency case mutation
   const completeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest("PATCH", `/api/emergencies/cases/${id}/complete`, {});
-      return response.json();
+    mutationFn: async (emergency: any) => {
+      // Check if this is an LHW emergency (has reportedByLhwId)
+      if (emergency.reportedByLhwId) {
+        // Use main emergencies endpoint for LHW emergencies
+        const response = await apiRequest("PATCH", `/api/emergencies/${emergency.id}/complete`, {});
+        return response.json();
+      } else {
+        // Use emergency cases endpoint for regular emergencies
+        const response = await apiRequest("PATCH", `/api/emergencies/cases/${emergency.id}/complete`, {});
+        return response.json();
+      }
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Emergency marked as completed" });
       queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to complete emergency", variant: "destructive" });
     }
   });
 
-  const completeEmergency = (id: string) => {
-    completeMutation.mutate(id);
+  const completeEmergency = (emergency: any) => {
+    completeMutation.mutate(emergency);
   };
 
   const getPriorityColor = (priority: number) => {
@@ -415,7 +424,7 @@ export default function HospitalEmergencies() {
                           size="sm"
                           variant="default"
                           className="mt-4"
-                          onClick={() => completeEmergency(emergency.id)}
+                          onClick={() => completeEmergency(emergency)}
                           data-testid={`button-complete-${emergency.id}`}
                           disabled={completeMutation.isPending}
                         >
