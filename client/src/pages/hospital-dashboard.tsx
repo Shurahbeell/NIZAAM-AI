@@ -20,8 +20,8 @@ export default function HospitalDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
 
-  // Fetch emergencies to get active count
-  const { data: emergencies = [] } = useQuery<any[]>({
+  // Fetch all emergencies to get LHW emergencies
+  const { data: allEmergencies = [] } = useQuery<any[]>({
     queryKey: ["/api/emergencies"],
     refetchInterval: 5000
   });
@@ -57,7 +57,9 @@ export default function HospitalDashboard() {
     refetchInterval: 5000
   });
 
-  const activeEmergencies = emergencies.filter((e: any) => e.status === "active").length;
+  // Count active emergencies: incoming cases + LHW emergencies for this hospital
+  const lhwEmergencies = allEmergencies.filter((e: any) => e.reportedByLhwId && e.status === "active");
+  const activeEmergencies = incomingEmergencies.length + lhwEmergencies.length;
   const incomingCount = incomingEmergencies.length;
 
   // Map database appointments to display format - show only 3 most recent
