@@ -45,7 +45,7 @@ export default function HospitalEmergencyHistory() {
     }));
 
   const completedLhwEmergencies = allEmergencies
-    .filter((e: any) => e.reportedByLhwId && e.status === "completed");
+    .filter((e: any) => e.reportedByLhwId && e.status === "resolved");
 
   const completedEmergencies = [
     ...completedEmergencyCases,
