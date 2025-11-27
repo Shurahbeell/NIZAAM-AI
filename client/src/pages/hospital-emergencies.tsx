@@ -156,15 +156,15 @@ export default function HospitalEmergencies() {
   };
 
   const filterIncoming = () => {
-    return emergencies.filter(e => !e.acknowledgedByHospitalId);
+    return emergencies.filter(e => !e.acknowledgedByHospitalId && e.status !== "resolved");
   };
 
   const filterAcknowledged = () => {
-    return emergencies.filter(e => e.acknowledgedByHospitalId);
+    return emergencies.filter(e => e.acknowledgedByHospitalId && e.status !== "resolved");
   };
 
   const filterLhwEmergencies = () => {
-    return emergencies.filter(e => e.reportedByLhwId);
+    return emergencies.filter(e => e.reportedByLhwId && e.status !== "resolved");
   };
 
   const incomingCount = filterIncoming().length;

@@ -266,6 +266,20 @@ export default function HospitalDashboard() {
 
             <Card 
               className="group cursor-pointer border-none shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-white to-accent/20 overflow-hidden relative" 
+              onClick={() => setLocation("/hospital/emergency-history")} 
+              data-testid="action-emergency-history"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <CardContent className="p-5 flex flex-col items-center gap-3 relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="w-7 h-7 text-white" />
+                </div>
+                <p className="font-semibold text-sm text-center">Emergency History</p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="group cursor-pointer border-none shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-white to-accent/20 overflow-hidden relative" 
               onClick={() => setLocation("/hospital/prescriptions")} 
               data-testid="action-prescriptions"
             >
