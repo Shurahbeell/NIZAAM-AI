@@ -953,3 +953,56 @@ router.get("/api/hospital/:hospitalId/doctors", async (req: Request, res: Respon
     res.status(500).json({ error: error.message });
   }
 });
+
+// Create doctor
+router.post("/api/hospital/:hospitalId/doctors", async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.params;
+    const { name, specialization, qualification, consultationFee, availability } = req.body;
+    
+    if (!name || !specialization || !consultationFee) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const doctor = await storage.createDoctor({
+      hospitalId,
+      name,
+      specialization,
+      qualification: qualification || "",
+      consultationFee: parseInt(consultationFee),
+      availability: availability || "Mon-Fri: 9AM-5PM",
+      isAvailable: true
+    });
+
+    res.status(201).json(doctor);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update doctor
+router.patch("/api/hospital/:hospitalId/doctors/:doctorId", async (req: Request, res: Response) => {
+  try {
+    const { doctorId } = req.params;
+    const doctor = await storage.updateDoctor(doctorId, req.body);
+    
+    if (!doctor) {
+      return res.status(404).json({ error: "Doctor not found" });
+    }
+
+    res.json(doctor);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete doctor
+router.delete("/api/hospital/:hospitalId/doctors/:doctorId", async (req: Request, res: Response) => {
+  try {
+    const { doctorId } = req.params;
+    await storage.deleteDoctor(doctorId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
