@@ -834,7 +834,8 @@ export class DrizzleStorage implements IStorage {
         and(
           eq(emergencyCases.assignedToType, "hospital"),
           eq(emergencyCases.assignedToId, hospitalId),
-          inArray(emergencyCases.status, ["assigned", "ack", "in_progress"])
+          inArray(emergencyCases.status, ["assigned", "ack", "in_progress"]),
+          isNull(emergencyCases.acknowledgedByHospitalId)
         )
       )
       .orderBy(desc(emergencyCases.createdAt));
