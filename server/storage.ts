@@ -168,11 +168,15 @@ export interface IStorage {
   createMedicalHistory(history: InsertMedicalHistory): Promise<MedicalHistory>;
   getUserMedicalHistory(userId: string): Promise<MedicalHistory[]>;
   getMedicalHistoryById(id: string): Promise<MedicalHistory | undefined>;
+  updateMedicalHistory(id: string, updates: Partial<MedicalHistory>): Promise<MedicalHistory | undefined>;
+  deleteMedicalHistory(id: string): Promise<void>;
 
   // Medicines methods
   createMedicine(medicine: InsertMedicines): Promise<Medicines>;
   getUserMedicines(userId: string): Promise<Medicines[]>;
   getMedicineById(id: string): Promise<Medicines | undefined>;
+  updateMedicine(id: string, updates: Partial<Medicines>): Promise<Medicines | undefined>;
+  deleteMedicine(id: string): Promise<void>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -909,6 +913,19 @@ export class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async updateMedicalHistory(id: string, updates: Partial<MedicalHistory>): Promise<MedicalHistory | undefined> {
+    const result = await db
+      .update(medicalHistory)
+      .set(updates)
+      .where(eq(medicalHistory.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteMedicalHistory(id: string): Promise<void> {
+    await db.delete(medicalHistory).where(eq(medicalHistory.id, id));
+  }
+
   // ==================== MEDICINES METHODS ====================
   async createMedicine(medicine: InsertMedicines): Promise<Medicines> {
     const result = await db.insert(medicines).values(medicine).returning();
@@ -922,6 +939,19 @@ export class DrizzleStorage implements IStorage {
   async getMedicineById(id: string): Promise<Medicines | undefined> {
     const result = await db.select().from(medicines).where(eq(medicines.id, id));
     return result[0];
+  }
+
+  async updateMedicine(id: string, updates: Partial<Medicines>): Promise<Medicines | undefined> {
+    const result = await db
+      .update(medicines)
+      .set(updates)
+      .where(eq(medicines.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteMedicine(id: string): Promise<void> {
+    await db.delete(medicines).where(eq(medicines.id, id));
   }
 }
 

@@ -1006,3 +1006,163 @@ router.delete("/api/hospital/:hospitalId/doctors/:doctorId", async (req: Request
     res.status(500).json({ error: error.message });
   }
 });
+
+// ==================== MEDICAL HISTORY ROUTES ====================
+
+// Get user's medical history
+router.get("/api/medical-history", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const history = await storage.getUserMedicalHistory(userId);
+    res.json(history);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create medical history record
+router.post("/api/medical-history", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { condition, diagnosisDate, status, notes } = req.body;
+    if (!condition) {
+      return res.status(400).json({ error: "Condition is required" });
+    }
+    const history = await storage.createMedicalHistory({
+      userId,
+      condition,
+      diagnosisDate: diagnosisDate ? new Date(diagnosisDate) : undefined,
+      status: status || "active",
+      notes
+    });
+    res.status(201).json(history);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update medical history record
+router.patch("/api/medical-history/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const existing = await storage.getMedicalHistoryById(id);
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    const updated = await storage.updateMedicalHistory(id, req.body);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete medical history record
+router.delete("/api/medical-history/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const existing = await storage.getMedicalHistoryById(id);
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    await storage.deleteMedicalHistory(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== MEDICINES ROUTES ====================
+
+// Get user's medicines
+router.get("/api/medicines", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const medicines_data = await storage.getUserMedicines(userId);
+    res.json(medicines_data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create medicine record
+router.post("/api/medicines", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { name, dosage, frequency, reason, startDate, endDate, isActive, sideEffects } = req.body;
+    if (!name || !dosage || !frequency || !reason) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const medicine = await storage.createMedicine({
+      userId,
+      name,
+      dosage,
+      frequency,
+      reason,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      isActive: isActive !== false,
+      sideEffects
+    });
+    res.status(201).json(medicine);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update medicine record
+router.patch("/api/medicines/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const existing = await storage.getMedicineById(id);
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    const updated = await storage.updateMedicine(id, req.body);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete medicine record
+router.delete("/api/medicines/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const existing = await storage.getMedicineById(id);
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    await storage.deleteMedicine(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
