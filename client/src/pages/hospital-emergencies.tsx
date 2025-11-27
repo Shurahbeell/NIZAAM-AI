@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useLanguage } from "@/lib/useLanguage";
+import { useAuthStore } from "@/lib/auth";
 
 interface IncomingEmergency {
   id: string;
@@ -31,11 +32,19 @@ interface Emergency extends IncomingEmergency {
 
 export default function HospitalEmergencies() {
   const [, setLocation] = useLocation();
-  const hospitalId = "4cd3d7c3-5e08-4086-89ec-a9610267a2f1"; // TODO: Get from user context
+  const { user } = useAuthStore();
+  const hospitalId = user?.hospitalId || "";
 
   // Fetch incoming emergencies for this hospital with polling
   const { data = [], isLoading } = useQuery<IncomingEmergency[]>({
-    queryKey: ["/api/hospital", hospitalId, "incoming-emergencies"],
+    queryKey: ["/api/emergencies/cases/incoming", hospitalId],
+    queryFn: async () => {
+      if (!hospitalId) return [];
+      const response = await fetch(`/api/emergencies/cases/incoming/${hospitalId}`);
+      if (!response.ok) throw new Error("Failed to fetch emergencies");
+      return response.json();
+    },
+    enabled: !!hospitalId,
     refetchInterval: 3000 // Poll every 3 seconds
   });
   
@@ -45,7 +54,7 @@ export default function HospitalEmergencies() {
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/emergency-cases/${id}/acknowledge`, {
+      const response = await fetch(`/api/emergencies/cases/${id}/acknowledge`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hospitalId })
@@ -54,7 +63,7 @@ export default function HospitalEmergencies() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hospital", hospitalId, "incoming-emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emergencies/cases/incoming", hospitalId] });
     }
   });
 

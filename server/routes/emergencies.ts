@@ -207,4 +207,49 @@ router.patch("/:id/status", requireAuth, requireRole("hospital"), async (req: Re
   }
 });
 
+// Get incoming emergency cases for hospital
+router.get("/cases/incoming/:hospitalId", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.params;
+    
+    // Authorization: ensure user is from the requested hospital
+    if (req.user!.hospitalId && req.user!.hospitalId !== hospitalId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const incomingCases = await storage.getIncomingEmergencies(hospitalId);
+    res.json(incomingCases);
+  } catch (error: any) {
+    console.error("[Emergencies] Get incoming cases error:", error);
+    res.status(500).json({ error: "Failed to fetch incoming emergencies" });
+  }
+});
+
+// Acknowledge emergency case
+router.patch("/cases/:id/acknowledge", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.body;
+    
+    if (!hospitalId) {
+      return res.status(400).json({ error: "Hospital ID is required" });
+    }
+
+    // Authorization: ensure user is from the hospital acknowledging
+    if (req.user!.hospitalId && req.user!.hospitalId !== hospitalId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const emergencyCase = await storage.acknowledgeEmergencyCase(req.params.id, hospitalId);
+
+    if (!emergencyCase) {
+      return res.status(404).json({ error: "Emergency case not found" });
+    }
+
+    res.json(emergencyCase);
+  } catch (error: any) {
+    console.error("[Emergencies] Acknowledge case error:", error);
+    res.status(500).json({ error: "Failed to acknowledge emergency" });
+  }
+});
+
 export default router;

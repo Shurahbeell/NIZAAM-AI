@@ -27,10 +27,11 @@ export default function HospitalDashboard() {
 
   // Fetch incoming emergencies for this hospital
   const { data: incomingEmergencies = [] } = useQuery<any[]>({
-    queryKey: ["/api/hospital", user?.hospitalId, "incoming-emergencies"],
+    queryKey: ["/api/emergencies/cases/incoming", user?.hospitalId],
     queryFn: async () => {
       if (!user?.hospitalId) return [];
-      const response = await fetch(`/api/hospital/${user.hospitalId}/incoming-emergencies`);
+      const response = await fetch(`/api/emergencies/cases/incoming/${user.hospitalId}`);
+      if (!response.ok) throw new Error("Failed to fetch emergencies");
       return response.json();
     },
     enabled: !!user?.hospitalId,
