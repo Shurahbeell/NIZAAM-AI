@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Users, Calendar, FileText, Activity, TrendingUp, TrendingDown, Minus, AlertCircle, User, Stethoscope, AlertTriangle, Building2, LogOut, MapPin, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface StatCard {
   title: string;
@@ -19,6 +20,8 @@ interface StatCard {
 export default function HospitalDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
+  const { toast } = useToast();
+  const hospitalId = user?.hospitalId;
 
   // Fetch all emergencies to get LHW emergencies
   const { data: allEmergencies = [] } = useQuery<any[]>({
@@ -28,9 +31,51 @@ export default function HospitalDashboard() {
 
   // Fetch incoming emergencies for this hospital
   const { data: incomingEmergencies = [] } = useQuery<any[]>({
-    queryKey: [`/api/emergencies/cases/incoming/${user?.hospitalId}`],
-    enabled: !!user?.hospitalId,
+    queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
+    enabled: !!hospitalId,
     refetchInterval: 3000,
+  });
+
+  // Acknowledge emergency mutation
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (emergency: any) => {
+      if (emergency.reportedByLhwId) {
+        const response = await apiRequest("PATCH", `/api/emergencies/${emergency.id}/acknowledge`, { hospitalId });
+        return response.json();
+      } else {
+        const response = await apiRequest("PATCH", `/api/emergencies/cases/${emergency.id}/acknowledge`, { hospitalId });
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Emergency acknowledged" });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to acknowledge emergency", variant: "destructive" });
+    }
+  });
+
+  // Complete emergency mutation
+  const completeMutation = useMutation({
+    mutationFn: async (emergency: any) => {
+      if (emergency.reportedByLhwId) {
+        const response = await apiRequest("PATCH", `/api/emergencies/${emergency.id}/complete`, {});
+        return response.json();
+      } else {
+        const response = await apiRequest("PATCH", `/api/emergencies/cases/${emergency.id}/complete`, {});
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Emergency marked as completed" });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to complete emergency", variant: "destructive" });
+    }
   });
 
   // Fetch real appointments for this hospital
@@ -167,6 +212,26 @@ export default function HospitalDashboard() {
                       <span>{new Date(emergency.createdAt).toLocaleTimeString()}</span>
                     </div>
                     <Badge variant="outline" className="mt-1 text-xs">{emergency.status}</Badge>
+                    <div className="flex gap-2 mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => acknowledgeMutation.mutate(emergency)}
+                        disabled={acknowledgeMutation.isPending}
+                        data-testid={`button-acknowledge-dashboard-${emergency.id}`}
+                      >
+                        {acknowledgeMutation.isPending ? "..." : "Acknowledge"}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        onClick={() => completeMutation.mutate(emergency)}
+                        disabled={completeMutation.isPending}
+                        data-testid={`button-complete-dashboard-${emergency.id}`}
+                      >
+                        {completeMutation.isPending ? "..." : "Complete"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
