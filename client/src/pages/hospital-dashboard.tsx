@@ -30,11 +30,12 @@ export default function HospitalDashboard() {
   });
 
   // Fetch incoming emergencies for this hospital
-  const { data: incomingEmergencies = [] } = useQuery<any[]>({
+  const incomingQuery = useQuery<any[]>({
     queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
     enabled: !!hospitalId,
     refetchInterval: 3000,
   });
+  const incomingEmergencies = incomingQuery.data || [];
 
   // Acknowledge emergency mutation
   const acknowledgeMutation = useMutation({
@@ -47,10 +48,10 @@ export default function HospitalDashboard() {
         return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({ title: "Success", description: "Emergency acknowledged" });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
+      await incomingQuery.refetch();
+      await queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to acknowledge emergency", variant: "destructive" });
@@ -68,10 +69,10 @@ export default function HospitalDashboard() {
         return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({ title: "Success", description: "Emergency marked as completed" });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
+      await incomingQuery.refetch();
+      await queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to complete emergency", variant: "destructive" });
