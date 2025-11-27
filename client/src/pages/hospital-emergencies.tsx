@@ -37,13 +37,7 @@ export default function HospitalEmergencies() {
 
   // Fetch incoming emergencies for this hospital with polling
   const { data = [], isLoading } = useQuery<IncomingEmergency[]>({
-    queryKey: ["/api/emergencies/cases/incoming", hospitalId],
-    queryFn: async () => {
-      if (!hospitalId) return [];
-      const response = await fetch(`/api/emergencies/cases/incoming/${hospitalId}`);
-      if (!response.ok) throw new Error("Failed to fetch emergencies");
-      return response.json();
-    },
+    queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
     enabled: !!hospitalId,
     refetchInterval: 3000 // Poll every 3 seconds
   });
@@ -63,7 +57,7 @@ export default function HospitalEmergencies() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergencies/cases/incoming", hospitalId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
     }
   });
 
