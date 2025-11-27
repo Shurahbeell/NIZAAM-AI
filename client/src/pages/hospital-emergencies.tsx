@@ -66,6 +66,25 @@ export default function HospitalEmergencies() {
     acknowledgeMutation.mutate(id);
   };
 
+  // Complete emergency case mutation
+  const completeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("PATCH", `/api/emergencies/cases/${id}/complete`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Emergency marked as completed" });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to complete emergency", variant: "destructive" });
+    }
+  });
+
+  const completeEmergency = (id: string) => {
+    completeMutation.mutate(id);
+  };
+
   const getPriorityColor = (priority: number) => {
     if (priority <= 1) return "destructive";
     if (priority === 2) return "default";
@@ -276,6 +295,16 @@ export default function HospitalEmergencies() {
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{emergency.notes}</p>
                           </div>
                         )}
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="mt-4"
+                          onClick={() => completeEmergency(emergency.id)}
+                          data-testid={`button-complete-${emergency.id}`}
+                          disabled={completeMutation.isPending}
+                        >
+                          {completeMutation.isPending ? "Completing..." : "Mark Completed"}
+                        </Button>
                       </div>
                     </div>
                   </div>

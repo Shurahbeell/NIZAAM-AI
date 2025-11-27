@@ -158,6 +158,7 @@ export interface IStorage {
   getOpenCasesForFrontliner(frontlinerId: string): Promise<EmergencyCase[]>;
   getIncomingEmergencies(hospitalId: string): Promise<any[]>;
   acknowledgeEmergencyCase(id: string, hospitalId: string): Promise<EmergencyCase | undefined>;
+  completeEmergencyCase(id: string): Promise<EmergencyCase | undefined>;
   getAllEmergencyCases(): Promise<EmergencyCase[]>;
 
   // Medical History methods
@@ -825,6 +826,18 @@ export class DrizzleStorage implements IStorage {
       .set({
         acknowledgedByHospitalId: hospitalId,
         acknowledgedAt: new Date()
+      })
+      .where(eq(emergencyCases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async completeEmergencyCase(id: string): Promise<EmergencyCase | undefined> {
+    const result = await db
+      .update(emergencyCases)
+      .set({
+        status: "completed",
+        updatedAt: new Date()
       })
       .where(eq(emergencyCases.id, id))
       .returning();

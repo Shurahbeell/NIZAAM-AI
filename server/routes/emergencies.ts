@@ -295,4 +295,20 @@ router.patch("/cases/:id/acknowledge", requireAuth, requireRole("hospital"), asy
   }
 });
 
+// Complete emergency case
+router.patch("/cases/:id/complete", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const emergencyCase = await storage.completeEmergencyCase(req.params.id);
+
+    if (!emergencyCase) {
+      return res.status(404).json({ error: "Emergency case not found" });
+    }
+
+    res.json(emergencyCase);
+  } catch (error: any) {
+    console.error("[Emergencies] Complete case error:", error);
+    res.status(500).json({ error: "Failed to complete emergency" });
+  }
+});
+
 export default router;
