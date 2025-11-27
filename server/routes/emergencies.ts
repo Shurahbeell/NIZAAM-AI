@@ -55,6 +55,30 @@ async function routeToNearestFrontliner(lat?: string, lng?: string, emergency: a
   }
 }
 
+// Helper: Find nearest hospital to route emergency
+async function routeToNearestHospital(lat?: string, lng?: string) {
+  if (!lat || !lng) return null;
+
+  try {
+    // Find nearest hospitals
+    const hospitals = await storage.findNearestHospitals(lat, lng, 5);
+    
+    if (hospitals.length === 0) {
+      console.log("[Emergency Routing] No hospitals available");
+      return null;
+    }
+
+    // Get the nearest hospital
+    const nearest = hospitals[0];
+
+    console.log(`[Emergency Routing] Routing to nearest hospital: ${nearest.name} at distance ${nearest.distance}m`);
+    return { type: "hospital", id: nearest.id, name: nearest.name };
+  } catch (error) {
+    console.error("[Emergency Routing] Error finding hospitals:", error);
+    return null;
+  }
+}
+
 // Create emergency (patient only) - routes to nearest 1122 frontliner
 router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: Response) => {
   try {
@@ -75,22 +99,41 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
 
     const emergency = await storage.createEmergency(data);
 
-    // Try to route to nearest Rescue 1122 frontliner
-    const assignment = await routeToNearestFrontliner(lat, lng, emergency);
-    
-    if (assignment) {
-      // Create emergency case and assign to frontliner
-      const priorityNumber = priorityStringToNumber[priority as string] || 3;
-      const emergencyCase = await storage.createEmergencyCase({
+    const priorityNumber = priorityStringToNumber[priority as string] || 3;
+    const assignments: any[] = [];
+
+    // Route to nearest Rescue 1122 frontliner
+    const frontlinerAssignment = await routeToNearestFrontliner(lat, lng, emergency);
+    if (frontlinerAssignment) {
+      // Create emergency case assigned to frontliner
+      const frontlinerCase = await storage.createEmergencyCase({
         patientId: req.user!.userId,
         originLat: lat || "0",
         originLng: lng || "0",
         status: "assigned",
         priority: priorityNumber,
-        assignedToType: assignment.type,
-        assignedToId: assignment.id,
+        assignedToType: frontlinerAssignment.type,
+        assignedToId: frontlinerAssignment.id,
       });
-      console.log(`[Emergencies] Created case ${emergencyCase.id} and assigned to ${assignment.type} ${assignment.id}`);
+      console.log(`[Emergencies] Created case ${frontlinerCase.id} and assigned to frontliner ${frontlinerAssignment.id}`);
+      assignments.push(frontlinerAssignment);
+    }
+
+    // Route to nearest hospital
+    const hospitalAssignment = await routeToNearestHospital(lat, lng);
+    if (hospitalAssignment) {
+      // Create emergency case assigned to hospital
+      const hospitalCase = await storage.createEmergencyCase({
+        patientId: req.user!.userId,
+        originLat: lat || "0",
+        originLng: lng || "0",
+        status: "assigned",
+        priority: priorityNumber,
+        assignedToType: hospitalAssignment.type,
+        assignedToId: hospitalAssignment.id,
+      });
+      console.log(`[Emergencies] Created case ${hospitalCase.id} and assigned to hospital ${hospitalAssignment.id}`);
+      assignments.push(hospitalAssignment);
     }
 
     // Trigger emergency event for MCP system
@@ -101,13 +144,13 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
         priority: emergency.priority,
         emergencyType: emergency.emergencyType,
         location: emergency.location,
-        assignedTo: assignment,
+        assignedTo: assignments,
       },
       triggeredByAgent: "system",
       status: "pending",
     });
 
-    res.json({ ...emergency, assignedTo: assignment });
+    res.json({ ...emergency, assignedTo: assignments });
   } catch (error: any) {
     console.error("[Emergencies] Create error:", error);
     if (error instanceof z.ZodError) {
