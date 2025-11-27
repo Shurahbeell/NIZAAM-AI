@@ -80,21 +80,30 @@ export default function HospitalEmergencies() {
 
   // Acknowledge emergency case notification mutation
   const acknowledgeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest("PATCH", `/api/emergencies/cases/${id}/acknowledge`, { hospitalId });
-      return response.json();
+    mutationFn: async (emergency: any) => {
+      // Check if this is an LHW emergency (has reportedByLhwId)
+      if (emergency.reportedByLhwId) {
+        // Use main emergencies endpoint for LHW emergencies
+        const response = await apiRequest("PATCH", `/api/emergencies/${emergency.id}/acknowledge`, { hospitalId });
+        return response.json();
+      } else {
+        // Use emergency cases endpoint for regular emergencies
+        const response = await apiRequest("PATCH", `/api/emergencies/cases/${emergency.id}/acknowledge`, { hospitalId });
+        return response.json();
+      }
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Emergency acknowledged" });
       queryClient.invalidateQueries({ queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/emergencies`] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to acknowledge emergency", variant: "destructive" });
     }
   });
 
-  const acknowledgeEmergency = (id: string) => {
-    acknowledgeMutation.mutate(id);
+  const acknowledgeEmergency = (emergency: any) => {
+    acknowledgeMutation.mutate(emergency);
   };
 
   // Complete emergency case mutation
@@ -270,7 +279,7 @@ export default function HospitalEmergencies() {
                       <Button
                         size="sm"
                         className="mt-4"
-                        onClick={() => acknowledgeEmergency(emergency.id)}
+                        onClick={() => acknowledgeEmergency(emergency)}
                         data-testid={`button-acknowledge-${emergency.id}`}
                         disabled={acknowledgeMutation.isPending}
                       >
@@ -337,7 +346,7 @@ export default function HospitalEmergencies() {
                         <Button
                           size="sm"
                           className="mt-4"
-                          onClick={() => acknowledgeEmergency(emergency.id)}
+                          onClick={() => acknowledgeEmergency(emergency)}
                           data-testid={`button-acknowledge-lhw-${emergency.id}`}
                           disabled={acknowledgeMutation.isPending}
                         >

@@ -299,6 +299,33 @@ router.patch("/cases/:id/acknowledge", requireAuth, requireRole("hospital"), asy
   }
 });
 
+// Acknowledge emergency (for LHW emergencies)
+router.patch("/:id/acknowledge", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.body;
+    
+    if (!hospitalId) {
+      return res.status(400).json({ error: "Hospital ID is required" });
+    }
+
+    // Authorization: ensure user is from the hospital acknowledging
+    if (req.user!.hospitalId && req.user!.hospitalId !== hospitalId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const emergency = await storage.acknowledgeEmergency(req.params.id, hospitalId);
+
+    if (!emergency) {
+      return res.status(404).json({ error: "Emergency not found" });
+    }
+
+    res.json(emergency);
+  } catch (error: any) {
+    console.error("[Emergencies] Acknowledge error:", error);
+    res.status(500).json({ error: "Failed to acknowledge emergency" });
+  }
+});
+
 // Complete emergency case
 router.patch("/cases/:id/complete", requireAuth, requireRole("hospital"), async (req: Request, res: Response) => {
   try {
