@@ -8,6 +8,7 @@ import {
   lhwInventory,
   lhwEducationSessions,
   emergencyCases,
+  emergencies,
   users
 } from "../../shared/schema";
 import { eq } from "drizzle-orm";
@@ -194,17 +195,43 @@ router.post("/emergency", requireAuth, async (req: Request, res: Response) => {
     }
     const { patientName, patientPhone, symptoms, severity } = req.body;
 
+    // Map severity to priority number and text
+    const priorityMap: { [key: string]: { num: number; text: string } } = {
+      critical: { num: 5, text: "critical" },
+      high: { num: 4, text: "high" },
+      medium: { num: 3, text: "medium" },
+      low: { num: 2, text: "low" },
+    };
+    
+    const priorityInfo = priorityMap[severity] || { num: 3, text: "medium" };
+
+    // Create emergency record in emergencies table with LHW tracking
+    const emergency = await db.insert(emergencies).values({
+      patientName,
+      patientPhone,
+      emergencyType: "medical",
+      priority: priorityInfo.text,
+      symptoms,
+      status: "active",
+      notes: symptoms,
+      reportedByLhwId: req.user.userId, // Mark as LHW-reported
+    });
+
+    // Also create emergency case for hospital routing
     const emergencyCase = await db.insert(emergencyCases).values({
       patientId: req.user.userId,
       originLat: "0",
       originLng: "0",
-      status: "new",
-      priority: severity === "critical" ? 1 : severity === "high" ? 2 : severity === "medium" ? 3 : 4,
+      status: "assigned",
+      priority: priorityInfo.num,
+      assignedToType: "hospital",
+      assignedToId: "", // Will be assigned when hospital responds
       log: [{ type: "lhw_report", message: symptoms, timestamp: new Date().toISOString() }],
     });
 
-    res.json({ success: true, id: emergencyCase[0] });
-  } catch (error) {
+    res.json({ success: true, emergencyId: emergency[0], caseId: emergencyCase[0] });
+  } catch (error: any) {
+    console.error("[LHW] Emergency report error:", error);
     res.status(500).json({ error: "Failed to report emergency" });
   }
 });
