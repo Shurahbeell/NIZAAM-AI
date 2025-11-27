@@ -20,16 +20,16 @@ export default function HospitalEmergencyHistory() {
     refetchInterval: 5000
   });
 
-  // Fetch incoming emergencies for this hospital to get completed cases
-  const { data: incomingEmergencies = [] } = useQuery<any[]>({
-    queryKey: [`/api/emergencies/cases/incoming/${hospitalId}`],
+  // Fetch all emergencies for this hospital (both incoming and acknowledged)
+  const { data: hospitalEmergencies = [] } = useQuery<any[]>({
+    queryKey: [`/api/emergencies/cases/all/${hospitalId}`],
     enabled: !!hospitalId,
     refetchInterval: 5000,
   });
 
   // Get completed emergencies from both sources
-  const completedEmergencyCases = incomingEmergencies
-    .filter((ec: any) => ec.status === "resolved")
+  const completedEmergencyCases = hospitalEmergencies
+    .filter((ec: any) => ec.status === "completed")
     .map((ec: any) => ({
       id: ec.id,
       patientName: ec.patientName || "Unknown",
@@ -37,15 +37,15 @@ export default function HospitalEmergencyHistory() {
       originLng: ec.originLng,
       status: ec.status,
       priority: ec.priority,
-      acknowledgedByHospitalId: null,
-      acknowledgedAt: null,
+      acknowledgedByHospitalId: ec.acknowledgedByHospitalId,
+      acknowledgedAt: ec.acknowledgedAt,
       createdAt: ec.createdAt,
       notes: ec.notes,
-      completedAt: ec.completedAt || new Date().toISOString()
+      completedAt: ec.updatedAt || new Date().toISOString()
     }));
 
   const completedLhwEmergencies = allEmergencies
-    .filter((e: any) => e.reportedByLhwId && e.status === "resolved");
+    .filter((e: any) => e.reportedByLhwId && e.status === "completed");
 
   const completedEmergencies = [
     ...completedEmergencyCases,
