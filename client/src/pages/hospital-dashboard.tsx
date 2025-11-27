@@ -40,6 +40,23 @@ export default function HospitalDashboard() {
     refetchInterval: 5000
   });
 
+  // Fetch doctors for this hospital
+  const { data: doctors = [] } = useQuery<any[]>({
+    queryKey: [`/api/hospital/${user?.hospitalId}/doctors`],
+    queryFn: async () => {
+      if (!user?.hospitalId) return [];
+      try {
+        const res = await apiRequest("GET", `/api/hospital/${user.hospitalId}/doctors`);
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch doctors:", error);
+        return [];
+      }
+    },
+    enabled: !!user?.hospitalId,
+    refetchInterval: 5000
+  });
+
   const activeEmergencies = emergencies.filter((e: any) => e.status === "active").length;
   const incomingCount = incomingEmergencies.length;
 
@@ -52,11 +69,17 @@ export default function HospitalDashboard() {
     status: (apt.status || "pending") as "pending" | "approved" | "completed" | "cancelled"
   }));
 
+  // Calculate stats from real data
+  const todayAppointments = dbAppointments.length;
+  const pendingPrescriptions = dbAppointments.filter((apt: any) => apt.status === "pending").length;
+  const uniquePatients = new Set(dbAppointments.map((apt: any) => apt.patientId)).size;
+  const activeDoctors = doctors.length;
+
   const stats: StatCard[] = [
-    { title: "Today's Appointments", value: String(dbAppointments.length), change: "+12%", icon: Calendar, trend: "up" },
-    { title: "Pending Prescriptions", value: "8", change: "-5%", icon: FileText, trend: "down" },
-    { title: "Total Patients (Week)", value: "156", change: "+8%", icon: Users, trend: "up" },
-    { title: "Active Doctors", value: "12", change: "0%", icon: Stethoscope, trend: "neutral" },
+    { title: "Today's Appointments", value: String(todayAppointments), change: "Live", icon: Calendar, trend: "neutral" },
+    { title: "Pending Prescriptions", value: String(pendingPrescriptions), change: "Live", icon: FileText, trend: "neutral" },
+    { title: "Total Patients (Week)", value: String(uniquePatients), change: "Live", icon: Users, trend: "neutral" },
+    { title: "Active Doctors", value: String(activeDoctors), change: "Live", icon: Stethoscope, trend: "neutral" },
   ];
 
   return (
