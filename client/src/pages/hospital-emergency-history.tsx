@@ -150,7 +150,7 @@ export default function HospitalEmergencyHistory() {
                         {emergency.originLat && emergency.originLng && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="w-4 h-4" />
-                            Coordinates: {emergency.originLat.toFixed(4)}, {emergency.originLng.toFixed(4)}
+                            Coordinates: {parseFloat(emergency.originLat).toFixed(4)}, {parseFloat(emergency.originLng).toFixed(4)}
                           </div>
                         )}
                         {emergency.notes && (
