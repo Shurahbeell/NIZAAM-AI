@@ -239,8 +239,8 @@ export const translations = {
     },
     // Onboarding
     onboarding: {
-      title: 'Welcome to NIZAAM-AI',
-      subtitle: 'National Integrated Zonal Assessment, Assistance & Management System',
+      title: 'Welcome to HARBOR',
+      subtitle: 'Health Analytics, Rescue Backup & Operations Routing',
       getStarted: 'Get Started',
       skip: 'Skip',
     },
@@ -296,8 +296,8 @@ export const translations = {
     loginRegister: {
       loginTab: 'Login',
       registerTab: 'Register',
-      nizaamAi: 'NIZAAM-AI',
-      subtitle: 'National Integrated Zonal Assessment, Assistance & Management',
+      nizaamAi: 'HARBOR',
+      subtitle: 'Health Analytics, Rescue Backup & Operations Routing',
       username: 'Username',
       passwordPlaceholder: 'Enter Password',
       loginButton: 'Login',
@@ -536,8 +536,8 @@ export const translations = {
     },
     // Onboarding
     onboarding: {
-      title: 'NIZAAM-AI میں خوش آمدید',
-      subtitle: 'نیشنل انٹیگریٹڈ زونل اسسمنٹ، اسسٹنس اور مینجمنٹ سسٹم',
+      title: 'HARBOR میں خوش آمدید',
+      subtitle: 'ہیلتھ اینالیٹکس، ریسکیو بیک اپ اور آپریشنز روٹنگ',
       getStarted: 'شروع کریں',
       skip: 'چھوڑ دیں',
     },
@@ -593,8 +593,8 @@ export const translations = {
     loginRegister: {
       loginTab: 'لاگ ان',
       registerTab: 'سائن اپ',
-      nizaamAi: 'NIZAAM-AI',
-      subtitle: 'نیشنل انٹیگریٹڈ زونل اسسمنٹ، اسسٹنس اور مینجمنٹ',
+      nizaamAi: 'HARBOR',
+      subtitle: 'ہیلتھ اینالیٹکس، ریسکیو بیک اپ اور آپریشنز روٹنگ',
       username: 'صارف نام',
       passwordPlaceholder: 'پاس ورڈ درج کریں',
       loginButton: 'لاگ ان',
@@ -860,8 +860,8 @@ export const translations = {
     },
     // Onboarding
     onboarding: {
-      title: 'Welcome to NIZAAM-AI',
-      subtitle: 'National Integrated Zonal Assessment, Assistance & Management System',
+      title: 'Welcome to HARBOR',
+      subtitle: 'Health Analytics, Rescue Backup & Operations Routing',
       getStarted: 'Get Started',
       skip: 'Skip',
     },
