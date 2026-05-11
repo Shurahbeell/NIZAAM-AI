@@ -25,6 +25,27 @@ interface GooglePlace {
   opening_hours?: any;
 }
 
+function mapNewPlaceToLegacy(p: any): GooglePlace {
+  return {
+    name: p.displayName?.text || '',
+    vicinity: p.formattedAddress || '',
+    formatted_address: p.formattedAddress || '',
+    geometry: {
+      location: {
+        lat: p.location?.latitude || 0,
+        lng: p.location?.longitude || 0
+      }
+    },
+    rating: p.rating,
+    place_id: p.id || '',
+    user_ratings_total: p.userRatingCount,
+    types: p.types || [],
+    photos: p.photos?.map((ph: any) => ({ photo_reference: ph.name })) || [],
+    formatted_phone_number: p.nationalPhoneNumber,
+    opening_hours: p.regularOpeningHours
+  };
+}
+
 interface FacilityResult {
   name: string;
   address: string;
@@ -65,92 +86,91 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const PLACES_NEW_API = 'https://places.googleapis.com/v1/places:searchNearby';
+const PLACES_FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types,places.photos,places.nationalPhoneNumber,places.regularOpeningHours,places.primaryType';
+
 async function fetchPlacesNearby(
   lat: number,
   lng: number,
   radius?: number,
-  rankBy?: 'distance',
-  keyword?: string,
-  pageToken?: string
-): Promise<{ results: GooglePlace[]; next_page_token?: string }> {
+  rankBy?: 'distance'
+): Promise<{ results: GooglePlace[] }> {
   try {
-    let url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?';
-    
-    if (rankBy === 'distance') {
-      url += `location=${lat},${lng}&rankby=distance&type=hospital`;
-    } else {
-      url += `location=${lat},${lng}&radius=${radius || 5000}&type=hospital`;
-    }
-    
-    if (keyword) {
-      url += `&keyword=${encodeURIComponent(keyword)}`;
-    }
-    
-    if (pageToken) {
-      url += `&pagetoken=${pageToken}`;
-    }
-    
-    url += `&key=${GOOGLE_API_KEY}`;
-    
-    const response = await axios.get(url);
-    
-    if (response.data.status === 'ZERO_RESULTS') {
-      return { results: [] };
-    }
-    
-    if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-      console.error('[Places API] Error:', response.data.status, response.data.error_message);
-      return { results: [] };
-    }
-    
-    return {
-      results: response.data.results || [],
-      next_page_token: response.data.next_page_token
+    const body: any = {
+      includedTypes: ['hospital', 'medical_center'],
+      maxResultCount: 20,
+      rankPreference: 'DISTANCE'
     };
-  } catch (error) {
-    console.error('[fetchPlacesNearby] Error:', error);
+
+    if (rankBy === 'distance') {
+      body.locationBias = {
+        circle: {
+          center: { latitude: lat, longitude: lng },
+          radius: 50000.0
+        }
+      };
+    } else {
+      body.locationRestriction = {
+        circle: {
+          center: { latitude: lat, longitude: lng },
+          radius: radius || 5000
+        }
+      };
+    }
+
+    const response = await axios.post(PLACES_NEW_API, body, {
+      headers: {
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': PLACES_FIELD_MASK,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const places: any[] = response.data.places || [];
+    return { results: places.map(mapNewPlaceToLegacy) };
+  } catch (error: any) {
+    console.error('[Places API New] Error:', error.response?.data?.error?.message || error.message);
     return { results: [] };
   }
 }
 
 async function fetchPlaceDetails(placeId: string): Promise<Partial<GooglePlace> | null> {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_phone_number,opening_hours,website,photos&key=${GOOGLE_API_KEY}`;
-    const response = await axios.get(url);
-    
-    if (response.data.status === 'OK') {
-      return response.data.result;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('[fetchPlaceDetails] Error:', error);
+    const response = await axios.get(
+      `https://places.googleapis.com/v1/places/${placeId}`,
+      {
+        headers: {
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'nationalPhoneNumber,regularOpeningHours,photos'
+        }
+      }
+    );
+    const p = response.data;
+    return {
+      formatted_phone_number: p.nationalPhoneNumber,
+      opening_hours: p.regularOpeningHours,
+      photos: p.photos?.map((ph: any) => ({ photo_reference: ph.name })) || []
+    };
+  } catch (error: any) {
+    console.error('[fetchPlaceDetails New] Error:', error.response?.data?.error?.message || error.message);
     return null;
   }
 }
 
-async function fetchDistanceMatrix(
+function fetchDistanceMatrix(
   origin: { lat: number; lng: number },
   destinations: Array<{ lat: number; lng: number }>
-): Promise<Array<{ distance?: { text: string; value: number }; duration?: { text: string; value: number } }>> {
-  try {
-    const destinationsStr = destinations.map(d => `${d.lat},${d.lng}`).join('|');
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.lng}&destinations=${destinationsStr}&key=${GOOGLE_API_KEY}`;
-    
-    const response = await axios.get(url);
-    
-    if (response.data.status === 'OK' && response.data.rows?.[0]?.elements) {
-      return response.data.rows[0].elements.map((el: any) => ({
-        distance: el.distance,
-        duration: el.duration
-      }));
-    }
-    
-    return destinations.map(() => ({}));
-  } catch (error) {
-    console.error('[fetchDistanceMatrix] Error:', error);
-    return destinations.map(() => ({}));
-  }
+): Array<{ distance?: { text: string; value: number }; duration?: { text: string; value: number } }> {
+  return destinations.map(dest => {
+    const distM = calculateDistance(origin.lat, origin.lng, dest.lat, dest.lng);
+    const distKm = distM / 1000;
+    const speedKmH = 40;
+    const durationMin = Math.round((distKm / speedKmH) * 60);
+    return {
+      distance: { text: `${distKm.toFixed(1)} km`, value: Math.round(distM) },
+      duration: { text: `${durationMin} min`, value: durationMin * 60 }
+    };
+  });
 }
 
 export async function findNearbyFacilities(
@@ -168,114 +188,63 @@ export async function findNearbyFacilities(
     let allResults: GooglePlace[] = [];
     const seenPlaceIds = new Set<string>();
     
-    console.log('[Zone 1] Fetching with rankby=distance...');
-    let response = await fetchPlacesNearby(lat, lng, undefined, 'distance', keyword);
-    
-    response.results.forEach(r => {
-      if (!seenPlaceIds.has(r.place_id)) {
+    console.log('[Zone 1] Fetching by distance...');
+    const zone1 = await fetchPlacesNearby(lat, lng, undefined, 'distance');
+    zone1.results.forEach(r => {
+      if (r.place_id && !seenPlaceIds.has(r.place_id)) {
         allResults.push(r);
         seenPlaceIds.add(r.place_id);
       }
     });
-    
-    let pageToken = response.next_page_token;
-    let pageCount = 0;
-    
-    while (pageToken && allResults.length < limit && pageCount < 2) {
-      await sleep(2000);
-      console.log(`[Zone 1] Fetching page ${pageCount + 2}...`);
-      response = await fetchPlacesNearby(lat, lng, undefined, 'distance', keyword, pageToken);
-      
-      response.results.forEach(r => {
-        if (!seenPlaceIds.has(r.place_id)) {
+    console.log(`[Zone 1 Loaded] Found ${allResults.length} results`);
+
+    const radii = [5000, 20000, 50000, 100000, 200000];
+    for (const radius of radii) {
+      if (allResults.length >= limit) break;
+      console.log(`[Zone ${radius/1000}km] Fetching...`);
+      await sleep(300);
+      const radiusResponse = await fetchPlacesNearby(lat, lng, radius);
+      radiusResponse.results.forEach(r => {
+        if (r.place_id && !seenPlaceIds.has(r.place_id) && allResults.length < limit) {
           allResults.push(r);
           seenPlaceIds.add(r.place_id);
         }
       });
-      
-      pageToken = response.next_page_token;
-      pageCount++;
+      console.log(`[Zone ${radius/1000}km Loaded] Total: ${allResults.length}`);
+      if (allResults.length >= 10) break;
     }
-    
-    console.log(`[Zone 1 Loaded] Found ${allResults.length} results`);
-    
-    const minWanted = 15;
-    const radii = [5000, 20000, 50000, 100000, 200000];
-    
-    if (allResults.length < minWanted) {
-      for (const radius of radii) {
-        if (allResults.length >= limit) break;
-        
-        console.log(`[Zone ${radius/1000}km] Fetching...`);
-        await sleep(400);
-        
-        const radiusResponse = await fetchPlacesNearby(lat, lng, radius, undefined, keyword);
-        
-        radiusResponse.results.forEach(r => {
-          if (!seenPlaceIds.has(r.place_id) && allResults.length < limit) {
-            allResults.push(r);
-            seenPlaceIds.add(r.place_id);
-          }
-        });
-        
-        console.log(`[Zone ${radius/1000}km Loaded] Total: ${allResults.length}`);
-        
-        let zonePageToken = radiusResponse.next_page_token;
-        if (zonePageToken && allResults.length < limit) {
-          await sleep(2000);
-          const pageResponse = await fetchPlacesNearby(lat, lng, radius, undefined, keyword, zonePageToken);
-          pageResponse.results.forEach(r => {
-            if (!seenPlaceIds.has(r.place_id) && allResults.length < limit) {
-              allResults.push(r);
-              seenPlaceIds.add(r.place_id);
-            }
-          });
-        }
-        
-        if (allResults.length >= limit) break;
-      }
-    }
-    
-    // ========== CRITICAL FILTER AFTER ALL RESULTS COLLECTED ==========
-    // Remove veterinary clinics, pharmacies, and non-hospital facilities
+
+    // Filter out non-hospital places (pharmacies, vets, etc.)
     const blockedKeywords = [
-      "pet", "vet", "veterinary", "animal", "pharmacy", "chemist", 
+      "pet", "vet", "veterinary", "animal", "pharmacy", "chemist",
       "drug store", "dentist", "dental", "salon", "beauty", "barber",
-      "acupuncture", "massage", "spa", "wellness", "clinic privé",
-      "physiotherapy", "podiatry", "optician", "vision", "herbal",
-      "store", "shop", "medical store", "medicine", "homeopathic",
-      "ayurveda", "unani", "traditional", "dawaakhana"
+      "acupuncture", "massage", "spa", "store", "shop", "dawaakhana"
     ];
-    
+
     console.log(`[Filter] Starting filter on ${allResults.length} total results...`);
     allResults = allResults.filter(place => {
       const nameLC = place.name.toLowerCase();
-      const addressLC = (place.vicinity || place.formatted_address || '').toLowerCase();
-      
-      // If name OR address contains ANY blocked keyword, reject it
-      for (const keyword of blockedKeywords) {
-        if (nameLC.includes(keyword) || addressLC.includes(keyword)) {
-          console.log(`[Filter] REJECTING "${place.name}" - keyword: "${keyword}"`);
+      for (const kw of blockedKeywords) {
+        if (nameLC.includes(kw)) {
+          console.log(`[Filter] REJECTING "${place.name}" - keyword: "${kw}"`);
           return false;
         }
       }
-      
-      // WHITELIST APPROACH: Only accept if clearly a hospital
-      const hasHospitalType = place.types?.includes('hospital');
-      const hasHospitalName = nameLC.includes('hospital') || nameLC.includes('infirmary');
-      const nameHasDoctor = nameLC.includes('dr.') || nameLC.includes('doctor');
-      
-      // Accept ONLY if it has hospital type AND hospital-related name
-      // OR clearly named as a hospital
-      if (hasHospitalType && (hasHospitalName || nameLC.includes('medical') || nameLC.includes('center'))) {
+      // Accept anything tagged as hospital or medical_center by Google
+      const hasHospitalType = place.types?.some(t =>
+        t === 'hospital' || t === 'medical_center'
+      );
+      if (hasHospitalType) return true;
+      // Also accept by name clues
+      if (nameLC.includes('hospital') || nameLC.includes('medical') ||
+          nameLC.includes('clinic') || nameLC.includes('health') ||
+          nameLC.includes('centre') || nameLC.includes('center')) {
         return true;
       }
-      
-      // Reject everything else - too risky to include clinics, centers, etc.
-      console.log(`[Filter] REJECTING "${place.name}" - not clearly a hospital`);
+      console.log(`[Filter] REJECTING "${place.name}" - not clearly a medical facility`);
       return false;
     });
-    
+
     console.log(`[Filter COMPLETE] ${allResults.length} results remain after filtering`);
     
     const mapped: FacilityResult[] = allResults.slice(0, limit).map(place => ({
@@ -317,7 +286,7 @@ export async function findNearbyFacilities(
     
     console.log(`[Distance Matrix] Computing for top ${topN} results...`);
     const destinations = topResults.map(r => ({ lat: r.lat, lng: r.lng }));
-    const distanceData = await fetchDistanceMatrix({ lat, lng }, destinations);
+    const distanceData = fetchDistanceMatrix({ lat, lng }, destinations);
     
     topResults.forEach((result, i) => {
       if (distanceData[i].distance) {
