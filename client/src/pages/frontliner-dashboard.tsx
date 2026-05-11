@@ -14,12 +14,25 @@ interface EmergencyCaseWithPatient {
   id: string;
   patientId: string;
   patientName?: string;
+  patientPhone?: string;
   originLat: string;
   originLng: string;
   priority: number;
   status: string;
   createdAt: string;
-  notes?: string | null;
+  log?: any;
+}
+
+function extractCaseInfo(ec: EmergencyCaseWithPatient) {
+  const logEntry = Array.isArray(ec.log) && ec.log.length > 0 ? ec.log[0] : null;
+  return {
+    notes: logEntry?.note || null,
+    emergencyType: logEntry?.emergencyType || null,
+    symptoms: logEntry?.symptoms || null,
+    location: logEntry?.location || null,
+    patientName: logEntry?.patientName || ec.patientName || "Unknown Patient",
+    patientPhone: logEntry?.patientPhone || ec.patientPhone || null,
+  };
 }
 
 interface DirectionsMapProps {
@@ -282,7 +295,7 @@ export default function FrontlinerDashboard() {
 
       {/* Cases */}
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Active Cases</h2>
+        <h2 className="text-2xl font-semibold">Incoming Rescue Cases</h2>
         <Badge variant="outline" data-testid="text-case-count">{cases.length} case(s)</Badge>
       </div>
 
@@ -292,7 +305,7 @@ export default function FrontlinerDashboard() {
         <Card className="p-8">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No active cases assigned to you</p>
+            <p className="text-muted-foreground">No active rescue cases at this time</p>
           </div>
         </Card>
       ) : (
@@ -313,34 +326,57 @@ export default function FrontlinerDashboard() {
                     </div>
 
                     {/* Patient Name */}
-                    <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-950 p-2 rounded">
-                      <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Patient</p>
-                        <p className="font-semibold text-foreground" data-testid={`text-patient-name-${emergencyCase.id}`}>
-                          {emergencyCase.patientName || "Unknown Patient"}
-                        </p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const info = extractCaseInfo(emergencyCase);
+                      return (
+                        <>
+                          <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-950 p-2 rounded">
+                            <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Patient</p>
+                              <p className="font-semibold text-foreground" data-testid={`text-patient-name-${emergencyCase.id}`}>
+                                {info.patientName}
+                              </p>
+                              {info.patientPhone && (
+                                <p className="text-xs text-muted-foreground">{info.patientPhone}</p>
+                              )}
+                            </div>
+                          </div>
 
-                    <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        Location: {emergencyCase.originLat}, {emergencyCase.originLng}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        Created: {new Date(emergencyCase.createdAt).toLocaleString()}
-                      </div>
-                    </div>
+                          <div className="space-y-1 text-sm text-muted-foreground mb-3">
+                            {info.location && info.location !== "0,0" && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                {info.location}
+                              </div>
+                            )}
+                            {emergencyCase.originLat !== "0" && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                GPS: {emergencyCase.originLat}, {emergencyCase.originLng}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              {new Date(emergencyCase.createdAt).toLocaleString()}
+                            </div>
+                            {info.emergencyType && (
+                              <div className="flex items-center gap-1 font-medium text-foreground">
+                                Type: {info.emergencyType}
+                              </div>
+                            )}
+                          </div>
 
-                    {/* Condition Description */}
-                    {emergencyCase.notes && (
-                      <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Condition Description:</p>
-                        <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{emergencyCase.notes}</p>
-                      </div>
-                    )}
+                          {/* Condition Description */}
+                          {info.notes && (
+                            <div className="mt-3 mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                              <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">Patient's Condition:</p>
+                              <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{info.notes}</p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {/* Map */}
                     <div className="mt-3 mb-3">

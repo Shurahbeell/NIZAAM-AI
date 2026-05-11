@@ -79,15 +79,11 @@ async function routeToNearestHospital(lat?: string, lng?: string) {
   }
 }
 
-// Create emergency (patient only) - routes to nearest 1122 frontliner
+// Create emergency (patient only) - routes to Rescue 1122 frontliners first
 router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: Response) => {
   try {
-    // Only allow specific fields from request body - derive patientId from token
     const { patientName, patientPhone, location, emergencyType, priority, symptoms, notes, lat, lng } = req.body;
 
-    // Check if this is an LHW reporting an emergency
-    const isLhwReport = req.user!.role === "lhw";
-    
     const data = insertEmergencySchema.parse({
       patientName,
       patientPhone,
@@ -96,65 +92,59 @@ router.post("/", requireAuth, requireRole("patient"), async (req: Request, res: 
       priority,
       symptoms,
       notes,
-      patientId: req.user!.userId, // Always use authenticated user's ID
+      patientId: req.user!.userId,
       status: "active",
-      reportedByLhwId: isLhwReport ? req.user!.userId : undefined,
     });
 
     const emergency = await storage.createEmergency(data);
 
     const priorityNumber = priorityStringToNumber[priority as string] || 3;
-    const assignments: any[] = [];
 
-    // Route to nearest Rescue 1122 frontliner
-    const frontlinerAssignment = await routeToNearestFrontliner(lat, lng, emergency);
-    if (frontlinerAssignment) {
-      // Create emergency case assigned to frontliner
-      const frontlinerCase = await storage.createEmergencyCase({
-        patientId: req.user!.userId,
-        originLat: lat || "0",
-        originLng: lng || "0",
+    // STEP 1: ALWAYS create a broadcast emergency case for ALL Rescue frontliners to see.
+    // Frontliners will pick it up and then forward it to the nearest hospital.
+    // This ensures the case always appears on the rescue dashboard regardless of GPS availability.
+    const broadcastCase = await storage.createEmergencyCase({
+      patientId: req.user!.userId,
+      originLat: lat || "0",
+      originLng: lng || "0",
+      status: "assigned",
+      priority: priorityNumber,
+      assignedToType: "frontliner",
+      assignedToId: "broadcast",
+      log: [{
+        at: new Date().toISOString(),
+        by: { id: req.user!.userId, role: "patient" },
         status: "assigned",
-        priority: priorityNumber,
-        assignedToType: frontlinerAssignment.type,
-        assignedToId: frontlinerAssignment.id,
-      });
-      console.log(`[Emergencies] Created case ${frontlinerCase.id} and assigned to frontliner ${frontlinerAssignment.id}`);
-      assignments.push(frontlinerAssignment);
-    }
+        note: notes || `Emergency: ${emergencyType || "Unknown"}`,
+        emergencyType,
+        symptoms,
+        patientName,
+        patientPhone,
+        location,
+      }] as any,
+    });
 
-    // Route to nearest hospital
-    const hospitalAssignment = await routeToNearestHospital(lat, lng);
-    if (hospitalAssignment) {
-      // Create emergency case assigned to hospital
-      const hospitalCase = await storage.createEmergencyCase({
-        patientId: req.user!.userId,
-        originLat: lat || "0",
-        originLng: lng || "0",
-        status: "assigned",
-        priority: priorityNumber,
-        assignedToType: hospitalAssignment.type,
-        assignedToId: hospitalAssignment.id,
-      });
-      console.log(`[Emergencies] Created case ${hospitalCase.id} and assigned to hospital ${hospitalAssignment.id}`);
-      assignments.push(hospitalAssignment);
-    }
+    console.log(`[Emergencies] Created broadcast case ${broadcastCase.id} → all Rescue frontliners notified`);
 
     // Trigger emergency event for MCP system
     await storage.createAgentEvent({
       type: "EmergencyCreated",
       payload: {
         emergencyId: emergency.id,
+        caseId: broadcastCase.id,
         priority: emergency.priority,
         emergencyType: emergency.emergencyType,
         location: emergency.location,
-        assignedTo: assignments,
       },
       triggeredByAgent: "system",
       status: "pending",
     });
 
-    res.json({ ...emergency, assignedTo: assignments });
+    res.json({
+      ...emergency,
+      caseId: broadcastCase.id,
+      assignedTo: { type: "frontliner", name: "Rescue 1122", id: "broadcast" },
+    });
   } catch (error: any) {
     console.error("[Emergencies] Create error:", error);
     if (error instanceof z.ZodError) {

@@ -787,16 +787,20 @@ export class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async getOpenCasesForFrontliner(frontlinerId: string): Promise<any[]> {
+  async getOpenCasesForFrontliner(_frontlinerId: string): Promise<any[]> {
+    // Broadcast model: ALL frontliners see ALL open cases (assigned/ack/in_progress)
+    // The frontliner who first acknowledges takes ownership of the case
     const results = await db
       .select({
         id: emergencyCases.id,
         patientId: emergencyCases.patientId,
         patientName: users.fullName,
+        patientPhone: users.phone,
         originLat: emergencyCases.originLat,
         originLng: emergencyCases.originLng,
         status: emergencyCases.status,
         priority: emergencyCases.priority,
+        log: emergencyCases.log,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
       })
@@ -805,8 +809,7 @@ export class DrizzleStorage implements IStorage {
       .where(
         and(
           eq(emergencyCases.assignedToType, "frontliner"),
-          eq(emergencyCases.assignedToId, frontlinerId),
-          eq(emergencyCases.status, "assigned")
+          inArray(emergencyCases.status, ["assigned", "ack", "in_progress"])
         )
       )
       .orderBy(desc(emergencyCases.createdAt));
@@ -823,12 +826,14 @@ export class DrizzleStorage implements IStorage {
         id: emergencyCases.id,
         patientId: emergencyCases.patientId,
         patientName: users.fullName,
+        patientPhone: users.phone,
         originLat: emergencyCases.originLat,
         originLng: emergencyCases.originLng,
         status: emergencyCases.status,
         priority: emergencyCases.priority,
         acknowledgedByHospitalId: emergencyCases.acknowledgedByHospitalId,
         acknowledgedAt: emergencyCases.acknowledgedAt,
+        log: emergencyCases.log,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
       })
@@ -852,12 +857,14 @@ export class DrizzleStorage implements IStorage {
         id: emergencyCases.id,
         patientId: emergencyCases.patientId,
         patientName: users.fullName,
+        patientPhone: users.phone,
         originLat: emergencyCases.originLat,
         originLng: emergencyCases.originLng,
         status: emergencyCases.status,
         priority: emergencyCases.priority,
         acknowledgedByHospitalId: emergencyCases.acknowledgedByHospitalId,
         acknowledgedAt: emergencyCases.acknowledgedAt,
+        log: emergencyCases.log,
         createdAt: emergencyCases.createdAt,
         updatedAt: emergencyCases.updatedAt,
       })

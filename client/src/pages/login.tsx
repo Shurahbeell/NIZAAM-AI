@@ -203,7 +203,7 @@ export default function Login() {
                   <div>
                     <p className="font-medium text-foreground">Patient Account</p>
                     <p className="text-muted-foreground">
-                      <strong>ali_diabetes_patient</strong> / <strong>Patient123!</strong>
+                      <strong>ali_diabetes_patient</strong> / <strong>Harbor2024!</strong>
                     </p>
                   </div>
                 </div>
@@ -212,7 +212,7 @@ export default function Login() {
                   <div>
                     <p className="font-medium text-foreground">Hospital Staff</p>
                     <p className="text-muted-foreground">
-                      <strong>hospital_staff_1</strong> / <strong>HospitalStaff123!</strong>
+                      <strong>hospital_staff_1</strong> / <strong>Harbor2024!</strong>
                     </p>
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export default function Login() {
                   <div>
                     <p className="font-medium text-foreground">Rescue 1122</p>
                     <p className="text-muted-foreground">
-                      <strong>rescue_1122_worker</strong> / <strong>Frontliner123!</strong>
+                      <strong>rescue_1122_worker</strong> / <strong>Harbor2024!</strong>
                     </p>
                   </div>
                 </div>

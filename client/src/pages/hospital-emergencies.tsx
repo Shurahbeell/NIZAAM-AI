@@ -14,6 +14,7 @@ interface IncomingEmergency {
   id: string;
   patientId: string;
   patientName: string;
+  patientPhone?: string;
   originLat: string;
   originLng: string;
   status: "assigned" | "ack" | "in_progress" | "completed";
@@ -22,7 +23,19 @@ interface IncomingEmergency {
   acknowledgedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  notes?: string | null;
+  log?: any;
+}
+
+function extractEmergencyInfo(e: IncomingEmergency | any) {
+  const logEntry = Array.isArray(e.log) && e.log.length > 0 ? e.log[0] : null;
+  return {
+    notes: logEntry?.note || e.notes || null,
+    emergencyType: logEntry?.emergencyType || e.emergencyType || null,
+    symptoms: logEntry?.symptoms || e.symptoms || null,
+    location: logEntry?.location || e.location || null,
+    patientName: logEntry?.patientName || e.patientName || "Unknown Patient",
+    patientPhone: logEntry?.patientPhone || e.patientPhone || null,
+  };
 }
 
 // For display purposes
@@ -52,20 +65,28 @@ export default function HospitalEmergencies() {
     refetchInterval: 3000 // Poll every 3 seconds
   });
 
-  // Transform emergency_cases to match Emergency interface
-  const emergencyCases = Array.isArray(data) ? data.map((ec: any) => ({
-    id: ec.id,
-    patientId: ec.patientId,
-    patientName: ec.patientName || "Unknown",
-    originLat: ec.originLat,
-    originLng: ec.originLng,
-    status: ec.status,
-    priority: ec.priority,
-    acknowledgedByHospitalId: ec.acknowledgedByHospitalId,
-    acknowledgedAt: ec.acknowledgedAt,
-    createdAt: ec.createdAt,
-    notes: ec.notes
-  })) : [];
+  // Transform emergency_cases to match Emergency interface, extracting notes from log
+  const emergencyCases = Array.isArray(data) ? data.map((ec: any) => {
+    const info = extractEmergencyInfo(ec);
+    return {
+      id: ec.id,
+      patientId: ec.patientId,
+      patientName: info.patientName,
+      patientPhone: info.patientPhone,
+      originLat: ec.originLat,
+      originLng: ec.originLng,
+      status: ec.status,
+      priority: ec.priority,
+      acknowledgedByHospitalId: ec.acknowledgedByHospitalId,
+      acknowledgedAt: ec.acknowledgedAt,
+      createdAt: ec.createdAt,
+      notes: info.notes,
+      emergencyType: info.emergencyType,
+      symptoms: info.symptoms,
+      location: info.location,
+      log: ec.log,
+    };
+  }) : [];
 
   // Only get LHW emergencies from allEmergencies and add to cases
   const lhwEmergencies = Array.isArray(allEmergencies) 
